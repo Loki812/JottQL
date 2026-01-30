@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/AppLogic/AppLogic.iml" filepath="$PROJECT_DIR$/AppLogic/AppLogic.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/JottQL.iml" filepath="$PROJECT_DIR$/.idea/JottQL.iml" />
-      <module fileurl="file://$PROJECT_DIR$/Test/Test.iml" filepath="$PROJECT_DIR$/Test/Test.iml" />
     </modules>
   </component>
 </project>
