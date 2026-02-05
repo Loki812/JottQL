@@ -1,4 +1,4 @@
-package base.parse;
+package base.parse.DDL;
 
 public class DDLParser {
 }
