@@ -8,11 +8,12 @@ public class DataCatalog {
 
     private static DataCatalog catalog = null;
 
-    int MAGIC_NUMBER = 323574324;
-    int pageSize; // represent in terms of bytes?
-    int tableCount; // in header of bin file, needed for extracting
-    Map<String, TableSchema> tables;
-    String dataDirectory;
+    int MAGIC_NUMBER = 323574324; // used to verify file is a data catalog
+
+    private int pageSize; // represent in terms of bytes?
+    private int tableCount; // in header of bin file, needed for extracting
+    private Map<String, TableSchema> tables;
+    private String dataDirectory;
 
     private DataCatalog() {}
 
@@ -49,17 +50,14 @@ public class DataCatalog {
 
         } else {
             // Build new one at given directory
-            try {
-                catalog.pageSize = suggestedSize;
-                catalog.dataDirectory = dataDirectory;
-                catalog.tableCount = 0;
-                catalog.tables = new HashMap<String, TableSchema>();
 
-                saveToDisk();
+            catalog.setPageSize(suggestedSize);
+            catalog.dataDirectory = dataDirectory;
+            catalog.setTableCount(0);
+            catalog.tables = new HashMap<String, TableSchema>();
+            saveToDisk();
 
-            } catch (IOException e) {
-                System.err.println("Failed to save catalog: " + e.getMessage());
-            }
+
         }
     }
 
@@ -76,8 +74,8 @@ public class DataCatalog {
         if (fileMagicNumber != catalog.MAGIC_NUMBER) {
             throw new IOException("Magic number mismatch! This file is not a valid database catalog.");
         }
-        catalog.pageSize = in.readInt();
-        catalog.tableCount = in.readInt();
+        catalog.setPageSize(in.readInt());
+        catalog.setTableCount(in.readInt());
         catalog.tables = new HashMap<String, TableSchema>();
 
         // TODO Loop over tableschemas, attribute schemas
@@ -87,17 +85,51 @@ public class DataCatalog {
      * Function: saveToDisk should be called whenever changes are made to the data catalog
      *      ie. dropping a table, editing a table.
      */
-    private static void saveToDisk() throws IOException {
-        Files.createDirectories(Paths.get(catalog.dataDirectory));
-        File catalogFile = new File(catalog.dataDirectory, "catalog.bin");
+    private static void saveToDisk() {
+        try {
+            Files.createDirectories(Paths.get(catalog.dataDirectory));
+            File catalogFile = new File(catalog.dataDirectory, "catalog.bin");
+            DataOutputStream out = new DataOutputStream(new FileOutputStream(catalogFile));
 
-        try (DataOutputStream out = new DataOutputStream(new FileOutputStream(catalogFile))) {
             out.writeInt(catalog.MAGIC_NUMBER);
             out.writeInt(catalog.pageSize);
             out.writeInt(catalog.tableCount);
 
             // TODO Loop over tableschemas, attribute schemas
+        } catch (IOException e) {
+            System.err.println("Error Occured while saving DataCatalog: " + e.getMessage());
         }
+    }
+
+    /* ------- HELPER FUNCTIONS -------- */
+
+    public int getPageSize() {
+        return catalog.pageSize;
+    }
+
+    private void setPageSize(int pSize) {
+        catalog.pageSize = pSize;
+    }
+
+    public int getTableCount() {
+        return catalog.tableCount;
+    }
+
+    public void setTableCount(int tCount) {
+        catalog.tableCount = tCount;
+    }
+
+    public TableSchema getTableSchema(String tableName) {
+        return catalog.tables.get(tableName);
+    }
+
+    public void removeTableSchema(String tableName) {
+        catalog.tableCount -= 1;
+        catalog.tables.remove(tableName);
+    }
+
+    public void addTableSchema(TableSchema schema) {
+        // TODO create implementation for tableschema
     }
 
 }
