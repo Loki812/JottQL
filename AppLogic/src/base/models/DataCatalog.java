@@ -1,19 +1,23 @@
 package base.models;
 import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.nio.file.*;
 
 public class DataCatalog {
 
     private static DataCatalog catalog = null;
 
-    int MAGIC_NUMBER = 323574324; // used to verify file is a data catalog
+    private String dataDirectory;
 
+    /* ---- In order they are written to catalog.bin file */
+
+    int MAGIC_NUMBER = 323574324; // used to verify file is a data catalog
     private int pageSize; // represent in terms of bytes?
     private int tableCount; // in header of bin file, needed for extracting
+    private int nextAvailablePageID; //  if free list is empty, use this offset
+    private List<Integer> freePageList; // List of free page IDs within the DB
     private Map<String, TableSchema> tables;
-    private String dataDirectory;
+
 
     private DataCatalog() {}
 
@@ -50,10 +54,12 @@ public class DataCatalog {
 
         } else {
             // Build new one at given directory
-
-            catalog.setPageSize(suggestedSize);
             catalog.dataDirectory = dataDirectory;
-            catalog.setTableCount(0);
+
+            catalog.pageSize = suggestedSize;
+            catalog.tableCount = 0;
+            catalog.nextAvailablePageID = 0;
+            catalog.freePageList = new ArrayList<>();
             catalog.tables = new HashMap<String, TableSchema>();
             saveToDisk();
 
@@ -74,11 +80,22 @@ public class DataCatalog {
         if (fileMagicNumber != catalog.MAGIC_NUMBER) {
             throw new IOException("Magic number mismatch! This file is not a valid database catalog.");
         }
-        catalog.setPageSize(in.readInt());
-        catalog.setTableCount(in.readInt());
-        catalog.tables = new HashMap<String, TableSchema>();
+        catalog.pageSize = in.readInt();
+        catalog.tableCount = in.readInt();
+        catalog.nextAvailablePageID = in.readInt();
 
-        // TODO Loop over tableschemas, attribute schemas
+        catalog.freePageList = new ArrayList<>();
+        int freePageListSize = in.readInt();
+        for (int i = 0; i < freePageListSize; i++) {
+            catalog.freePageList.add(in.readInt());
+        }
+
+        catalog.tables = new HashMap<String, TableSchema>();
+        for (int i = 0; i < catalog.tableCount; i++) {
+            TableSchema ts = TableSchema.createTableSchemaFromDisk(in);
+            catalog.tables.put(ts.tableName, ts);
+        }
+
     }
 
     /**
@@ -94,8 +111,18 @@ public class DataCatalog {
             out.writeInt(catalog.MAGIC_NUMBER);
             out.writeInt(catalog.pageSize);
             out.writeInt(catalog.tableCount);
+            out.writeInt(catalog.nextAvailablePageID);
+            out.writeInt(catalog.freePageList.size());
 
-            // TODO Loop over tableschemas, attribute schemas
+            for (int i = 0; i < catalog.freePageList.size(); i++) {
+                out.writeInt(catalog.freePageList.get(i));
+            }
+
+            for (TableSchema t : catalog.tables.values()) {
+                t.saveTableSchemaToDisk(out);
+            }
+
+
         } catch (IOException e) {
             System.err.println("Error Occured while saving DataCatalog: " + e.getMessage());
         }
@@ -105,18 +132,6 @@ public class DataCatalog {
 
     public int getPageSize() {
         return catalog.pageSize;
-    }
-
-    private void setPageSize(int pSize) {
-        catalog.pageSize = pSize;
-    }
-
-    public int getTableCount() {
-        return catalog.tableCount;
-    }
-
-    public void setTableCount(int tCount) {
-        catalog.tableCount = tCount;
     }
 
     public TableSchema getTableSchema(String tableName) {
@@ -129,7 +144,21 @@ public class DataCatalog {
     }
 
     public void addTableSchema(TableSchema schema) {
-        // TODO create implementation for tableschema
+        // TODO figure out
+    }
+
+    /**
+     *
+     * @return the lowest indexed free page, first checks the free page list. if it is empty it 'allocates' a new page
+     */
+    public int getNextAvailablePageID() {
+        if (catalog.freePageList.isEmpty()) {
+            int next = catalog.nextAvailablePageID;
+            catalog.nextAvailablePageID += 1;
+            return next;
+        } else {
+            return catalog.freePageList.removeFirst();
+        }
     }
 
 }

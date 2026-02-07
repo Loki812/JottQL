@@ -1,13 +1,96 @@
 package base.models;
 
-
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+
 
 public class TableSchema {
 
-    public TableSchema() {
+    public String tableName;
+    private int numOfAttributes;
+    private LinkedHashMap<String, AttributeSchema> attributeSchemas;
+    private int recordSize; // not stored on disk, calculated on load from disk or instantiation.
+    private int rootPageID;
+    private int lastPageID;
+    private int numOfPages;
+
+    public TableSchema() {}
 
 
 
+    public static TableSchema createTableSchemaFromDisk(DataInputStream in) throws IOException {
+        TableSchema ts = new TableSchema();
+
+        // First int in a table schema block is the length of the name
+        byte[] nameBytes = new byte[in.readInt()];
+        in.readFully(nameBytes);
+        ts.tableName = new String(nameBytes, StandardCharsets.UTF_8);
+
+        ts.numOfAttributes = in.readInt();
+        ts.attributeSchemas = new LinkedHashMap<>();
+        // accumulator for total record size as well as offset
+        int tempSize = 0;
+        for (int i = 0; i < ts.numOfAttributes; i++) {
+            AttributeSchema a = AttributeSchema.createAttributeSchemaFromDisk(in, tempSize);
+            tempSize += a.getLength();
+            ts.attributeSchemas.put(a.attributeName, a);
+        }
+
+        ts.recordSize = tempSize;
+        ts.rootPageID = in.readInt();
+        ts.lastPageID = in.readInt();
+        ts.numOfPages = in.readInt();
+
+        return ts;
+    }
+
+    public static TableSchema createTableSchemaFromQuery(String query) {
+        // TODO
+        return new TableSchema();
+    }
+
+    public void saveTableSchemaToDisk(DataOutputStream out) throws IOException {
+        out.writeInt(tableName.length());
+
+        byte[] nameBytes = tableName.getBytes(StandardCharsets.UTF_8);
+        out.write(nameBytes);
+
+        out.writeInt(numOfAttributes);
+
+        for (AttributeSchema a : attributeSchemas.values()) {
+            a.saveAttributeSchemaToDisk(out);
+        }
+
+        out.writeInt(recordSize);
+        out.writeInt(rootPageID);
+        out.writeInt(lastPageID);
+        out.writeInt(numOfPages);
+    }
+
+    public int getRecordSize() { return recordSize; }
+
+    public int getRootPageID() { return rootPageID; }
+
+    public int getLastPageID() { return lastPageID; }
+
+    public int getNumOfPages() { return numOfPages; }
+
+    public AttributeSchema getAttributeSchema(String name) {
+        return attributeSchemas.get(name);
+    }
+
+    public void removeAttributeSchema(String name) {
+        attributeSchemas.remove(name);
+        numOfAttributes -= 1;
+    }
+
+    public void addAttributeSchema(AttributeSchema a) {
+        attributeSchemas.put(a.attributeName, a);
+        numOfAttributes += 1;
     }
 }
