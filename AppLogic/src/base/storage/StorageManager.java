@@ -4,10 +4,13 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import base.models.DataCatalog;
+import base.models.TableSchema;
+import base.models.Page;
+import base.models.Record;
 
 // Insert this record into this table function
 
-// Write page, read page, insert record into table
+// Write page, read page, insert record into page
 // Get a table schema, get record object, use tableschema.lastPage field to get page ID, go to that offset in DB file
 // and write to file
 
@@ -30,10 +33,9 @@ public class StorageManager {
      * Creates a new StorageManager instance.
      *
      * @param filename The database file name
-     * @param pageSize The size of each page (currently obtained from DataCatalog)
      * @throws Exception If the file cannot be opened or created
      */
-    public StorageManager(String filename, int pageSize) throws Exception {
+    public StorageManager(String filename) throws Exception {
         this.file = new RandomAccessFile(filename, "rw");
         this.catalog = DataCatalog.getInstance();
     }
@@ -41,15 +43,16 @@ public class StorageManager {
     /**
      * Reads a page from disk.
      *
-     * @param pageNum The page number to read
+     * @param page The page to read
      * @return A byte array containing the page data
      * @throws IOException If an I/O error occurs
      * @throws IllegalArgumentException If the page does not exist
      */
-    public byte[] readPage(int pageNum) throws IOException {
+    public byte[] readPage(Page page) throws IOException {
+        int pageID = page.getId();
         int pageSize = catalog.getPageSize();
         byte[] buffer = new byte[pageSize];
-        long offset = (long) pageNum * pageSize;
+        long offset = (long) pageID * pageSize;
 
         if (offset >= file.length()) {
             throw new IllegalArgumentException("Page does not exist");
@@ -63,20 +66,67 @@ public class StorageManager {
     /**
      * Writes a page to disk.
      *
-     * @param pageNum The page number to write
-     * @param pageData The page data to write
+     * @param page The page to write
      * @throws IOException If an I/O error occurs
      * @throws IllegalArgumentException If the page size does not match
      */
-    public void writePage(int pageNum, byte[] pageData) throws IOException {
+    public void writePage(Page page) throws IOException {
+        int pageID = page.getId();
         int pageSize = catalog.getPageSize();
 
-        if (pageData.length != pageSize) {
-            throw new IllegalArgumentException("Page size mismatch");
+        byte[] pageData = new byte[pageSize];
+
+        // Wrap buffer for easy writing
+        java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(pageData);
+
+        buffer.putInt(pageID);
+        buffer.putInt(page.getNextPageId());
+        buffer.putInt(page.recordList.size());
+
+        for (Record record : page.recordList) {
+            byte[] recordBytes = record.toBytes();
+
+            if (buffer.position() + recordBytes.length > pageSize) {
+                throw new IllegalArgumentException("Page overflow");
+            }
+
+            buffer.put(recordBytes);
         }
 
-        long offset = (long) pageNum * pageSize;
+        long offset = (long) pageID * pageSize;
         file.seek(offset);
         file.write(pageData);
+    }
+
+
+    /**
+     * Deletes the contents of a page.
+     *
+     * @param page The page to delete
+     * @throws IllegalArgumentException If the page size does not match
+     */
+    public void deletePage(Page page) {
+        try {
+            int pageID = page.getId();
+            int pageSize = catalog.getPageSize();
+            long offset = (long) pageID * pageSize;
+
+            if (offset >= file.length()) {
+                throw new IllegalArgumentException("Page does not exist");
+            }
+
+            byte[] emptyPage = new byte[pageSize];
+            file.seek(offset);
+            file.write(emptyPage);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to delete page", e);
+        }
+    }
+
+    // take pageID and record, get offset
+    public void insertRecordIntoPage(Page page, Record record, TableSchema schema) {
+        int pageID = page.getId();
+        int recordSize = schema.getRecordSize();
     }
 }
