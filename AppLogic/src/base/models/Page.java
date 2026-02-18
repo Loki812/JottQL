@@ -6,19 +6,22 @@ import java.util.ArrayList;
 
 public class Page {
 
-    private int pageId;
+    public int pageId;
+    public int tableId;
+    public int nextPageId;
+    public int currentSize;
+    public boolean hasBeenModified;
     public LocalDateTime timestamp;
     public ArrayList<Record> recordList;
 
-    //todo the Page is just a list of pointers to records
     public Page(int pageId){
         this.pageId = pageId;
+        this.currentSize = 0;
+        this.hasBeenModified = true;
         this.timestamp = LocalDateTime.now();
         recordList = new ArrayList<Record>();
     }
 
-    public int getPageId(){
-        return pageId;
-    }
+
 
 }

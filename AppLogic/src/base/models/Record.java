@@ -1,9 +1,11 @@
 package base.models;
 
-public class Record {
-    public Byte[] byteList;
+import java.util.ArrayList;
 
-    public Record(int recordLength){
-        this.byteList = new Byte[recordLength];
+public class Record {
+    public ArrayList<AttributeValue> byteList;
+
+    public Record(){
+        this.byteList = new ArrayList<AttributeValue>();
     }
 }
