@@ -10,9 +10,9 @@ import java.util.ArrayList;
  * The StorageManager handles low-level disk I/O operations.
  */
 public class StorageManager {
-    private final RandomAccessFile file;
-    private final DataCatalog catalog;
-    private final ArrayList<Integer> freePages;
+    private static RandomAccessFile file;
+    private static DataCatalog catalog;
+    private static ArrayList<Integer> freePages;
 
     /**
      * Create a new StorageManager instance.
@@ -21,9 +21,9 @@ public class StorageManager {
      * @throws Exception If the file cannot be opened or created
      */
     public StorageManager(String filename) throws Exception {
-        this.file = new RandomAccessFile(filename, "rw");
-        this.catalog = DataCatalog.getInstance();
-        this.freePages = new ArrayList<>();
+        StorageManager.file = new RandomAccessFile(filename, "rw");
+        StorageManager.catalog = DataCatalog.getInstance();
+        StorageManager.freePages = new ArrayList<>();
     }
 
     /**
@@ -43,7 +43,7 @@ public class StorageManager {
      * @throws IOException If an I/O error occurs
      * @throws IllegalArgumentException If the page does not exist
      */
-    public ByteBuffer readPage(int pageId) throws IOException {
+    public static ByteBuffer readPage(int pageId) throws IOException {
         int pageSize = catalog.getPageSize();
         long offset = (long) pageId * pageSize;
 
@@ -69,7 +69,7 @@ public class StorageManager {
      * @throws IOException If an I/O error occurs
      * @throws IllegalArgumentException If the page size does not match
      */
-    public void writePage(int pageId, ByteBuffer pageData) throws IOException {
+    public static void writePage(int pageId, ByteBuffer pageData) throws IOException {
         int pageSize = catalog.getPageSize();
 
         if (pageData.array().length != pageSize) {
@@ -93,7 +93,7 @@ public class StorageManager {
      * @param pageId The ID of the page to delete
      * @throws IllegalArgumentException If the page does not exist
      */
-    public void deletePage(int pageId) {
+    public static void deletePage(int pageId) {
         try {
             int pageSize = catalog.getPageSize();
             long offset = (long) pageId * pageSize;
