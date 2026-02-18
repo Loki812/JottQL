@@ -2,6 +2,30 @@
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
     public static void main(String[] args) {
+
+        //infinite command-line loop
+
+        //todo call the Datacatalog.buildCatalog() function
+        //todo call the BufferManager.buildBufferManager
+
+        while(true){
+            /*
+            todo read the first word from command-line inputs to decide
+            what functions it should be sent to
+             */
+
+            //todo do not instantiate DDL and DML parsers
+            //todo pass the full query-string to the DDLand DML parsers' static functions
+
+        }
+
+
+
+
+
+
+
+
         //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
         // to see how IntelliJ IDEA suggests fixing it.
         System.out.print("Hello and welcome!");
