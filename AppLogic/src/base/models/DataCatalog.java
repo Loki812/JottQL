@@ -141,11 +141,12 @@ public class DataCatalog {
     public void removeTableSchema(String tableName) {
         catalog.tableCount -= 1;
         catalog.tables.remove(tableName);
-        //Todo Hardware interaction
+        // wherever this is called, ensure saveToDisk() is called
     }
 
     public void addTableSchema(TableSchema schema) {
-        // TODO figure out
+        catalog.tables.put(schema.tableName, schema);
+        catalog.tableCount += 1;
     }
 
     /**
