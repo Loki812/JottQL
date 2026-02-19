@@ -36,11 +36,15 @@ public class BufferManager {
     //todo call storage manager to save the page
 
 
-    /*
-    public Page getPage(int id){
 
+    public static Page getPage(int id){
+
+        //todo actually make a proper getPage function
+        return new Page(1);
 
     }
+
+    /*
 
     public Page createNewPage(...){
 
@@ -61,15 +65,30 @@ public class BufferManager {
 
 
      */
-    private void writePageToHardware(Page page){
+    public void writePageToHardware(Page page){
 
-        //todo the DataCatalog should take a tableId instead of a tableName
-        TableSchema tableSchema = dataCatalog.getTableSchema(page.tableId);
+        /*
+        for(Record record : page.recordList){
+            for(AttributeValue attributeValue : record.attributeList){
+
+                System.out.println("Attribute: "+attributeValue);
+
+
+            }
+        }
+
+         */
+
+
+        /*
+        TableSchema tableSchema = dataCatalog.getTableSchema(page.tableName);
 
         for(AttributeSchema value : tableSchema.attributeSchemas.values()){
             dataTypes.add(value.getDataType());
-            //todo iterate through this to get datatypes of attributes and they length
+            //todo iterate through this to get datatypes of attributes and their length
         }
+
+         */
 
         //todo if page has been modified:
         //todo convert pages to byteBuffer
@@ -84,6 +103,12 @@ class BufferMain{
         BufferManager bufferManager = new BufferManager(50);
         Integer testInt = 5;
         AttributeValue attribute = new AttributeValue(testInt, DataTypes.INTEGER);
-        Record record = new Record();
+        Record testRecord = new Record();
+        testRecord.attributeList.add(attribute);
+        Page testPage = new Page(1);
+        testPage.recordList.add(testRecord);
+
+        bufferManager.writePageToHardware(testPage);
+
     }
 }

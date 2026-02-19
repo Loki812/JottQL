@@ -8,7 +8,7 @@ import java.util.ArrayList;
 public class Page {
 
     public int pageId;
-    public int tableId;
+    public String tableName;
     public int nextPageId;
     public int currentSize;
     public boolean hasBeenModified;
@@ -86,7 +86,7 @@ public class Page {
 
         // Now insert the current record at the correct location
         if (!nextPage.recordList.isEmpty() &&
-                record.compareTo(nextPage.recordList.getFirst(), schema) >= 0) {
+                record.compareTo(nextPage.recordList.get(0), schema) >= 0) {
             nextPage.insertIntoPage(record, schema);
         } else {
             this.insertIntoPage(record, schema);
