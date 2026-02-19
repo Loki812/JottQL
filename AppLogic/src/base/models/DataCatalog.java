@@ -21,9 +21,10 @@ public class DataCatalog {
 
     private DataCatalog() {}
 
-    public static synchronized DataCatalog getInstance() throws Exception {
+    public static synchronized DataCatalog getInstance() {
         if (catalog == null) {
-            throw new Exception("Catalog was not built before attempting use...");
+            System.err.println("Catalog was not built before attempting use...");
+            System.exit(1);
         }
         return catalog;
     }
@@ -78,7 +79,8 @@ public class DataCatalog {
         // Verify file using magic number
         int fileMagicNumber = in.readInt();
         if (fileMagicNumber != catalog.MAGIC_NUMBER) {
-            throw new IOException("Magic number mismatch! This file is not a valid database catalog.");
+            System.err.println("Magic number mismatch! This file is not a valid database catalog.");
+            System.exit(0);
         }
         catalog.pageSize = in.readInt();
         catalog.tableCount = in.readInt();
@@ -102,10 +104,10 @@ public class DataCatalog {
      * Function: saveToDisk should be called whenever changes are made to the data catalog
      *      ie. dropping a table, editing a table.
      */
-    private static void saveToDisk() {
+    public static void saveToDisk() {
         try {
-            Files.createDirectories(Paths.get(catalog.dataDirectory));
             File catalogFile = new File(catalog.dataDirectory, "catalog.bin");
+
             DataOutputStream out = new DataOutputStream(new FileOutputStream(catalogFile));
 
             out.writeInt(catalog.MAGIC_NUMBER);
@@ -124,7 +126,8 @@ public class DataCatalog {
 
 
         } catch (IOException e) {
-            System.err.println("Error Occured while saving DataCatalog: " + e.getMessage());
+            System.err.println("Error occurred while saving DataCatalog: " + e.getMessage());
+            System.exit(0);
         }
     }
 
