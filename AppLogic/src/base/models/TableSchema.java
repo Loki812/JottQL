@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
+import static base.models.AttributeSchema.createAttributeSchemaFromQuery;
+
 
 public class TableSchema {
 
@@ -49,9 +51,15 @@ public class TableSchema {
         return ts;
     }
 
-    public static TableSchema createTableSchemaFromQuery(String query) {
-        // TODO
-        return new TableSchema();
+    public static TableSchema createTableSchemaFromQuery(String name, ArrayList<String> attributes) throws Exception {
+        TableSchema ts = new TableSchema();
+        ts.tableName = name;
+        AttributeSchema atb;
+        for(String attribute : attributes) {
+            atb = createAttributeSchemaFromQuery(attribute);
+            ts.attributeSchemas.put(atb.attributeName, atb);
+        }
+        return ts;
     }
 
     public void saveTableSchemaToDisk(DataOutputStream out) throws IOException {
