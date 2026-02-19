@@ -3,21 +3,24 @@ package base.models;
 import java.util.ArrayList;
 
 public class Record {
-    public ArrayList<AttributeValue> byteList;
+    public ArrayList<AttributeValue> attributeList;
 
     public Record(){
-        this.byteList = new ArrayList<AttributeValue>();
+        this.attributeList = new ArrayList<AttributeValue>();
     }
 
     /**
-     * Compare two records and determine if they are equal.
+     * Compare this record to another record.
      *
-     * @param other The other record of the comparison
-     * @return true if the records are equal, false otherwise
+     * @param rec The record to compare this record to
+     * @param schema The current table schema
+     * @return a positive value if this record is greater than rec,
+     *      negative if it is less than rec,
+     *      0 if they are equal
      */
-    public boolean compareTo(Record other) {
-
-
-        return false;
+    public int compareTo(Record rec, TableSchema schema) {
+        int primaryKeyIndex = schema.getPrimaryIndex();
+        AttributeValue primaryKey = attributeList.get(primaryKeyIndex);
+        return primaryKey.compareTo(rec.attributeList.get(primaryKeyIndex));
     }
 }
