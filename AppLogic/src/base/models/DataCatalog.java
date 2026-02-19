@@ -79,7 +79,8 @@ public class DataCatalog {
         // Verify file using magic number
         int fileMagicNumber = in.readInt();
         if (fileMagicNumber != catalog.MAGIC_NUMBER) {
-            throw new IOException("Magic number mismatch! This file is not a valid database catalog.");
+            System.err.println("Magic number mismatch! This file is not a valid database catalog.");
+            System.exit(0);
         }
         catalog.pageSize = in.readInt();
         catalog.tableCount = in.readInt();
@@ -126,6 +127,7 @@ public class DataCatalog {
 
         } catch (IOException e) {
             System.err.println("Error occurred while saving DataCatalog: " + e.getMessage());
+            System.exit(0);
         }
     }
 

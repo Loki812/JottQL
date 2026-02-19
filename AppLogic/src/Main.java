@@ -61,7 +61,12 @@ public class Main {
                 case "INSERT" -> System.out.println("Inserting Something...");
                 case "DROP" -> System.out.println("Dropping a Table...");
                 case "ALTER" -> System.out.println("Altering a Table...");
-                case "EXIT" -> DataCatalog.saveToDisk();
+                case "EXIT" -> {
+                    DataCatalog.saveToDisk();
+                    // BufferManager (save before exiting_)
+                    System.out.println("Exiting Application");
+                    System.exit(0);
+                }
                 default -> System.out.println("Unrecognized query, please retry.");
             }
 
