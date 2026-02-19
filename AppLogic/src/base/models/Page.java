@@ -1,5 +1,4 @@
 package base.models;
-import base.models.Record;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -22,6 +21,10 @@ public class Page {
         recordList = new ArrayList<Record>();
     }
 
-
+    public void insertIntoPage(Record record) {
+        // records sorted by primary key
+        // call compareTo
+        // check last element in recordList to check if split needed/next page needed
+    }
 
 }
