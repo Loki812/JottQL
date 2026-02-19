@@ -36,8 +36,7 @@ public class Page {
 
         // If the page is full, split it
         if (currentSize + recordSize > pageSize) {
-            splitPage(record, schema);
-            return;
+            splitPage(schema);
         }
 
         // If the page is not full, insert the record at the correct position
@@ -60,12 +59,11 @@ public class Page {
     /**
      * Split a full page and insert a record into one of the pages.
      *
-     * @param record The record to insert
      * @param schema The table schema
      * @throws Exception If the next page cannot be retrieved
      * @throws IllegalStateException If no next page is available
      */
-    private void splitPage(Record record, TableSchema schema) throws Exception {
+    private void splitPage(TableSchema schema) throws Exception {
         if (nextPageId < 0) {
             throw new IllegalStateException("No next page available for split");
         }
@@ -83,14 +81,6 @@ public class Page {
         // Recalculate each page's current size
         this.currentSize = recordList.size() * schema.getRecordSize();
         nextPage.currentSize = recordList.size() * schema.getRecordSize();
-
-        // Now insert the current record at the correct location
-        if (!nextPage.recordList.isEmpty() &&
-                record.compareTo(nextPage.recordList.getFirst(), schema) >= 0) {
-            nextPage.insertIntoPage(record, schema);
-        } else {
-            this.insertIntoPage(record, schema);
-        }
 
         // Mark both pages as having been modified
         this.hasBeenModified = true;
