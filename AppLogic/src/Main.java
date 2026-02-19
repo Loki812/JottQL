@@ -1,14 +1,27 @@
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+import base.models.DataCatalog;
+
+import java.util.Scanner;
+
 public class Main {
     public static void main(String[] args) {
+
+
+
+
+        Scanner scanner = new Scanner(System.in);
 
         //infinite command-line loop
 
         //todo call the Datacatalog.buildCatalog() function
         //todo call the BufferManager.buildBufferManager
 
+        System.out.println("Welcome to JottQL!");
+        DataCatalog.buildCatalog();
+
         while(true){
+
+
+
             /*
             todo read the first word from command-line inputs to decide
             what functions it should be sent to
@@ -22,18 +35,5 @@ public class Main {
 
 
 
-
-
-
-
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        System.out.print("Hello and welcome!");
-
-        for (int i = 1; i <= 5; i++) {
-            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-            System.out.println("i = " + i);
-        }
     }
 }
