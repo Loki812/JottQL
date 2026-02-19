@@ -19,8 +19,6 @@ public class TableSchema {
     public String primaryKey;
     private int recordSize; // not stored on disk, calculated on load from disk or instantiation.
     private int rootPageID;
-    private int lastPageID;
-    private int numOfPages;
 
     public TableSchema() {}
 
@@ -46,18 +44,18 @@ public class TableSchema {
 
         ts.recordSize = tempSize;
         ts.rootPageID = in.readInt();
-        ts.lastPageID = in.readInt();
-        ts.numOfPages = in.readInt();
 
         return ts;
     }
 
     public static TableSchema createTableSchemaFromQuery(String name, ArrayList<String> attributes) throws Exception {
+        DataCatalog dc = DataCatalog.getInstance();
+
         TableSchema ts = new TableSchema();
         ts.tableName = name;
-        AttributeSchema atb;
+        ts.rootPageID = dc.getNextAvailablePageID();
         for(String attribute : attributes) {
-            atb = createAttributeSchemaFromQuery(attribute);
+            AttributeSchema atb = createAttributeSchemaFromQuery(attribute);
             ts.attributeSchemas.put(atb.attributeName, atb);
         }
         return ts;
@@ -77,17 +75,25 @@ public class TableSchema {
 
         out.writeInt(recordSize);
         out.writeInt(rootPageID);
-        out.writeInt(lastPageID);
-        out.writeInt(numOfPages);
     }
 
     public int getRecordSize() { return recordSize; }
 
     public int getRootPageID() { return rootPageID; }
 
-    public int getLastPageID() { return lastPageID; }
+    public String getPrimaryKey() { return primaryKey; }
 
-    public int getNumOfPages() { return numOfPages; }
+    public Integer getPrimaryIndex() {
+        Integer index = 0;
+        for (String key : attributeSchemas.sequencedKeySet()) {
+            if (primaryKey.equals(key)) {
+                return index;
+            }else{
+                index++;
+            }
+        }
+        return null;
+    }
 
     public AttributeSchema getAttributeSchema(String name) {
         return attributeSchemas.get(name);
