@@ -81,6 +81,20 @@ public class TableSchema {
 
     public int getRootPageID() { return rootPageID; }
 
+    public String getPrimaryKey() { return primaryKey; }
+
+    public Integer getPrimaryIndex() {
+        Integer index = 0;
+        for (String key : attributeSchemas.sequencedKeySet()) {
+            if (primaryKey.equals(key)) {
+                return index;
+            }else{
+                index++;
+            }
+        }
+        return null;
+    }
+
     public AttributeSchema getAttributeSchema(String name) {
         return attributeSchemas.get(name);
     }
