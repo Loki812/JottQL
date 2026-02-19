@@ -141,6 +141,7 @@ public class DataCatalog {
     public void removeTableSchema(String tableName) {
         catalog.tableCount -= 1;
         catalog.tables.remove(tableName);
+        //Todo Hardware interaction
     }
 
     public void addTableSchema(TableSchema schema) {

@@ -4,21 +4,24 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.NoSuchElementException;
 
 public class AttributeSchema {
 
     public String attributeName;
     private DataTypes dataType;
     private int length;
-    private int offSet; // offset from start of record, allows for quicker lookups.
     private boolean notNull;
     private boolean primaryKey;
+    private boolean unique;
+    private Object Default = null;
 
     public AttributeSchema() {}
 
     public static AttributeSchema createAttributeSchemaFromDisk(DataInputStream in, int offSet) throws IOException {
         AttributeSchema as = new AttributeSchema();
-        as.offSet = offSet;
 
         byte[] nameBytes = new byte[in.readInt()];
         in.readFully(nameBytes);
@@ -37,9 +40,59 @@ public class AttributeSchema {
         return as;
     }
 
-    public static AttributeSchema createAttributeSchemaFromQuery(String Query) {
-        // TODO
-        return new AttributeSchema();
+    public static AttributeSchema createAttributeSchemaFromQuery(String field) throws Exception {
+        ArrayList<String> fields = new ArrayList<>(Arrays.asList(field.split(" ")));
+        String name = fields.removeFirst();
+        AttributeSchema atb = new  AttributeSchema();
+        try {
+            atb.attributeName = name;
+            String type = fields.removeFirst();
+            if(type.substring(DataTypes.valueOf("VARCHAR").toString().length()).equals("VARCHAR")) {
+                atb.dataType = DataTypes.VARCHAR;
+                type = type.substring(DataTypes.valueOf("VARCHAR").toString().length())
+                        .replace("(", "").replace(")", "");
+                atb.length = Integer.parseInt(type);
+            } else if(type.substring(DataTypes.valueOf("CHAR").toString().length()).equals("VARCHAR")) {
+                    atb.dataType = DataTypes.VARCHAR;
+                    type = type.substring(DataTypes.valueOf("CHAR").toString().length())
+                            .replace("(", "").replace(")", "");
+                    atb.length = Integer.parseInt(type);
+            }else{
+                atb.dataType = DataTypes.valueOf(type);
+                if(atb.dataType == DataTypes.INTEGER){
+                    atb.length = 4;
+                } else if(atb.dataType == DataTypes.DOUBLE){
+                    atb.length = 8;
+                } else if(atb.dataType == DataTypes.BOOLEAN){
+                    atb.length = 1;
+                }
+            }
+        }catch (IllegalArgumentException e){
+            System.out.println(name + " has invalid data type");
+            throw new Exception();
+        }catch (NoSuchElementException e){
+            System.out.println(name + " has No data type");
+            throw new Exception();
+        }
+        while(!field.isEmpty()){
+            String constraint = fields.removeFirst();
+            if(constraint.equals("PRIMARYKEY")){
+                atb.primaryKey = true;
+                atb.unique = true;
+                atb.notNull = true;
+            }else if(constraint.equals("NOTNULL")) {
+                atb.notNull = true;
+            }else if(constraint.equals("UNIQUE")) {
+                atb.unique = true;
+            }else if(constraint.equals("DEFAULTVALUE")){
+                atb.Default = fields.removeFirst();
+            }else {
+                System.out.println(constraint + " is an invalid constraint");
+                throw new Exception();
+            }
+        }
+
+        return atb;
     }
 
     public void saveAttributeSchemaToDisk(DataOutputStream out) throws IOException {
@@ -57,11 +110,7 @@ public class AttributeSchema {
 
     public int getLength() { return length; }
 
-    public int getOffSet() { return offSet; }
-
     public boolean getNotNull() { return notNull; }
-
-    public void setNotNull(boolean n) { notNull = n; }
 
     public boolean isPrimaryKey() { return primaryKey; }
 
