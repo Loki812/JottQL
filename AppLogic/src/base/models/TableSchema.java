@@ -16,6 +16,7 @@ public class TableSchema {
     public String tableName;
     private int numOfAttributes;
     private LinkedHashMap<String, AttributeSchema> attributeSchemas;
+    public String primaryKey;
     private int recordSize; // not stored on disk, calculated on load from disk or instantiation.
     private int rootPageID;
     private int lastPageID;
