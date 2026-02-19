@@ -8,7 +8,7 @@ import java.util.ArrayList;
 public class Page {
 
     public int pageId;
-    public int tableId;
+    public String tableName;
     public int nextPageId;
     public int currentSize;
     public boolean hasBeenModified;
@@ -81,6 +81,14 @@ public class Page {
         // Recalculate each page's current size
         this.currentSize = recordList.size() * schema.getRecordSize();
         nextPage.currentSize = recordList.size() * schema.getRecordSize();
+
+        // Now insert the current record at the correct location
+        if (!nextPage.recordList.isEmpty() &&
+                record.compareTo(nextPage.recordList.get(0), schema) >= 0) {
+            nextPage.insertIntoPage(record, schema);
+        } else {
+            this.insertIntoPage(record, schema);
+        }
 
         // Mark both pages as having been modified
         this.hasBeenModified = true;
