@@ -90,6 +90,51 @@ public class InsertTable {
 
     }
 
+    private static boolean isDuplicatePK(TableSchema tableSchema, int pkIndex, Object candidate) throws Exception {
+
+        int pageId = tableSchema.getRootPageID();
+        while (pageId >= 0) {
+
+            Page p = BufferManager.getPage(pageId);
+            for(Record r : p.recordList) {
+
+                if(pkIndex >= r.attributeList.size()) {
+
+                    continue;
+
+                }
+
+                Object exists = r.attributeList.get(pkIndex).data;
+                if(exists != null && exists.equals(candidate)) {
+
+                    return true;
+
+                }
+
+            }
+
+            pageId = p.nextPageId;
+
+        }
+
+        return false;
+
+    }
+
+    public static void insertIntoLastPage(TableSchema tableSchema, Record record) throws Exception {
+
+        int pageId = tableSchema.getRootPageID();
+        Page p = BufferManager.getPage(pageId);
+        while(p.nextPageId >= 0) {
+
+            p = BufferManager.getPage(p.nextPageId);
+
+        }
+
+        p.insertIntoPage(record, tableSchema);
+
+    }
+
     @SuppressWarnings("unchecked")
     private static List<AttributeSchema> getSchemaInOrder(TableSchema tableSchema) throws Exception {
 
@@ -210,6 +255,44 @@ public class InsertTable {
         }
 
         List<AttributeSchema> attributeSchemas = getSchemaInOrder(tableSchema);
+        Integer pkObject = tableSchema.getPrimaryIndex();
+        int pkIndex = (pkObject == null) ? -1 : pkObject;
+        if(attributeSchemas.size() == 1) {
+
+            AttributeSchema attrscma = attributeSchemas.getFirst();
+            for(String raw : vals) {
+
+                AttributeValue<?> attrval = convertLiteral(raw, attrscma);
+
+                if(pkIndex == 0) {
+
+                    Object candidate = attrval.data;
+                    if(candidate == null) {
+
+                        System.out.println("Primary key cannot be null");
+                        break;
+
+                    }
+
+                    if(isDuplicatePK(tableSchema, pkIndex, candidate)) {
+
+                        System.out.println("Duplicate PK: " + candidate);
+                        break;
+
+                    }
+
+                }
+
+                Record r = new Record();
+                r.attributeList.add(attrval);
+                insertIntoLastPage(tableSchema, r);
+
+            }
+
+            return;
+
+        }
+
         if(vals.size() != attributeSchemas.size()) {
 
             System.out.println("Insert values count does not equal attribute count");
@@ -220,17 +303,28 @@ public class InsertTable {
         Record record = new Record();
         for(int i = 0; i < attributeSchemas.size(); i++) {
 
-            AttributeSchema as = attributeSchemas.get(i);
-            AttributeValue<?> av = convertLiteral(vals.get(i), as);
-            record.attributeList.add(av);
+            record.attributeList.add(convertLiteral(vals.get(i), attributeSchemas.get(i)));
 
         }
 
-        int pageID = tableSchema.getRootPageID();
-        Page p = BufferManager.getPage(pageID);
-        while(p.nextPageId >= 0) {
+        if(pkIndex >= 0) {
 
-            p.insertIntoPage(record, tableSchema);
+            Object cand = record.attributeList.get(pkIndex).data;
+            if(cand == null) {
+
+                System.out.println("Primary key cannot be null");
+                throw new Exception();
+
+            }
+
+            if(isDuplicatePK(tableSchema, pkIndex, cand)) {
+
+                System.out.println("Duplicate PK: " + cand);
+                throw new Exception();
+
+            }
+
+        insertIntoLastPage(tableSchema, record);
 
         }
 
