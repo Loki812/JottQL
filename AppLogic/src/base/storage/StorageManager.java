@@ -31,7 +31,7 @@ public class StorageManager {
      *
      * @return the freePages ArrayList of Integers
      */
-    public ArrayList<Integer> getFreePages() {
+    public static ArrayList<Integer> getFreePages() {
         return freePages;
     }
 
