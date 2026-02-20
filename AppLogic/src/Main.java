@@ -60,8 +60,20 @@ public class Main {
 
             switch (firstWord) {
                 case "CREATE" -> CreateTable.execute(input);
-                case "SELECT" -> System.out.println("Selecting something...");
-                case "INSERT" -> System.out.println("Inserting Something...");
+                case "SELECT" -> {
+
+                    System.out.println("Selecting something...");
+                    base.parse.DML.SelectTable.parse(firstWord);
+
+                }
+
+                case "INSERT" -> {
+
+                    System.out.println("Inserting Something...");
+                    base.parse.DML.InsertTable.parse(firstWord);
+
+                }
+
                 case "DROP" -> DropTable.execute(input);
                 case "ALTER" -> AtlerTable.execute(input);
                 case "EXIT" -> {
