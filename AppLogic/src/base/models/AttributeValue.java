@@ -16,6 +16,10 @@ public class AttributeValue<T> {
 
     @Override
     public String toString() {
-        return data.toString();
+        if(data!=null){
+            return data.toString();
+        }else{
+            return "null";
+        }
     }
 }
