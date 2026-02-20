@@ -102,6 +102,6 @@ public class Page {
         this.timestamp = java.time.LocalDateTime.now();
         nextPage.timestamp = java.time.LocalDateTime.now();
 
-        // TODO: write nextPage to hardware w/ BufferManager
+        BufferManager.writePageToHardware(nextPage, schema);
     }
 }
