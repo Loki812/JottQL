@@ -18,13 +18,25 @@ public class DataCatalog {
     private List<Integer> freePageList; // List of free page IDs within the DB
     private Map<String, TableSchema> tables;
 
+    private static boolean isInitialized = false;
 
     private DataCatalog() {}
 
+    /**
+     * added the wait loop so things like Storagemanager, Buffermanager, etc. wait until
+     * catalog is completed
+     *
+     *
+     * @return the singleton instance of the catalog
+     */
     public static synchronized DataCatalog getInstance() {
-        if (catalog == null) {
-            System.err.println("Catalog was not built before attempting use...");
-            System.exit(1);
+        while (!isInitialized) {
+            try {
+                System.out.println("Waiting for catalog to build...");
+                DataCatalog.class.wait(); // Pauses this thread until notifyAll() is called
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
         return catalog;
     }
@@ -37,7 +49,8 @@ public class DataCatalog {
      * @param dataDirectory - the path to the catalog.bin file.
      *
      **/
-    public static void buildCatalog(Integer suggestedSize, String dataDirectory) {
+    public static synchronized void buildCatalog(Integer suggestedSize, String dataDirectory) {
+        if (isInitialized) return; // if buildCatalog was already called do nothing
 
         catalog = new DataCatalog();
         File catalogFile = new File(dataDirectory, "catalog.bin");
@@ -63,9 +76,10 @@ public class DataCatalog {
             catalog.freePageList = new ArrayList<>();
             catalog.tables = new HashMap<String, TableSchema>();
             saveToDisk();
-
-
         }
+
+        isInitialized = true;
+        DataCatalog.class.notifyAll(); // notify all processes waiting on buildCatalog()
     }
 
     /**

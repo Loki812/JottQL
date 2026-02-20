@@ -82,14 +82,6 @@ public class Page {
         this.currentSize = recordList.size() * schema.getRecordSize();
         nextPage.currentSize = recordList.size() * schema.getRecordSize();
 
-        // Now insert the current record at the correct location
-        if (!nextPage.recordList.isEmpty() &&
-                record.compareTo(nextPage.recordList.get(0), schema) >= 0) {
-            nextPage.insertIntoPage(record, schema);
-        } else {
-            this.insertIntoPage(record, schema);
-        }
-
         // Mark both pages as having been modified
         this.hasBeenModified = true;
         nextPage.hasBeenModified = true;
