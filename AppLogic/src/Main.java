@@ -1,4 +1,5 @@
 import base.models.DataCatalog;
+import base.parse.DDL.AtlerTable;
 import base.parse.DDL.CreateTable;
 import base.parse.DDL.DropTable;
 
@@ -58,11 +59,11 @@ public class Main {
             String firstWord = input.split(" ")[0].toUpperCase();
 
             switch (firstWord) {
-                case "CREATE" -> CreateTable.parse(input);
+                case "CREATE" -> CreateTable.execute(input);
                 case "SELECT" -> System.out.println("Selecting something...");
                 case "INSERT" -> System.out.println("Inserting Something...");
-                case "DROP" -> DropTable.parse(input);
-                case "ALTER" -> System.out.println("Altering a Table...");
+                case "DROP" -> DropTable.execute(input);
+                case "ALTER" -> AtlerTable.execute(input);
                 case "EXIT" -> {
                     DataCatalog.saveToDisk();
                     // BufferManager (save before exiting_)

@@ -6,20 +6,33 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 public class CreateTable {
-    private static int COMMAND_LENGTH = 13;
-    public static void parse(String command) throws Exception {
-        command = command.substring(COMMAND_LENGTH); // strip command
+    public static void execute(String command) throws Exception {
+        String trimmedCommand = command.trim();
+        if(!trimmedCommand.startsWith("CREATE TABLE ")) {
+            System.out.println("Invalid CREATE TABLE Command");
+            throw new Exception();
+        }
+        if(!trimmedCommand.endsWith(";")) {
+            System.out.println("Missing Semicolon");
+            throw new Exception();
+        }
+        trimmedCommand = trimmedCommand.substring(0, trimmedCommand.length() - 1).trim();
+        command = trimmedCommand.substring("CREATE TABLE ".length()).trim();
+        // strip command
         String table_Name = command.substring(0, command.indexOf(" "));
-        if(command.charAt(command.length()-1) == ';' && command.charAt(command.length()-2) == ')' ){
-            command = command.substring(command.indexOf(" ") + 1,command.length()-2); //remove table name
+        if(command.charAt(command.length()-1) == ')' ){
+            command = command.substring(command.indexOf(" ") + 1,command.length()-1).trim(); //remove table name
+            if(!trimmedCommand.startsWith("(")) {
+                System.out.println("Missing opening parentheses");
+                throw new Exception();
+            }
             command = command.replace("(", "");
             ArrayList<String> columns = new ArrayList<String>(Arrays.asList(command.split(",")));
             TableSchema ts = TableSchema.createTableSchemaFromQuery(table_Name, columns);
             DataCatalog dc = DataCatalog.getInstance();
             dc.addTableSchema(ts);
         }else {
-            System.out.println("ending not valid");
-            System.out.println(command);
+            System.out.println("Missing closing parentheses");
             throw new Exception();
         }
 
