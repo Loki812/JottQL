@@ -12,7 +12,7 @@ import java.util.ArrayList;
 public class StorageManager {
     private static RandomAccessFile file;
     private static DataCatalog catalog;
-    private static ArrayList<Integer> freePages;
+    private static ArrayList<Integer> freePageList;
 
     /**
      * Create a new StorageManager instance.
@@ -23,16 +23,7 @@ public class StorageManager {
     public StorageManager(String filename) throws Exception {
         StorageManager.file = new RandomAccessFile(filename, "rw");
         StorageManager.catalog = DataCatalog.getInstance();
-        StorageManager.freePages = new ArrayList<>();
-    }
-
-    /**
-     * Get the ArrayList of free pages.
-     *
-     * @return the freePages ArrayList of Integers
-     */
-    public static ArrayList<Integer> getFreePages() {
-        return freePages;
+        StorageManager.freePageList = DataCatalog.getFreePageList();
     }
 
     /**
@@ -82,8 +73,8 @@ public class StorageManager {
         file.write(pageData.array());
 
         // If writing to a previously freed page, remove it from the free pages list
-        if (freePages.contains(pageId)) {
-            freePages.remove(pageId);
+        if (freePageList.contains(pageId)) {
+            freePageList.remove(pageId);
         }
     }
 
@@ -106,7 +97,7 @@ public class StorageManager {
             ByteBuffer emptyPage = ByteBuffer.allocate(pageSize);
             file.seek(offset);
             file.write(emptyPage.array());
-            freePages.add(pageId);  // The page becomes free, so we add it to the free pages list
+            freePageList.add(pageId);  // The page becomes free, so we add it to the free pages list
 
         } catch (IOException e) {
             throw new RuntimeException("Failed to delete page", e);

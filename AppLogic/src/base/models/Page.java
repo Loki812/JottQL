@@ -13,6 +13,7 @@ public class Page {
     public int currentSize;
     public boolean hasBeenModified;
     public LocalDateTime timestamp;
+    private DataCatalog catalog;
     public ArrayList<Record> recordList;
 
     public Page(int pageId){
@@ -20,6 +21,7 @@ public class Page {
         this.currentSize = 0;
         this.hasBeenModified = true;
         this.timestamp = LocalDateTime.now();
+        this.catalog = DataCatalog.getInstance();
         recordList = new ArrayList<Record>();
     }
 
@@ -68,8 +70,10 @@ public class Page {
             throw new IllegalStateException("No next page available for split");
         }
 
-        // Fetch the next page from the buffer
-        Page nextPage = BufferManager.getPage(nextPageId);
+        // Create a new page and re-order the pointers
+        Page nextPage = BufferManager.createNewPage(catalog.getNextAvailablePageID());
+        nextPage.nextPageId = nextPageId;
+        this.nextPageId = nextPage.pageId;
 
         // Split the record list into two equal halves
         int split = recordList.size() / 2;
@@ -89,5 +93,7 @@ public class Page {
         // Record timestamps
         this.timestamp = java.time.LocalDateTime.now();
         nextPage.timestamp = java.time.LocalDateTime.now();
+
+        // TODO: write nextPage to hardware w/ BufferManager
     }
 }
