@@ -1,6 +1,6 @@
 package base.models;
 
-//import base.buffer.BufferManager;
+import base.buffer.BufferManager;
 import base.storage.StorageManager;
 
 import java.time.LocalDateTime;
@@ -93,15 +93,14 @@ public class Page {
 //    }
 
     public void deleteTable(){
-        //bufferManager.deletePage(pageId)
-        //BufferManager.getPage(nextPageId).deleteTable();;
-        StorageManager.deletePage(pageId);
+        //BufferManager.deletePage(pageId);
+        BufferManager.getPage(nextPageId).deleteTable();;
     }
     public void deleteColumn(int index){
         for(Record record : recordList){
             record.attributeList.remove(index);
         }
-        //BufferManager.getPage(nextPageId).deleteColumn(index);
+        BufferManager.getPage(nextPageId).deleteColumn(index);
         hasBeenModified = true;
     }
 }

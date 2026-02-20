@@ -1,5 +1,7 @@
 package base.models;
 
+import base.buffer.BufferManager;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -123,7 +125,7 @@ public class TableSchema {
             throw new Exception();
         }
         Integer index = getIndex(name);
-
+        BufferManager.getPage(rootPageID).deleteColumn(index);
         attributeSchemas.remove(name);
         numOfAttributes -= 1;
 

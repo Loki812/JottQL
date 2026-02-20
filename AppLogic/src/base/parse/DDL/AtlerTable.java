@@ -21,7 +21,6 @@ public class AtlerTable {
         if(operation.equals("ADD")) {
             AttributeSchema attribute = AttributeSchema.createAttributeSchemaFromQuery(command);
             ts.addAttributeSchema(attribute);
-            //TODO Remake the table with new or altered column
         } else if(operation.equals("DROP")) {
             String attribute = command;
             ts.removeAttributeSchema(attribute);
