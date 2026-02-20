@@ -16,7 +16,7 @@ public class Main {
      *       - indexing - will indexing be used True or False
      *
      * **/
-    public static void main(String[] args)  {
+    public static void main(String[] args) throws Exception {
 
         // Check if exists build File, if not create new file.
         try {
@@ -57,8 +57,20 @@ public class Main {
 
             switch (firstWord) {
                 case "CREATE" -> System.out.println("Creating Table...");
-                case "SELECT" -> System.out.println("Selecting something...");
-                case "INSERT" -> System.out.println("Inserting Something...");
+                case "SELECT" -> {
+
+                    System.out.println("Selecting something...");
+                    base.parse.DML.SelectTable.parse(firstWord);
+
+                }
+
+                case "INSERT" -> {
+
+                    System.out.println("Inserting Something...");
+                    base.parse.DML.InsertTable.parse(firstWord);
+
+                }
+
                 case "DROP" -> System.out.println("Dropping a Table...");
                 case "ALTER" -> System.out.println("Altering a Table...");
                 case "EXIT" -> {
