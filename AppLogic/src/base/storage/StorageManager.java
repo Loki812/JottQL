@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 
 /**
  * The StorageManager handles low-level disk I/O operations.
@@ -12,7 +14,8 @@ import java.util.ArrayList;
 public class StorageManager {
     private static RandomAccessFile file;
     private static DataCatalog catalog;
-    private static ArrayList<Integer> freePageList;
+    private static ArrayList<Integer> freePages;
+    private static HashMap<Integer, Integer> idSizeMapper;
 
     /**
      * Create a new StorageManager instance.
@@ -23,7 +26,17 @@ public class StorageManager {
     public StorageManager(String filename) throws Exception {
         StorageManager.file = new RandomAccessFile(filename, "rw");
         StorageManager.catalog = DataCatalog.getInstance();
-        StorageManager.freePageList = DataCatalog.getFreePageList();
+        StorageManager.freePages = new ArrayList<>();
+        idSizeMapper = new HashMap<Integer, Integer>();
+    }
+
+    /**
+     * Get the ArrayList of free pages.
+     *
+     * @return the freePages ArrayList of Integers
+     */
+    public static ArrayList<Integer> getFreePages() {
+        return freePages;
     }
 
     /**
@@ -34,7 +47,7 @@ public class StorageManager {
      * @throws IOException If an I/O error occurs
      * @throws IllegalArgumentException If the page does not exist
      */
-    public static ByteBuffer readPage(int pageId) throws IOException {
+    public static byte[] readPage(int pageId) throws IOException {
         int pageSize = catalog.getPageSize();
         long offset = (long) pageId * pageSize;
 
@@ -45,11 +58,20 @@ public class StorageManager {
         // Allocate a new buffer and read page contents into it at the page's location
         ByteBuffer buffer = ByteBuffer.allocate(pageSize);
         file.seek(offset);
-        file.readFully(buffer.array());
+
+        byte[] finalByteArray = new byte[idSizeMapper.get(pageId)];
+
+        for(int i =0; i<idSizeMapper.get(pageId); i++){
+            file.seek(offset+i);
+            //System.out.println(file.readByte());
+            finalByteArray[i] = file.readByte();
+        }
+
+        //file.readFully(buffer.array());
 
         buffer.position(0); // Reset buffer cursor back to beginning
 
-        return buffer;
+        return finalByteArray;
     }
 
     /**
@@ -61,9 +83,12 @@ public class StorageManager {
      * @throws IllegalArgumentException If the page size does not match
      */
     public static void writePage(int pageId, ByteBuffer pageData) throws IOException {
+
+        idSizeMapper.put(pageId,pageData.array().length);
+
         int pageSize = catalog.getPageSize();
 
-        if (pageData.array().length != pageSize) {
+        if (pageData.array().length > pageSize) {
             throw new IllegalArgumentException("Page size mismatch");
         }
 
@@ -73,8 +98,8 @@ public class StorageManager {
         file.write(pageData.array());
 
         // If writing to a previously freed page, remove it from the free pages list
-        if (freePageList.contains(pageId)) {
-            freePageList.remove(pageId);
+        if (freePages.contains(pageId)) {
+            freePages.remove(pageId);
         }
     }
 
@@ -97,7 +122,7 @@ public class StorageManager {
             ByteBuffer emptyPage = ByteBuffer.allocate(pageSize);
             file.seek(offset);
             file.write(emptyPage.array());
-            freePageList.add(pageId);  // The page becomes free, so we add it to the free pages list
+            freePages.add(pageId);  // The page becomes free, so we add it to the free pages list
 
         } catch (IOException e) {
             throw new RuntimeException("Failed to delete page", e);
