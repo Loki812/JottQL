@@ -13,6 +13,7 @@ public class Page {
     public int currentSize;
     public boolean hasBeenModified;
     public LocalDateTime timestamp;
+    private DataCatalog catalog;
     public ArrayList<Record> recordList;
 
     public Page(int pageId){
@@ -20,6 +21,7 @@ public class Page {
         this.currentSize = 0;
         this.hasBeenModified = true;
         this.timestamp = LocalDateTime.now();
+        this.catalog = DataCatalog.getInstance();
         recordList = new ArrayList<Record>();
     }
 
@@ -32,16 +34,27 @@ public class Page {
      */
     public void insertIntoPage(Record record, TableSchema schema) throws Exception {
         int recordSize = schema.getRecordSize();
-        int pageSize = DataCatalog.getInstance().getPageSize();
+        int pageSize = catalog.getPageSize();
 
-        // If the page is full, split it
-        if (currentSize + recordSize > pageSize) {
-            splitPage(schema);
+        if (recordList.isEmpty()) {
+            recordList.addFirst(record);
+            this.currentSize += recordSize;
+            this.hasBeenModified = true;
+            this.timestamp = LocalDateTime.now();
+            return;
         }
 
-        // If the page is not full, insert the record at the correct position
         for (int i = 0; i < recordList.size(); i++) {
+            if (record.compareTo(recordList.get(i), schema) == 0) {
+                throw new Exception("Duplicate primary key detected");
+            }
             if (record.compareTo(recordList.get(i), schema) < 0) {
+                // If the page is full, split it
+                if (currentSize + recordSize > pageSize) {
+                    splitPage(schema);
+                    insertIntoPage(record, schema);
+                }
+                // Otherwise insert the record in the correct place
                 recordList.add(i, record);
                 this.currentSize += recordSize;
                 this.hasBeenModified = true;
@@ -49,11 +62,8 @@ public class Page {
                 return;
             }
         }
-        // Add to end if this record is the largest
-        recordList.add(record);
-        this.currentSize += recordSize;
-        this.hasBeenModified = true;
-        this.timestamp = LocalDateTime.now();
+
+        BufferManager.getPage(nextPageId).insertIntoPage(record, schema);
     }
 
     /**
@@ -68,8 +78,10 @@ public class Page {
             throw new IllegalStateException("No next page available for split");
         }
 
-        // Fetch the next page from the buffer
-        Page nextPage = BufferManager.getPage(nextPageId);
+        // Create a new page and re-order the pointers
+        Page nextPage = BufferManager.createNewPage(catalog.getNextAvailablePageID());
+        nextPage.nextPageId = nextPageId;
+        this.nextPageId = nextPage.pageId;
 
         // Split the record list into two equal halves
         int split = recordList.size() / 2;
@@ -89,5 +101,7 @@ public class Page {
         // Record timestamps
         this.timestamp = java.time.LocalDateTime.now();
         nextPage.timestamp = java.time.LocalDateTime.now();
+
+        BufferManager.writePageToHardware(nextPage, schema);
     }
 }
