@@ -56,7 +56,7 @@ public class BufferManager {
         }
     }
 
-    public Page createNewPage(int id){
+    public static Page createNewPage(int id){
         Page page = new Page(id);
         buffer.put(page.pageId, page);
         page.timestamp = LocalDateTime.now();
@@ -76,7 +76,7 @@ public class BufferManager {
 
     //todo make this just take in an (int pageId) instead of an array of bytes
     //public Page readPageFromHardware(int pageId, byte[] encodedByteArray, ArrayList<DataTypes> fakeTableSchema) throws IOException {
-    public Page readPageFromHardware(int pageId, ArrayList<DataTypes> fakeTableSchema) throws IOException {
+    public static Page readPageFromHardware(int pageId, ArrayList<DataTypes> fakeTableSchema) throws IOException {
 
         //get byte array from hardware
         //ByteBuffer buffer = StorageManager.readPage(pageId);
@@ -114,7 +114,7 @@ public class BufferManager {
     }
 
 
-    public Record convertBytesToRecord(byte[] encodedByteArray, ArrayList<DataTypes> fakeTableSchema) throws IOException {
+    public static Record convertBytesToRecord(byte[] encodedByteArray, ArrayList<DataTypes> fakeTableSchema) throws IOException {
 
         //todo the null byte array should be the same size as the length of characters
         //System.out.println("encoded byteArray: "+Arrays.toString(encodedByteArray));
@@ -160,7 +160,7 @@ public class BufferManager {
 
     //todo make this void and send the byte array to the sotrage manager
     //public byte[] writePageToHardware(Page page, ArrayList<DataTypes> fakeTableSchema){
-    public void writePageToHardware(Page page, ArrayList<DataTypes> fakeTableSchema) throws IOException {
+    public static void writePageToHardware(Page page, ArrayList<DataTypes> fakeTableSchema) throws IOException {
 
         ArrayList<byte[]> byteLists = new ArrayList<>();
         for(Record record : page.recordList){
@@ -195,7 +195,7 @@ public class BufferManager {
     }
 
 
-    public byte[] convertRecordToBytes(Record record, ArrayList<DataTypes> fakeTableSchema){
+    public static byte[] convertRecordToBytes(Record record, ArrayList<DataTypes> fakeTableSchema){
 
         ArrayList<byte[]> byteLists = new ArrayList<>();
 
@@ -298,8 +298,8 @@ class BufferMain{
 
 
         AttributeValue attribute4 = new AttributeValue(4, DataTypes.INTEGER);
-        AttributeValue attribute5 = new AttributeValue(5, DataTypes.INTEGER);
-        AttributeValue attribute6 = new AttributeValue(6, DataTypes.INTEGER);
+        AttributeValue attribute5 = new AttributeValue(5.5, DataTypes.DOUBLE);
+        AttributeValue attribute6 = new AttributeValue(true, DataTypes.BOOLEAN);
         Record record2 = new Record();
         record2.attributeList.add(attribute4);
         record2.attributeList.add(attribute5);
@@ -314,8 +314,8 @@ class BufferMain{
         //make a test table schema
         ArrayList<DataTypes> fakeTableSchema = new ArrayList<>();
         fakeTableSchema.add(DataTypes.INTEGER);
-        fakeTableSchema.add(DataTypes.INTEGER);
-        fakeTableSchema.add(DataTypes.INTEGER);
+        fakeTableSchema.add(DataTypes.DOUBLE);
+        fakeTableSchema.add(DataTypes.BOOLEAN);
 
 
         // write it
