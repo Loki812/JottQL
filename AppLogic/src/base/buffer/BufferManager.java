@@ -18,12 +18,14 @@ public class BufferManager {
     private final int maxPageCount;
     private static HashMap<Integer,Page> buffer;
     private DataCatalog dataCatalog;
+    private StorageManager storageManager;
 
     //todo make static instance of the BufferManager similar to how the bufferManager is done
     private static BufferManager bufferManager = null;
 
-    public BufferManager(int maxPageCount) throws Exception {
+    public BufferManager(int maxPageCount, String filename) throws Exception {
         this.maxPageCount = maxPageCount;
+        this.storageManager = new StorageManager(filename);
         //this.dataCatalog = DataCatalog.getInstance();
     }
 
@@ -73,7 +75,13 @@ public class BufferManager {
 
 
     //todo make this just take in an (int pageId) instead of an array of bytes
-    public Page readPageFromHardware(int pageId, byte[] encodedByteArray, ArrayList<DataTypes> fakeTableSchema) throws IOException {
+    //public Page readPageFromHardware(int pageId, byte[] encodedByteArray, ArrayList<DataTypes> fakeTableSchema) throws IOException {
+    public Page readPageFromHardware(int pageId, ArrayList<DataTypes> fakeTableSchema) throws IOException {
+
+        //get byte array from hardware
+        //ByteBuffer buffer = StorageManager.readPage(pageId);
+        byte[] encodedByteArray = StorageManager.readPage(pageId);
+
         int encodedIndex = 0;
         Page finalPage = new Page(pageId);
         while(encodedIndex<encodedByteArray.length){
@@ -82,7 +90,7 @@ public class BufferManager {
             //null-byte array
             byte[] nullByteArray = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+fakeTableSchema.size()));
             encodedIndex+=fakeTableSchema.size();
-            System.out.println("null-byte array: "+Arrays.toString(nullByteArray));
+            //System.out.println("null-byte array: "+Arrays.toString(nullByteArray));
             //objects in byte array
             for(int i=0; i<nullByteArray.length; i++){
                 DataTypes dataType = fakeTableSchema.get(i);
@@ -151,7 +159,8 @@ public class BufferManager {
 
 
     //todo make this void and send the byte array to the sotrage manager
-    public byte[] writePageToHardware(Page page, ArrayList<DataTypes> fakeTableSchema){
+    //public byte[] writePageToHardware(Page page, ArrayList<DataTypes> fakeTableSchema){
+    public void writePageToHardware(Page page, ArrayList<DataTypes> fakeTableSchema) throws IOException {
 
         ArrayList<byte[]> byteLists = new ArrayList<>();
         for(Record record : page.recordList){
@@ -161,7 +170,7 @@ public class BufferManager {
         //find size of final array
         int finalByteArraySize = 0;
         for(int i=0; i<byteLists.size(); i++){
-            System.out.println(Arrays.toString(byteLists.get(i)));
+            //System.out.println(Arrays.toString(byteLists.get(i)));
             finalByteArraySize+=byteLists.get(i).length;
         }
 
@@ -177,7 +186,12 @@ public class BufferManager {
         }
 
 
-        return finalByteArray;
+        //return finalByteArray;
+        ByteBuffer buffer = ByteBuffer.wrap(finalByteArray);
+
+        //todo fix this
+        System.out.println("buffer lengeth: "+buffer.array().length);
+        StorageManager.writePage(page.pageId, buffer);
     }
 
 
@@ -201,16 +215,16 @@ public class BufferManager {
 
             ByteBuffer byteBuffer = null;
 
-            System.out.println("Attribute: "+attributeValue);
+            //System.out.println("Attribute: "+attributeValue);
             if(attributeValue.data!=null){
                 switch(attributeValue.type){
                     case DataTypes.INTEGER:
-                        System.out.println("Its an int!");
+                        //System.out.println("Its an int!");
                         byteBuffer = ByteBuffer.allocate(Integer.BYTES);
                         byteBuffer.putInt((Integer) attributeValue.data);
                         break;
                     case DataTypes.DOUBLE:
-                        System.out.println("Its a double!");
+                        //System.out.println("Its a double!");
                         byteBuffer = ByteBuffer.allocate(Double.BYTES);
                         byteBuffer.putDouble((Double) attributeValue.data);
                         break;
@@ -269,7 +283,8 @@ public class BufferManager {
 
 class BufferMain{
     public static void main(String[] args) throws Exception {
-        BufferManager bufferManager = new BufferManager(50);
+        DataCatalog.buildCatalog(500,"data");
+        BufferManager bufferManager = new BufferManager(500, "storage.bin");
 
         //make a test table structure
 
@@ -305,11 +320,14 @@ class BufferMain{
 
         // write it
         byte[] encodedByteArray;
-        encodedByteArray = bufferManager.writePageToHardware(testPage, fakeTableSchema);
+        //ncodedByteArray = bufferManager.writePageToHardware(testPage, fakeTableSchema);
+        bufferManager.writePageToHardware(testPage, fakeTableSchema);
+
 
         //read it
         System.out.println("Reading...");
-        Page decodedPage = bufferManager.readPageFromHardware(1,encodedByteArray, fakeTableSchema);
+        //Page decodedPage = bufferManager.readPageFromHardware(1,encodedByteArray, fakeTableSchema);
+        Page decodedPage = bufferManager.readPageFromHardware(1, fakeTableSchema);
         System.out.println("decoded record");
         for(Record record : decodedPage.recordList){
             System.out.println("next record");
