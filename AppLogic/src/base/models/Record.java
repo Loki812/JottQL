@@ -19,7 +19,7 @@ public class Record {
      *      0 if they are equal
      */
     public int compareTo(Record rec, TableSchema schema) {
-        int primaryKeyIndex = schema.getPrimaryIndex();
+        int primaryKeyIndex = schema.getIndex(schema.primaryKey);
         AttributeValue primaryKey = attributeList.get(primaryKeyIndex);
         return primaryKey.compareTo(rec.attributeList.get(primaryKeyIndex));
     }

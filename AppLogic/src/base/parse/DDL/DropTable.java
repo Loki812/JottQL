@@ -1,5 +1,8 @@
 package base.parse.DDL;
+//import base.buffer.BufferManager;
 import base.models.DataCatalog;
+import base.models.Page;
+import base.models.TableSchema;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,9 +12,9 @@ public class DropTable {
     public static void parse(String command) throws Exception {
         command = command.substring(COMMAND_LENGTH);
         String table_Name = command.replace(";", "");
-        //TODO Drop the table
         DataCatalog dc = DataCatalog.getInstance();
+        //Page first = BufferManager.getPage(dc.getTableSchema(table_Name).getRootPageID());
+        //first.deleteTable();
         dc.removeTableSchema(table_Name);
-
     }
 }

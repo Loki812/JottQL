@@ -1,4 +1,6 @@
 import base.models.DataCatalog;
+import base.parse.DDL.CreateTable;
+import base.parse.DDL.DropTable;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,23 +18,23 @@ public class Main {
      *       - indexing - will indexing be used True or False
      *
      * **/
-    public static void main(String[] args)  {
-
-        // Check if exists build File, if not create new file.
-        try {
-            File dbFile = new File(args[0] + "db.bin");
-            // docs say it only creates new file if file existed before
-            // therefore we don't have to check if it exists beforehand
-            boolean madeNew = dbFile.createNewFile();
-            if (madeNew) {
-                System.out.println("Database found at " + args[0] + " initializing...");
-            } else {
-                System.out.println("No file found at " + args[0] + " creating new file...");
-            }
-        } catch (IOException e) {
-            System.err.println("An error occurred while attempting to initialize database: " + e);
-            System.exit(1);
-        }
+    public static void main(String[] args) throws Exception {
+//
+//        // Check if exists build File, if not create new file.
+//        try {
+//            File dbFile = new File(args[0] + "db.bin");
+//            // docs say it only creates new file if file existed before
+//            // therefore we don't have to check if it exists beforehand
+//            boolean madeNew = dbFile.createNewFile();
+//            if (madeNew) {
+//                System.out.println("Database found at " + args[0] + " initializing...");
+//            } else {
+//                System.out.println("No file found at " + args[0] + " creating new file...");
+//            }
+//        } catch (IOException e) {
+//            System.err.println("An error occurred while attempting to initialize database: " + e);
+//            System.exit(1);
+//        }
 
         // build data catalog with page-size and data directory
         DataCatalog.buildCatalog(Integer.parseInt(args[1]), args[0]);
@@ -56,10 +58,10 @@ public class Main {
             String firstWord = input.split(" ")[0].toUpperCase();
 
             switch (firstWord) {
-                case "CREATE" -> System.out.println("Creating Table...");
+                case "CREATE" -> CreateTable.parse(input);
                 case "SELECT" -> System.out.println("Selecting something...");
                 case "INSERT" -> System.out.println("Inserting Something...");
-                case "DROP" -> System.out.println("Dropping a Table...");
+                case "DROP" -> DropTable.parse(input);
                 case "ALTER" -> System.out.println("Altering a Table...");
                 case "EXIT" -> {
                     DataCatalog.saveToDisk();

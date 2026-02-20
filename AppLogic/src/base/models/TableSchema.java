@@ -19,8 +19,12 @@ public class TableSchema {
     public String primaryKey;
     private int recordSize; // not stored on disk, calculated on load from disk or instantiation.
     private int rootPageID;
+    private static final DataCatalog dc = DataCatalog.getInstance();
 
-    public TableSchema() {}
+    public TableSchema() {
+        rootPageID = dc.getNextAvailablePageID();
+        attributeSchemas = new LinkedHashMap<>();
+    }
 
 
 
@@ -39,9 +43,11 @@ public class TableSchema {
         for (int i = 0; i < ts.numOfAttributes; i++) {
             AttributeSchema a = AttributeSchema.createAttributeSchemaFromDisk(in, tempSize);
             tempSize += a.getLength();
+            if(a.isPrimaryKey()){
+                ts.primaryKey = a.attributeName;
+            }
             ts.attributeSchemas.put(a.attributeName, a);
         }
-
         ts.recordSize = tempSize;
         ts.rootPageID = in.readInt();
 
@@ -49,14 +55,26 @@ public class TableSchema {
     }
 
     public static TableSchema createTableSchemaFromQuery(String name, ArrayList<String> attributes) throws Exception {
-        DataCatalog dc = DataCatalog.getInstance();
 
         TableSchema ts = new TableSchema();
         ts.tableName = name;
-        ts.rootPageID = dc.getNextAvailablePageID();
+
         for(String attribute : attributes) {
             AttributeSchema atb = createAttributeSchemaFromQuery(attribute);
+            if(atb.isPrimaryKey()){
+                if(ts.primaryKey == null){
+                    ts.primaryKey = atb.attributeName;
+                }else{
+                    System.out.println("Duplicate primary key");
+                    throw new Exception();
+                }
+
+            }
             ts.attributeSchemas.put(atb.attributeName, atb);
+        }
+        if(ts.primaryKey == null){
+            System.out.println("No primary key found");
+            throw new Exception();
         }
         return ts;
     }
@@ -83,10 +101,10 @@ public class TableSchema {
 
     public String getPrimaryKey() { return primaryKey; }
 
-    public Integer getPrimaryIndex() {
+    public Integer getIndex(String attribute_key) {
         Integer index = 0;
         for (String key : attributeSchemas.sequencedKeySet()) {
-            if (primaryKey.equals(key)) {
+            if (attribute_key.equals(key)) {
                 return index;
             }else{
                 index++;
@@ -99,12 +117,23 @@ public class TableSchema {
         return attributeSchemas.get(name);
     }
 
-    public void removeAttributeSchema(String name) {
+    public void removeAttributeSchema(String name) throws Exception {
+        if(primaryKey.equals(name)){
+            System.out.println("Cannot remove primary key");
+            throw new Exception();
+        }
+        Integer index = getIndex(name);
+
         attributeSchemas.remove(name);
         numOfAttributes -= 1;
+
     }
 
-    public void addAttributeSchema(AttributeSchema a) {
+    public void addAttributeSchema(AttributeSchema a) throws Exception {
+        if(a.isPrimaryKey()){
+            System.out.println("Primary key already exists");
+            throw new Exception();
+        }
         attributeSchemas.put(a.attributeName, a);
         numOfAttributes += 1;
     }

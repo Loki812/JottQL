@@ -19,6 +19,7 @@ public class CreateTable {
             dc.addTableSchema(ts);
         }else {
             System.out.println("ending not valid");
+            System.out.println(command);
             throw new Exception();
         }
 

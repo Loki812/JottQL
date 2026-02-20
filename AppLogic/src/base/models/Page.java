@@ -1,6 +1,7 @@
 package base.models;
 
-import base.buffer.BufferManager;
+//import base.buffer.BufferManager;
+import base.storage.StorageManager;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -36,7 +37,7 @@ public class Page {
 
         // If the page is full, split it
         if (currentSize + recordSize > pageSize) {
-            splitPage(schema);
+           // splitPage(schema);
         }
 
         // If the page is not full, insert the record at the correct position
@@ -55,39 +56,52 @@ public class Page {
         this.hasBeenModified = true;
         this.timestamp = LocalDateTime.now();
     }
+//
+//    /**
+//     * Split a full page and insert a record into one of the pages.
+//     *
+//     * @param schema The table schema
+//     * @throws Exception If the next page cannot be retrieved
+//     * @throws IllegalStateException If no next page is available
+//     */
+//    private void splitPage(TableSchema schema) throws Exception {
+//        if (nextPageId < 0) {
+//            throw new IllegalStateException("No next page available for split");
+//        }
+//
+//        // Fetch the next page from the buffer
+//        Page nextPage = BufferManager.getPage(nextPageId);
+//
+//        // Split the record list into two equal halves
+//        int split = recordList.size() / 2;
+//
+//        // Move half of the records to the next page
+//        nextPage.recordList.addAll(recordList.subList(split, recordList.size()));
+//        recordList.subList(split, recordList.size()).clear();
+//
+//        // Recalculate each page's current size
+//        this.currentSize = recordList.size() * schema.getRecordSize();
+//        nextPage.currentSize = recordList.size() * schema.getRecordSize();
+//
+//        // Mark both pages as having been modified
+//        this.hasBeenModified = true;
+//        nextPage.hasBeenModified = true;
+//
+//        // Record timestamps
+//        this.timestamp = java.time.LocalDateTime.now();
+//        nextPage.timestamp = java.time.LocalDateTime.now();
+//    }
 
-    /**
-     * Split a full page and insert a record into one of the pages.
-     *
-     * @param schema The table schema
-     * @throws Exception If the next page cannot be retrieved
-     * @throws IllegalStateException If no next page is available
-     */
-    private void splitPage(TableSchema schema) throws Exception {
-        if (nextPageId < 0) {
-            throw new IllegalStateException("No next page available for split");
+    public void deleteTable(){
+        //bufferManager.deletePage(pageId)
+        //BufferManager.getPage(nextPageId).deleteTable();;
+        StorageManager.deletePage(pageId);
+    }
+    public void deleteColumn(int index){
+        for(Record record : recordList){
+            record.attributeList.remove(index);
         }
-
-        // Fetch the next page from the buffer
-        Page nextPage = BufferManager.getPage(nextPageId);
-
-        // Split the record list into two equal halves
-        int split = recordList.size() / 2;
-
-        // Move half of the records to the next page
-        nextPage.recordList.addAll(recordList.subList(split, recordList.size()));
-        recordList.subList(split, recordList.size()).clear();
-
-        // Recalculate each page's current size
-        this.currentSize = recordList.size() * schema.getRecordSize();
-        nextPage.currentSize = recordList.size() * schema.getRecordSize();
-
-        // Mark both pages as having been modified
-        this.hasBeenModified = true;
-        nextPage.hasBeenModified = true;
-
-        // Record timestamps
-        this.timestamp = java.time.LocalDateTime.now();
-        nextPage.timestamp = java.time.LocalDateTime.now();
+        //BufferManager.getPage(nextPageId).deleteColumn(index);
+        hasBeenModified = true;
     }
 }

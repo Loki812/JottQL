@@ -25,7 +25,6 @@ public class AtlerTable {
         } else if(operation.equals("DROP")) {
             String attribute = command;
             ts.removeAttributeSchema(attribute);
-            //TODO remake the table with dropped column
         }
     }
 }
