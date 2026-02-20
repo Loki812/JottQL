@@ -3,6 +3,7 @@ import base.models.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -39,32 +40,35 @@ public class BufferManager {
 
 
     public static Page getPage(int id){
+        if(buffer.containsKey(id)){
+            Page page = buffer.get(id);
+            page.timestamp = LocalDateTime.now();
+            return page;
+        } else {
+            //todo actually make a proper getPage function
+            Page decodedPage; // = bufferManager.readPageFromHardware(1,encodedByteArray, fakeTableSchema);
+            decodedPage = new Page(id);
+            buffer.put(decodedPage.pageId, decodedPage);
+            decodedPage.timestamp = LocalDateTime.now();
+            return decodedPage;
+        }
+    }
 
-        //todo actually make a proper getPage function
-        return new Page(1);
-
+    public Page createNewPage(int id){
+        Page page = new Page(id);
+        buffer.put(page.pageId, page);
+        page.timestamp = LocalDateTime.now();
+        return page;
     }
 
     /*
-
-    public Page createNewPage(...){
-
-    }
-
     private Page readPageFromHardware(int pageId) throws IOException {
-
-
 
         //todo send pageId to storage managers -> get a ByteBuffer
         ByteBuffer pageData = StorageManager.readPage(id);
         //todo convert byteBuffers to Page -> return page
 
-        //
-
     }
-
-
-
      */
 
 
@@ -204,7 +208,11 @@ public class BufferManager {
                         System.out.println("Its an int!");
                         byteBuffer = ByteBuffer.allocate(Integer.BYTES);
                         byteBuffer.putInt((Integer) attributeValue.data);
-
+                        break;
+                    case DataTypes.DOUBLE:
+                        System.out.println("Its a double!");
+                        byteBuffer = ByteBuffer.allocate(Double.BYTES);
+                        byteBuffer.putDouble((Double) attributeValue.data);
                         break;
 
                     default:
@@ -258,6 +266,7 @@ public class BufferManager {
 
 }
 
+
 class BufferMain{
     public static void main(String[] args) throws Exception {
         BufferManager bufferManager = new BufferManager(50);
@@ -310,20 +319,5 @@ class BufferMain{
 
             }
         }
-
-        //print the returned page
-        /*
-        System.out.println("Returned Page:");
-        for(Record record : decodedPage.recordList){
-            for(AttributeValue attributeValue : record.attributeList){
-
-                System.out.println(attributeValue);
-
-            }
-        }
-
-         */
-
-
     }
 }
