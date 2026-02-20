@@ -34,16 +34,27 @@ public class Page {
      */
     public void insertIntoPage(Record record, TableSchema schema) throws Exception {
         int recordSize = schema.getRecordSize();
-        int pageSize = DataCatalog.getInstance().getPageSize();
+        int pageSize = catalog.getPageSize();
 
-        // If the page is full, split it
-        if (currentSize + recordSize > pageSize) {
-            splitPage(schema);
+        if (recordList.isEmpty()) {
+            recordList.addFirst(record);
+            this.currentSize += recordSize;
+            this.hasBeenModified = true;
+            this.timestamp = LocalDateTime.now();
+            return;
         }
 
-        // If the page is not full, insert the record at the correct position
         for (int i = 0; i < recordList.size(); i++) {
+            if (record.compareTo(recordList.get(i), schema) == 0) {
+                throw new Exception("Duplicate primary key detected");
+            }
             if (record.compareTo(recordList.get(i), schema) < 0) {
+                // If the page is full, split it
+                if (currentSize + recordSize > pageSize) {
+                    splitPage(schema);
+                    insertIntoPage(record, schema);
+                }
+                // Otherwise insert the record in the correct place
                 recordList.add(i, record);
                 this.currentSize += recordSize;
                 this.hasBeenModified = true;
@@ -51,11 +62,8 @@ public class Page {
                 return;
             }
         }
-        // Add to end if this record is the largest
-        recordList.add(record);
-        this.currentSize += recordSize;
-        this.hasBeenModified = true;
-        this.timestamp = LocalDateTime.now();
+
+        BufferManager.getPage(nextPageId).insertIntoPage(record, schema);
     }
 
     /**
