@@ -11,7 +11,11 @@ public class AttributeValue<T> {
 
 
     public int compareTo(AttributeValue<T> attribute){
-        return this.toString().compareTo(attribute.toString());
+        try {
+            return Double.compare(Double.parseDouble(data.toString()), Double.parseDouble(attribute.data.toString()));
+        } catch (NumberFormatException e) {
+            return this.toString().compareTo(attribute.toString());
+        }
     }
 
     @Override
