@@ -15,7 +15,7 @@ public class DataCatalog {
     private int pageSize; // represent in terms of bytes?
     private int tableCount; // in header of bin file, needed for extracting
     private int nextAvailablePageID; //  if free list is empty, use this offset
-    private List<Integer> freePageList; // List of free page IDs within the DB
+    private static ArrayList<Integer> freePageList; // List of free page IDs within the DB
     private Map<String, TableSchema> tables;
 
 
@@ -145,7 +145,11 @@ public class DataCatalog {
         // wherever this is called, ensure saveToDisk() is called
     }
 
-    public void addTableSchema(TableSchema schema) {
+    public void addTableSchema(TableSchema schema) throws Exception {
+        if(catalog.tables.containsKey(schema.tableName)){
+            System.out.println("Table already exists: " + schema.tableName);
+            throw new Exception();
+        }
         catalog.tables.put(schema.tableName, schema);
         catalog.tableCount += 1;
     }
@@ -164,4 +168,12 @@ public class DataCatalog {
         }
     }
 
+    /**
+     * Get the ArrayList of free pages.
+     *
+     * @return the freePages ArrayList of Integers
+     */
+    public static ArrayList<Integer> getFreePageList() {
+        return freePageList;
+    }
 }
