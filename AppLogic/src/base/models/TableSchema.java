@@ -20,7 +20,7 @@ public class TableSchema {
     private LinkedHashMap<String, AttributeSchema> attributeSchemas;
     public String primaryKey;
     private int recordSize; // not stored on disk, calculated on load from disk or instantiation.
-    private int rootPageID;
+    public int rootPageID;
     private static final DataCatalog dc = DataCatalog.getInstance();
 
     public TableSchema() {

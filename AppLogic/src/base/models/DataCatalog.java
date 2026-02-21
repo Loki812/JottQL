@@ -1,4 +1,6 @@
 package base.models;
+import base.buffer.BufferManager;
+
 import java.io.*;
 import java.util.*;
 import java.nio.file.*;
@@ -150,8 +152,10 @@ public class DataCatalog {
             System.out.println("Table already exists: " + schema.tableName);
             throw new Exception();
         }
+        schema.rootPageID = getNextAvailablePageID();
         catalog.tables.put(schema.tableName, schema);
         catalog.tableCount += 1;
+        BufferManager.createNewPage(schema.getRootPageID(), schema.tableName);
     }
 
     /**
