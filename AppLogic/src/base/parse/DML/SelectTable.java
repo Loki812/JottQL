@@ -52,15 +52,24 @@ public class SelectTable {
         System.out.println();
     }
 
-    private static int[] findSpacing(Page page) {
+    private static int[] findSpacing(Page page, TableSchema tableSchema) {
         try{
             int[] spacing = new int[page.recordList.getFirst().attributeList.size()];
-            for(Record r : page.recordList){
-                for(int i = 0; i < r.attributeList.size(); i++){
-                    if(spacing[i] < r.attributeList.get(i).toString().length()){
-                        spacing[i] = r.attributeList.get(i).toString().length();
+            ArrayList<AttributeSchema> attributeSchemas = new ArrayList<>(tableSchema.getAttributeSchemas().sequencedValues());
+            for (int i = 0; i < attributeSchemas.size(); i++) {
+                if (spacing[i] < attributeSchemas.get(i).attributeName.length()) {
+                    spacing[i] = attributeSchemas.get(i).attributeName.length();
+                }
+            }
+            while (page != null) {
+                for (Record r : page.recordList) {
+                    for (int i = 0; i < r.attributeList.size(); i++) {
+                        if (spacing[i] < r.attributeList.get(i).toString().length()) {
+                            spacing[i] = r.attributeList.get(i).toString().length();
+                        }
                     }
                 }
+                page = BufferManager.getPage(page.nextPageId);
             }
             return spacing;
         }catch (Exception e) {
@@ -71,7 +80,6 @@ public class SelectTable {
     public static void parse(String command) throws Exception {
 
         String trimmedCommand = command.trim();
-        System.out.println(trimmedCommand);
         if(!trimmedCommand.startsWith("SELECT")) {
 
             System.out.println("Invalid SELECT Command");
@@ -123,7 +131,7 @@ public class SelectTable {
 
         int pageId = tableSchema.getRootPageID();
         Page p = BufferManager.getPage(pageId);
-        int[] spacing = findSpacing(p);
+        int[] spacing = findSpacing(p, tableSchema);
         printAttributes(tableSchema, spacing);
         if(spacing != null) {
             while (p != null) {

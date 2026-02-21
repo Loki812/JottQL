@@ -1,4 +1,6 @@
 package base.models;
+import base.buffer.BufferManager;
+
 import java.io.*;
 import java.util.*;
 import java.nio.file.*;
@@ -18,25 +20,13 @@ public class DataCatalog {
     private static ArrayList<Integer> freePageList; // List of free page IDs within the DB
     private Map<String, TableSchema> tables;
 
-    private static boolean isInitialized = false;
 
     private DataCatalog() {}
 
-    /**
-     * added the wait loop so things like Storagemanager, Buffermanager, etc. wait until
-     * catalog is completed
-     *
-     *
-     * @return the singleton instance of the catalog
-     */
     public static synchronized DataCatalog getInstance() {
-        while (!isInitialized) {
-            try {
-                System.out.println("Waiting for catalog to build...");
-                DataCatalog.class.wait(); // Pauses this thread until notifyAll() is called
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+        if (catalog == null) {
+            System.err.println("Catalog was not built before attempting use...");
+            System.exit(1);
         }
         return catalog;
     }
@@ -49,8 +39,7 @@ public class DataCatalog {
      * @param dataDirectory - the path to the catalog.bin file.
      *
      **/
-    public static synchronized void buildCatalog(Integer suggestedSize, String dataDirectory) {
-        if (isInitialized) return; // if buildCatalog was already called do nothing
+    public static void buildCatalog(Integer suggestedSize, String dataDirectory) {
 
         catalog = new DataCatalog();
         File catalogFile = new File(dataDirectory, "catalog.bin");
@@ -76,10 +65,9 @@ public class DataCatalog {
             catalog.freePageList = new ArrayList<>();
             catalog.tables = new HashMap<String, TableSchema>();
             saveToDisk();
-        }
 
-        isInitialized = true;
-        DataCatalog.class.notifyAll(); // notify all processes waiting on buildCatalog()
+
+        }
     }
 
     /**
@@ -93,8 +81,7 @@ public class DataCatalog {
         // Verify file using magic number
         int fileMagicNumber = in.readInt();
         if (fileMagicNumber != catalog.MAGIC_NUMBER) {
-            System.err.println("Magic number mismatch! This file is not a valid database catalog.");
-            System.exit(0);
+            throw new IOException("Magic number mismatch! This file is not a valid database catalog.");
         }
         catalog.pageSize = in.readInt();
         catalog.tableCount = in.readInt();
@@ -141,7 +128,6 @@ public class DataCatalog {
 
         } catch (IOException e) {
             System.err.println("Error occurred while saving DataCatalog: " + e.getMessage());
-            System.exit(0);
         }
     }
 
@@ -166,8 +152,10 @@ public class DataCatalog {
             System.out.println("Table already exists: " + schema.tableName);
             throw new Exception();
         }
+        schema.rootPageID = getNextAvailablePageID();
         catalog.tables.put(schema.tableName, schema);
         catalog.tableCount += 1;
+        BufferManager.createNewPage(schema.getRootPageID(), schema.tableName);
     }
 
     /**

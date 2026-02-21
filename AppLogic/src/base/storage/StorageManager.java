@@ -115,7 +115,7 @@ public class StorageManager {
             long offset = (long) pageId * pageSize;
 
             if (offset >= file.length()) {
-                throw new IllegalArgumentException("Page does not exist");
+                return;
             }
 
             // Create an empty ByteBuffer and overwrite the page at its location

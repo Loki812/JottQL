@@ -50,91 +50,68 @@ public class AttributeSchema {
     }
 
     public static AttributeSchema createAttributeSchemaFromQuery(String field) throws Exception {
-        ArrayList<String> fields = new ArrayList<>(Arrays.asList(field.trim().split(" ")));
-        String name = fields.removeFirst();
-        AttributeSchema atb = new  AttributeSchema();
-        try {
-            atb.attributeName = name;
-            String type = fields.removeFirst();
-            if(type.length()>6&&type.substring(0,DataTypes.valueOf("VARCHAR").toString().length()).equals("VARCHAR")) {
-                atb.dataType = DataTypes.VARCHAR;
-                type = type.substring(DataTypes.valueOf("VARCHAR").toString().length())
-                        .replace("(", "").replace(")", "");
-                atb.length = Integer.parseInt(type);
-            } else if(type.substring(0,DataTypes.valueOf("CHAR").toString().length()).equals("VARCHAR")) {
-                    atb.dataType = DataTypes.VARCHAR;
-                    type = type.substring(DataTypes.valueOf("CHAR").toString().length())
-                            .replace("(", "").replace(")", "");
-                    atb.length = Integer.parseInt(type);
-            }else{
-                atb.dataType = DataTypes.valueOf(type);
-                if(atb.dataType == DataTypes.INTEGER){
-                    atb.length = 4;
-                } else if(atb.dataType == DataTypes.DOUBLE){
-                    atb.length = 8;
-                } else if(atb.dataType == DataTypes.BOOLEAN){
-                    atb.length = 1;
+        field = field.strip();
+
+        // INPUT String = "ID INT PRIMARYKEY" <Identifier> <type> <constraints>
+        String[] tokens = field.split(" ");
+
+        // each column definition needs atleast <Ident> <type>
+        if (tokens.length < 2) {
+            throw new Exception("Invalid column definition: " + field);
+        }
+
+        /* ---------- Name -------------- */
+        AttributeSchema abtSch = new AttributeSchema();
+        abtSch.attributeName = tokens[0];
+
+        /* ---------- Datatype ------------ */
+        String type = tokens[1].split("\\(")[0];
+        abtSch.dataType = switch (type) {
+            case "INTEGER" -> DataTypes.INTEGER;
+            case "DOUBLE" -> DataTypes.DOUBLE;
+            case "BOOLEAN" -> DataTypes.BOOLEAN;
+            case "CHAR" -> DataTypes.CHAR;
+            case "VARCHAR" -> DataTypes.VARCHAR;
+            default -> throw new Exception("Invalid Datatype Specified: " + type + " is not valid");
+        };
+
+        /*------- Length ---------*/
+        abtSch.length = switch (abtSch.dataType) {
+            case INTEGER -> 4;
+            case DOUBLE -> 8;
+            case BOOLEAN -> 1;
+            case CHAR, VARCHAR -> {
+                int openParen = tokens[1].indexOf("(");
+                int closeParen = tokens[1].indexOf(")");
+
+                if (closeParen != -1 && openParen != -1 && closeParen > openParen) {
+                    yield Integer.parseInt(tokens[1].substring(openParen + 1, closeParen));
+                } else {
+                    throw new Exception("Column definition was not valid");
                 }
             }
-        }catch (IllegalArgumentException e){
-            System.out.println(name + " has invalid data type");
-            throw new Exception();
-        }catch (NoSuchElementException e){
-            System.out.println(name + " has No data type");
-            throw new Exception();
-        }
-        while(!fields.isEmpty()){
-            String constraint = fields.removeFirst();
-            if(constraint.equals("PRIMARYKEY")){
-                atb.primaryKey = true;
-                atb.unique = true;
-                atb.notNull = true;
-            }else if(constraint.equals("NOTNULL")) {
-                atb.notNull = true;
-            }else if(constraint.equals("UNIQUE")) {
-                atb.unique = true;
-            }else if(constraint.equals("DEFAULT")){
-                atb.hasDefaultValue = true;
-                try {
-                    switch (atb.dataType) {
-                        case CHAR -> {
-                            atb.defaultVal = fields.removeFirst();
-                            if(!atb.defaultVal.toString().startsWith("\"") || !atb.defaultVal.toString().endsWith("\"")){
-                                System.out.println(name + " has invalid default value");
-                                throw new Exception();
-                            }
-                            if (atb.defaultVal.toString().length() > atb.length) {
-                                System.out.println(name + " has invalid default value");
-                                throw new Exception();
-                            }
-                        }
-                        case VARCHAR -> {
-                            atb.defaultVal = fields.removeFirst();
-                            atb.defaultVarcharLength = atb.defaultVal.toString().length();
-                            if(!atb.defaultVal.toString().startsWith("\"") || !atb.defaultVal.toString().endsWith("\"")){
-                                System.out.println(name + " has invalid default value");
-                                throw new Exception();
-                            }
-                            if (atb.defaultVal.toString().length() > atb.defaultVarcharLength) {
-                                System.out.println(name + " has invalid default value");
-                                throw new Exception();
-                            }
-                        }
-                        case INTEGER -> atb.defaultVal = Integer.parseInt(fields.removeFirst());
-                        case BOOLEAN -> atb.defaultVal = Boolean.parseBoolean(fields.removeFirst());
-                        case DOUBLE -> atb.defaultVal = Double.parseDouble(fields.removeFirst());
-                    }
-                }catch (Exception e){
-                    System.out.println(name + " has invalid default value");
-                    throw new Exception();
+        };
+
+        /*------- Constraints ---------*/
+        for (int i = 2; i < tokens.length; i++) {
+            switch (tokens[i]) {
+                case "PRIMARYKEY" -> {
+                    abtSch.primaryKey = true;
+                    abtSch.unique = true;
+                    abtSch.notNull = true;
                 }
-            }else {
-                System.out.println(constraint + " is an invalid constraint");
-                throw new Exception();
+                case "NOTNULL" -> abtSch.notNull = true;
+                case "UNIQUE" -> abtSch.unique = true;
+                case "DEFAULT" -> {
+                    i += 1; // use to grab default value
+                    String defValue = tokens[i];
+                    abtSch.setDefaultValue(defValue);
+                }
             }
         }
 
-        return atb;
+
+        return abtSch;
     }
 
     public void saveAttributeSchemaToDisk(DataOutputStream out) throws IOException {
@@ -164,6 +141,44 @@ public class AttributeSchema {
     public Object getDefaultVal() { return defaultVal; }
 
     public DataTypes getDataType() { return dataType; }
+
+    /**
+     * setDefaultValue expects the attributeSchemas datatype to be not null
+     *
+     *
+     * @param defValue the default value passed from a query
+     */
+    private void setDefaultValue(String defValue) throws Exception {
+        defaultVal = switch(dataType) {
+            case INTEGER -> Integer.parseInt(defValue);
+            case DOUBLE -> Double.parseDouble(defValue);
+            case BOOLEAN -> Boolean.parseBoolean(defValue);
+            case CHAR -> {
+                if (!(defValue.startsWith("\"") && defValue.endsWith("\""))) {
+                    throw new Exception("Default Value was not valid: " + defValue);
+                }
+                String strippedValue = defValue.substring(1, defValue.length() - 1);
+
+                if (length != strippedValue.length()) {
+                    throw new Exception("Default value was not prescribed length: " + defValue);
+                }
+
+                yield strippedValue;
+            }
+            case VARCHAR -> {
+                if (!(defValue.startsWith("\"") && defValue.endsWith("\""))) {
+                    throw new Exception("Default Value was not valid: " + defValue);
+                }
+                String strippedValue = defValue.substring(1, defValue.length() - 1);
+
+                if (length < strippedValue.length()) {
+                    throw new Exception("Default value was too large to fit: " + defValue);
+                }
+
+                yield strippedValue;
+            }
+        };
+    }
 
 
 }

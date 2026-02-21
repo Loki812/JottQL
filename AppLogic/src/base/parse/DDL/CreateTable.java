@@ -26,7 +26,7 @@ public class CreateTable {
                 System.out.println("Missing opening parentheses");
                 throw new Exception();
             }
-            command = command.replace("(", "");
+            command = command.replaceFirst("\\(", "");
             ArrayList<String> columns = new ArrayList<String>(Arrays.asList(command.split(",")));
             TableSchema ts = TableSchema.createTableSchemaFromQuery(table_Name, columns);
             DataCatalog dc = DataCatalog.getInstance();
@@ -35,6 +35,6 @@ public class CreateTable {
             System.out.println("Missing closing parentheses");
             throw new Exception();
         }
-
+        System.out.println("Table Created Successfully... \n");
     }
 }
