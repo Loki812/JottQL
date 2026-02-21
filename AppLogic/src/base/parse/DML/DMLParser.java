@@ -49,7 +49,6 @@ public class DMLParser {
             }
             System.out.println(line);
         }
-        System.out.println("-".repeat(topLine.length() - 1));
         System.out.println("Rows Returned: " + resultSet.size());
     }
 

@@ -73,6 +73,7 @@ public class TableSchema {
 
             }
             ts.attributeSchemas.put(atb.attributeName, atb);
+            ts.numOfAttributes += 1;
         }
         if(ts.primaryKey == null){
             System.out.println("No primary key found");

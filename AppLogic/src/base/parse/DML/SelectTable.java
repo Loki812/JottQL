@@ -131,27 +131,13 @@ public class SelectTable {
 
         int pageId = tableSchema.getRootPageID();
         Page p = BufferManager.getPage(pageId);
-        int[] spacing = findSpacing(p, tableSchema);
-        printAttributes(tableSchema, spacing);
-        if(spacing != null) {
-            while (p != null) {
 
-                for (Record record : p.recordList) {
-
-                    printRecord(record, spacing);
-
-                }
-
-                if (p.nextPageId < 0) {
-
-                    break;
-
-                }
-
-                p = BufferManager.getPage(p.nextPageId);
-
-            }
+        ArrayList<String> attrNames = new ArrayList<>();
+        for (AttributeSchema att : tableSchema.getAttributeSchemas().sequencedValues()) {
+            attrNames.add(att.attributeName);
         }
+
+        DMLParser.printResultSet(attrNames, p.recordList);
 
     }
 
