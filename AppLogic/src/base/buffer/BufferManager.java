@@ -17,7 +17,7 @@ import base.storage.StorageManager;
 public class BufferManager {
 
     //max number of pages that can be in buffer before flushing
-    private final int maxPageCount;
+    private static int maxPageCount;
     private static HashMap<Integer,Page> buffer;
     private DataCatalog dataCatalog;
     private StorageManager storageManager;
@@ -76,7 +76,7 @@ public class BufferManager {
 
     public static void flushOldestPage() throws IOException {
         if (buffer.size()>= bufferManager.maxPageCount){
-            ArrayList<Page> pages = (ArrayList<Page>) buffer.values();
+            ArrayList<Page> pages = new ArrayList<Page>(buffer.values());
             Page oldestPage = pages.get(0);
             for(Page p : pages){
                 if(p.timestamp.isBefore(oldestPage.timestamp)){
@@ -90,7 +90,7 @@ public class BufferManager {
     }
 
     public static void flushBuffer() throws IOException {
-        ArrayList<Page> pages = (ArrayList<Page>) buffer.values();
+        ArrayList<Page> pages = new ArrayList<Page>(buffer.values());
         for(Page p : pages){
             writePageToHardware(p);
         }
