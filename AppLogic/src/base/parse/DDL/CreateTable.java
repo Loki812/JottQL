@@ -21,8 +21,8 @@ public class CreateTable {
         // strip command
         String table_Name = command.substring(0, command.indexOf(" ")).toUpperCase();
         if(command.charAt(command.length()-1) == ')' ){
-            command = command.substring(command.indexOf(" ") + 1,command.length()-1).trim(); //remove table name
-            if(!trimmedCommand.startsWith("(")) {
+            command = command.substring(command.indexOf(" "),command.length()-1).trim(); //remove table name
+            if(!command.startsWith("(")) {
                 System.out.println("Missing opening parentheses");
                 throw new Exception();
             }

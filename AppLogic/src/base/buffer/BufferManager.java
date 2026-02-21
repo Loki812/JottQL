@@ -27,6 +27,7 @@ public class BufferManager {
     public BufferManager(int maxPageCount, String directory) throws Exception {
         this.maxPageCount = maxPageCount;
         this.storageManager = new StorageManager(directory+"/storage.bin/");
+        buffer = new HashMap<>();
         //this.dataCatalog = DataCatalog.getInstance();
     }
 

@@ -59,28 +59,3 @@ public class DMLParser {
 
 
 }
-
-class testDMLParsing {
-    public static void main(String[] args) {
-        ArrayList<String> testNames = new ArrayList<>();
-        testNames.add("cat");
-        testNames.add("parrot");
-        testNames.add("alexander");
-        Record r1 = new Record(List.of(new AttributeValue<String>("Cat", DataTypes.VARCHAR),
-                new AttributeValue<Integer>(18592, DataTypes.INTEGER),
-                new AttributeValue<Double>(3.03, DataTypes.DOUBLE)));
-        Record r2 = new Record(List.of(new AttributeValue<String>("Catmeister", DataTypes.VARCHAR),
-                new AttributeValue<Integer>(192, DataTypes.INTEGER),
-                new AttributeValue<Double>(3.13, DataTypes.DOUBLE)));
-        Record r3 = new Record(List.of(new AttributeValue<String>("C", DataTypes.VARCHAR),
-                new AttributeValue<Integer>(18592342, DataTypes.INTEGER),
-                new AttributeValue<Double>(3.03, DataTypes.DOUBLE)));
-        Record r4 = new Record(List.of(new AttributeValue<String>("Catmeister", DataTypes.VARCHAR),
-                new AttributeValue<Integer>(192, DataTypes.INTEGER),
-                new AttributeValue<Double>(3.53, DataTypes.DOUBLE)));
-
-
-        DMLParser.printResultSet(testNames, List.of(r1, r2, r3, r4));
-
-    }
-}

@@ -71,8 +71,8 @@ public class SelectTable {
     public static void parse(String command) throws Exception {
 
         String trimmedCommand = command.trim();
-
-        if(!trimmedCommand.startsWith("SELECT ")) {
+        System.out.println(trimmedCommand);
+        if(!trimmedCommand.startsWith("SELECT")) {
 
             System.out.println("Invalid SELECT Command");
             throw new Exception();

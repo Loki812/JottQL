@@ -1,3 +1,4 @@
+import base.buffer.BufferManager;
 import base.models.DataCatalog;
 import base.parse.DDL.AtlerTable;
 import base.parse.DDL.CreateTable;
@@ -41,8 +42,7 @@ public class Main {
         DataCatalog.buildCatalog(Integer.parseInt(args[1]), args[0]);
         DataCatalog dc = DataCatalog.getInstance();
 
-        // BufferManager.buildBuffer(Integer.parseInt(args[2]))
-        // BufferManager bm = BufferManager.getInstance()
+        BufferManager bm = new BufferManager(Integer.parseInt(args[2]),args[0]);
 
         Scanner scanner = new Scanner(System.in);
 
@@ -61,17 +61,11 @@ public class Main {
             switch (firstWord) {
                 case "CREATE" -> CreateTable.execute(input);
                 case "SELECT" -> {
-
-                    System.out.println("Selecting something...");
-                    base.parse.DML.SelectTable.parse(firstWord);
-
+                    base.parse.DML.SelectTable.parse(input);
                 }
 
                 case "INSERT" -> {
-
-                    System.out.println("Inserting Something...");
-                    base.parse.DML.InsertTable.parse(firstWord);
-
+                    base.parse.DML.InsertTable.parse(input);
                 }
 
                 case "DROP" -> DropTable.execute(input);
