@@ -74,7 +74,7 @@ public class Page {
      * @throws Exception If the next page cannot be retrieved
      * @throws IllegalStateException If no next page is available
      */
-    private void splitPage() throws Exception {
+    private void splitPage(){
         if (nextPageId < 0) {
             throw new IllegalStateException("No next page available for split");
         }
@@ -103,6 +103,7 @@ public class Page {
         this.timestamp = java.time.LocalDateTime.now();
         nextPage.timestamp = java.time.LocalDateTime.now();
     }
+
     public void deleteTable(){
         Page page = BufferManager.getPage(nextPageId);
         if(page != null){
@@ -111,6 +112,7 @@ public class Page {
         StorageManager.deletePage(pageId);
         BufferManager.deletePage(pageId);
     }
+
     public void deleteColumn(int index){
         for(Record record : recordList){
             record.attributeList.remove(index);
@@ -126,9 +128,12 @@ public class Page {
         for(Record record : recordList){
             record.attributeList.add(defaultValue);
         }
-        BufferManager.getPage(nextPageId).addColumn(defaultValue);
+        Page page = BufferManager.getPage(nextPageId);
+        if(page != null){
+            page.addColumn(defaultValue);
+        }
         if (currentSize > DataCatalog.getInstance().getPageSize()) {
-            // splitPage(schema);
+            splitPage();
         }
     }
 }
