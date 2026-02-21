@@ -8,8 +8,8 @@ import java.util.ArrayList;
 
 public class Page {
 
+    public final String tableName;
     public int pageId;
-    public int tableId;
     public int nextPageId;
     public int currentSize;
     public boolean hasBeenModified;

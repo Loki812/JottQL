@@ -301,9 +301,8 @@ public class InsertTable {
 
                 Page p = BufferManager.getPage(tableSchema.getRootPageID());
                 if (p == null) {
-
-                    throw new Exception("Root page not found for table " + tableName);
-
+                    System.out.println("Inconsistent Database Cannot recover");
+                    System.exit(0);
                 }
 
                 p.insertIntoPage(record);
@@ -312,7 +311,7 @@ public class InsertTable {
             }
 
             catch (Exception e) {
-
+                System.out.println("Inserted " + inserted + " into " + tableName);
                 System.out.println("Insert failed on row " + (idx + 1) + ": " + e.getMessage());
                 throw e;
 
