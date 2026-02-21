@@ -73,6 +73,7 @@ public class Main {
                 case "EXIT" -> {
                     DataCatalog.saveToDisk();
                     // BufferManager (save before exiting_)
+                    BufferManager.flushBuffer();
                     System.out.println("Exiting Application");
                     System.exit(0);
                 }

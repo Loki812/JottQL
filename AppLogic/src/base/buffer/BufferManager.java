@@ -4,6 +4,7 @@ import base.models.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,7 +17,6 @@ import base.storage.StorageManager;
 public class BufferManager {
 
     //max number of pages that can be in buffer before flushing
-    //todo get max page count from command line
     private final int maxPageCount;
     private static HashMap<Integer,Page> buffer;
     private DataCatalog dataCatalog;
@@ -29,7 +29,6 @@ public class BufferManager {
         this.maxPageCount = maxPageCount;
         this.storageManager = new StorageManager(directory+"/storage.bin/");
         buffer = new HashMap<>();
-        //this.dataCatalog = DataCatalog.getInstance();
     }
 
 
@@ -44,29 +43,57 @@ public class BufferManager {
 
 
 
-    public static Page getPage(int id){
-        if(id==-1){
+    public static Page getPage(int pageId){
+        if(pageId==-1){
             return null;
-        }
-        if(buffer.containsKey(id)){
-            Page page = buffer.get(id);
+        } else if(buffer.containsKey(pageId)){
+            Page page = buffer.get(pageId);
             page.timestamp = LocalDateTime.now();
             return page;
         } else {
-            //todo actually make a proper getPage function
-            Page decodedPage; // = bufferManager.readPageFromHardware(1,encodedByteArray, fakeTableSchema);
-            decodedPage = new Page(id, "table");
-            buffer.put(decodedPage.pageId, decodedPage);
-            decodedPage.timestamp = LocalDateTime.now();
-            return decodedPage;
+            try{
+                flushOldestPage();
+                Page decodedPage = readPageFromHardware(pageId);
+                buffer.put(decodedPage.pageId, decodedPage);
+                decodedPage.timestamp = LocalDateTime.now();
+                return decodedPage;
+            } catch (Exception e){
+                System.out.println("Inconsistent Database");
+                System.exit(0);
+            }
+
         }
+        return null;
     }
 
-    public static Page createNewPage(int id, String table){
+    public static Page createNewPage(int id, String table) throws IOException {
+        flushOldestPage();
         Page page = new Page(id, table);
         buffer.put(page.pageId, page);
         page.timestamp = LocalDateTime.now();
         return page;
+    }
+
+    public static void flushOldestPage() throws IOException {
+        if (buffer.size()>= bufferManager.maxPageCount){
+            ArrayList<Page> pages = (ArrayList<Page>) buffer.values();
+            Page oldestPage = pages.get(0);
+            for(Page p : pages){
+                if(p.timestamp.isBefore(oldestPage.timestamp)){
+                    oldestPage = p;
+                }
+            }
+            writePageToHardware(oldestPage);
+            buffer.remove(oldestPage.pageId);
+        }
+
+    }
+
+    public static void flushBuffer() throws IOException {
+        ArrayList<Page> pages = (ArrayList<Page>) buffer.values();
+        for(Page p : pages){
+            writePageToHardware(p);
+        }
     }
 
     public static void deletePage(int pageId){
@@ -424,7 +451,7 @@ class BufferMain{
         testPage.recordList.add(record1);
         testPage.recordList.add(record2);
 
-        //todo make a test table schema
+        //make a test table schema
         TableSchema  tableSchema = new TableSchema();
         tableSchema.tableName = testPage.tableName;
         DataCatalog.getInstance().addTableSchema(tableSchema);
