@@ -144,7 +144,10 @@ public class TableSchema {
         }
         attributeSchemas.put(a.attributeName, a);
         numOfAttributes += 1;
-        BufferManager.getPage(rootPageID);
+        Page page = BufferManager.getPage(rootPageID);
+        assert page != null;
+        page.addColumn(new AttributeValue<>(a.getDefaultVal(),a.getDataType()));
+
     }
 
     public LinkedHashMap<String, AttributeSchema> getAttributeSchemas() {

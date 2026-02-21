@@ -35,12 +35,11 @@ public class Page {
      * @throws Exception If the DataCatalog instance cannot be retrieved
      */
     public void insertIntoPage(Record record, TableSchema schema) throws Exception {
-        int recordSize = schema.getRecordSize();
         int pageSize = catalog.getPageSize();
 
         if (recordList.isEmpty()) {
             recordList.addFirst(record);
-            this.currentSize += recordSize;
+            this.currentSize += record.getSize();
             this.hasBeenModified = true;
             this.timestamp = LocalDateTime.now();
             return;
@@ -52,13 +51,13 @@ public class Page {
             }
             if (record.compareTo(recordList.get(i), schema) < 0) {
                 // If the page is full, split it
-                if (currentSize + recordSize > pageSize) {
+                if (currentSize + record.getSize() > pageSize) {
                     splitPage();
                     insertIntoPage(record, schema);
                 }
                 // Otherwise insert the record in the correct place
                 recordList.add(i, record);
-                this.currentSize += recordSize;
+                this.currentSize += record.getSize();
                 this.hasBeenModified = true;
                 this.timestamp = LocalDateTime.now();
                 return;
@@ -92,8 +91,12 @@ public class Page {
         recordList.subList(split, recordList.size()).clear();
 
         // Recalculate each page's current size
-        this.currentSize = recordList.size() * schema.getRecordSize();
-        nextPage.currentSize = recordList.size() * schema.getRecordSize();
+        for(Record record : recordList){
+            currentSize += record.getSize();
+        }
+        for (Record record : nextPage.recordList) {
+            nextPage.currentSize += record.getSize();
+        }
 
         // Mark both pages as having been modified
         this.hasBeenModified = true;
@@ -126,7 +129,9 @@ public class Page {
 
     public void addColumn(AttributeValue<?> defaultValue){
         for(Record record : recordList){
+            currentSize -= record.getSize();
             record.attributeList.add(defaultValue);
+            currentSize += record.getSize();
         }
         Page page = BufferManager.getPage(nextPageId);
         if(page != null){
