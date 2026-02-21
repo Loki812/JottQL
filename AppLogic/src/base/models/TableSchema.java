@@ -136,7 +136,18 @@ public class TableSchema {
             System.out.println("Primary key already exists");
             throw new Exception();
         }
+        if(a.getNotNull()){
+            if(a.getDefaultVal() == null){
+                System.out.println("Not null requires a default value when altering a table");
+                throw new Exception();
+            }
+        }
         attributeSchemas.put(a.attributeName, a);
         numOfAttributes += 1;
+        BufferManager.getPage(rootPageID);
+    }
+
+    public LinkedHashMap<String, AttributeSchema> getAttributeSchemas() {
+        return attributeSchemas;
     }
 }

@@ -161,7 +161,11 @@ public class DataCatalog {
         // wherever this is called, ensure saveToDisk() is called
     }
 
-    public void addTableSchema(TableSchema schema) {
+    public void addTableSchema(TableSchema schema) throws Exception {
+        if(catalog.tables.containsKey(schema.tableName)){
+            System.out.println("Table already exists: " + schema.tableName);
+            throw new Exception();
+        }
         catalog.tables.put(schema.tableName, schema);
         catalog.tableCount += 1;
     }

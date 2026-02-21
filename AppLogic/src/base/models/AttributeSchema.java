@@ -46,20 +46,6 @@ public class AttributeSchema {
         as.notNull = in.readBoolean();
         as.primaryKey = in.readBoolean();
         as.unique = in.readBoolean();
-        as.hasDefaultValue = in.readBoolean();
-        if(as.hasDefaultValue){
-            switch (as.dataType) {
-                case CHAR -> as.defaultVal = new String(in.readNBytes(as.length), StandardCharsets.UTF_8);
-                case VARCHAR -> {
-                    as.defaultVarcharLength = in.readInt();
-                    as.defaultVal = new String(in.readNBytes(as.defaultVarcharLength), StandardCharsets.UTF_8);
-                }
-                case INTEGER -> as.defaultVal = in.readInt();
-                case BOOLEAN -> as.defaultVal = in.readBoolean();
-                case DOUBLE -> as.defaultVal = in.readDouble();
-            }
-        }
-
         return as;
     }
 
@@ -109,15 +95,38 @@ public class AttributeSchema {
                 atb.unique = true;
             }else if(constraint.equals("DEFAULT")){
                 atb.hasDefaultValue = true;
-                switch (atb.dataType) {
-                    case CHAR -> atb.defaultVal = fields.removeFirst();
-                    case VARCHAR -> {
-                        atb.defaultVal = fields.removeFirst();
-                        atb.defaultVarcharLength = atb.defaultVal.toString().length();
+                try {
+                    switch (atb.dataType) {
+                        case CHAR -> {
+                            atb.defaultVal = fields.removeFirst();
+                            if(!atb.defaultVal.toString().startsWith("\"") || !atb.defaultVal.toString().endsWith("\"")){
+                                System.out.println(name + " has invalid default value");
+                                throw new Exception();
+                            }
+                            if (atb.defaultVal.toString().length() > atb.length) {
+                                System.out.println(name + " has invalid default value");
+                                throw new Exception();
+                            }
+                        }
+                        case VARCHAR -> {
+                            atb.defaultVal = fields.removeFirst();
+                            atb.defaultVarcharLength = atb.defaultVal.toString().length();
+                            if(!atb.defaultVal.toString().startsWith("\"") || !atb.defaultVal.toString().endsWith("\"")){
+                                System.out.println(name + " has invalid default value");
+                                throw new Exception();
+                            }
+                            if (atb.defaultVal.toString().length() > atb.defaultVarcharLength) {
+                                System.out.println(name + " has invalid default value");
+                                throw new Exception();
+                            }
+                        }
+                        case INTEGER -> atb.defaultVal = Integer.parseInt(fields.removeFirst());
+                        case BOOLEAN -> atb.defaultVal = Boolean.parseBoolean(fields.removeFirst());
+                        case DOUBLE -> atb.defaultVal = Double.parseDouble(fields.removeFirst());
                     }
-                    case INTEGER -> atb.defaultVal = Integer.parseInt(fields.removeFirst());
-                    case BOOLEAN -> atb.defaultVal = Boolean.parseBoolean(fields.removeFirst());
-                    case DOUBLE -> atb.defaultVal = Double.parseDouble(fields.removeFirst());
+                }catch (Exception e){
+                    System.out.println(name + " has invalid default value");
+                    throw new Exception();
                 }
             }else {
                 System.out.println(constraint + " is an invalid constraint");
@@ -140,21 +149,6 @@ public class AttributeSchema {
         out.writeBoolean(notNull);
         out.writeBoolean(primaryKey);
         out.writeBoolean(unique);
-        out.writeBoolean(hasDefaultValue);
-        if(hasDefaultValue){
-            switch (dataType) {
-                case CHAR -> out.write(defaultVal.toString().getBytes(StandardCharsets.UTF_8));
-                case VARCHAR -> {
-                    out.writeInt(defaultVarcharLength);
-                    out.write(defaultVal.toString().getBytes(StandardCharsets.UTF_8));
-                }
-                case INTEGER -> out.writeInt((Integer)defaultVal);
-                case BOOLEAN -> out.writeBoolean((Boolean)defaultVal);
-                case DOUBLE -> out.writeDouble((Double)defaultVal);
-            }
-        }
-
-
     }
 
     public int getLength() { return length; }
@@ -163,6 +157,13 @@ public class AttributeSchema {
 
     public boolean isPrimaryKey() { return primaryKey; }
 
+    public boolean isUnique() { return unique; }
+
+    public boolean isHasDefaultValue() { return hasDefaultValue; }
+
+    public Object getDefaultVal() { return defaultVal; }
+
     public DataTypes getDataType() { return dataType; }
+
 
 }

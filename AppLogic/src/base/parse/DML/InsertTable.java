@@ -18,20 +18,31 @@ public class InsertTable {
         switch (raw) {
 
             case "NULL" -> {
-
+                if (schema.getNotNull()){
+                    System.out.println(schema.attributeName+" is not NULL");
+                }
                 return new AttributeValue<>(null, type);
 
             }
 
-            case "true" -> {
-
-                return new AttributeValue<>(true, type);
+            case "TRUE" -> {
+                if(type.equals(DataTypes.BOOLEAN)) {
+                    return new AttributeValue<>(true, type);
+                }else {
+                    System.out.println(schema.attributeName+" is not a BOOLEAN");
+                    throw new Exception();
+                }
 
             }
 
-            case "false" -> {
+            case "FALSE" -> {
 
-                return new AttributeValue<>(false, type);
+                if(type.equals(DataTypes.BOOLEAN)) {
+                    return new AttributeValue<>(false, type);
+                }else {
+                    System.out.println(schema.attributeName+" is not a BOOLEAN");
+                    throw new Exception();
+                }
 
             }
 
@@ -40,11 +51,20 @@ public class InsertTable {
         if(raw.startsWith("\"") && raw.endsWith("\"") && raw.length() >= 2) {
 
             String s = raw.substring(1, raw.length() - 1);
-            if(type == DataTypes.CHAR && s.length() != 1) {
-
-                System.out.println("Char must be of length 1");
-                throw new Exception();
-
+            if(type == DataTypes.CHAR) {
+                if(schema.getLength() == s.length()) {
+                    return new AttributeValue<>(s, type);
+                }else{
+                    System.out.println(s+": CHAR must be of length "+schema.getLength());
+                    throw new Exception();
+                }
+            }else if(type == DataTypes.VARCHAR) {
+                if(schema.getLength() >= s.length()) {
+                    return new AttributeValue<>(s, type);
+                }else{
+                    System.out.println(s+": VARCHAR must be within length "+schema.getLength());
+                    throw new Exception();
+                }
             }
 
             return new AttributeValue<>(s, type);
@@ -135,23 +155,6 @@ public class InsertTable {
 
     }
 
-    @SuppressWarnings("unchecked")
-    private static List<AttributeSchema> getSchemaInOrder(TableSchema tableSchema) throws Exception {
-
-        Field f = TableSchema.class.getDeclaredField("attributeSchemas");
-        f.setAccessible(true);
-        LinkedHashMap<String, AttributeSchema> map = (LinkedHashMap<String, AttributeSchema>) f.get(tableSchema);
-        if(map == null) {
-
-            System.out.println("Schema map is not initialized");
-            throw new Exception();
-
-        }
-
-        return new ArrayList<>(map.values());
-
-    }
-
     private static List<String> splitValue(String s) throws Exception {
 
         List<String> list = new ArrayList<>();
@@ -226,7 +229,7 @@ public class InsertTable {
 
         }
 
-        String tableName = remainder.substring(0, space).trim();
+        String tableName = remainder.substring(0, space).trim().toUpperCase();
         remainder = remainder.substring(space).trim();
         if(!remainder.startsWith("VALUES")) {
 
@@ -248,50 +251,12 @@ public class InsertTable {
         DataCatalog dataCatalog = DataCatalog.getInstance();
         TableSchema tableSchema = dataCatalog.getTableSchema(tableName);
         if(tableSchema == null) {
-
             System.out.println("Table " + tableName + " not found");
             throw new Exception();
 
         }
 
-        List<AttributeSchema> attributeSchemas = getSchemaInOrder(tableSchema);
-        Integer pkObject = tableSchema.getPrimaryIndex();
-        int pkIndex = (pkObject == null) ? -1 : pkObject;
-        if(attributeSchemas.size() == 1) {
-
-            AttributeSchema attrscma = attributeSchemas.getFirst();
-            for(String raw : vals) {
-
-                AttributeValue<?> attrval = convertLiteral(raw, attrscma);
-
-                if(pkIndex == 0) {
-
-                    Object candidate = attrval.data;
-                    if(candidate == null) {
-
-                        System.out.println("Primary key cannot be null");
-                        break;
-
-                    }
-
-                    if(isDuplicatePK(tableSchema, pkIndex, candidate)) {
-
-                        System.out.println("Duplicate PK: " + candidate);
-                        break;
-
-                    }
-
-                }
-
-                Record r = new Record();
-                r.attributeList.add(attrval);
-                insertIntoLastPage(tableSchema, r);
-
-            }
-
-            return;
-
-        }
+        List<AttributeSchema> attributeSchemas = new ArrayList<>(tableSchema.getAttributeSchemas().sequencedValues());
 
         if(vals.size() != attributeSchemas.size()) {
 
@@ -306,27 +271,7 @@ public class InsertTable {
             record.attributeList.add(convertLiteral(vals.get(i), attributeSchemas.get(i)));
 
         }
-
-        if(pkIndex >= 0) {
-
-            Object cand = record.attributeList.get(pkIndex).data;
-            if(cand == null) {
-
-                System.out.println("Primary key cannot be null");
-                throw new Exception();
-
-            }
-
-            if(isDuplicatePK(tableSchema, pkIndex, cand)) {
-
-                System.out.println("Duplicate PK: " + cand);
-                throw new Exception();
-
-            }
-
         insertIntoLastPage(tableSchema, record);
-
-        }
 
     }
 

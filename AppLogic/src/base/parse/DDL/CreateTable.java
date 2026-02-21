@@ -19,7 +19,7 @@ public class CreateTable {
         trimmedCommand = trimmedCommand.substring(0, trimmedCommand.length() - 1).trim();
         command = trimmedCommand.substring("CREATE TABLE ".length()).trim();
         // strip command
-        String table_Name = command.substring(0, command.indexOf(" "));
+        String table_Name = command.substring(0, command.indexOf(" ")).toUpperCase();
         if(command.charAt(command.length()-1) == ')' ){
             command = command.substring(command.indexOf(" ") + 1,command.length()-1).trim(); //remove table name
             if(!trimmedCommand.startsWith("(")) {

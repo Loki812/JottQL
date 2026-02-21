@@ -19,7 +19,7 @@ public class DropTable {
             throw new Exception();
         }
         trimmedCommand = trimmedCommand.substring(0, trimmedCommand.length() - 1).trim();
-        String table_Name = trimmedCommand.substring("DROP TABLE ".length()).trim();
+        String table_Name = trimmedCommand.substring("DROP TABLE ".length()).trim().toUpperCase();
         DataCatalog dc = DataCatalog.getInstance();
         Page first = BufferManager.getPage(dc.getTableSchema(table_Name).getRootPageID());
         first.deleteTable();

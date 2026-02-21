@@ -21,7 +21,7 @@ public class AtlerTable {
         trimmedCommand = trimmedCommand.substring(0, trimmedCommand.length() - 1).trim();
         command = trimmedCommand.substring("ALTER TABLE ".length()).trim();
 
-        String table_Name = command.substring(0, command.indexOf(" "));
+        String table_Name = command.substring(0, command.indexOf(" ")).toUpperCase();
         command = command.substring(command.indexOf(" ") + 1);
         String operation = command.substring(0, command.indexOf(" "));
         command = command.substring(command.indexOf(" ") + 1);
