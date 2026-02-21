@@ -24,6 +24,7 @@ public class Page {
         this.hasBeenModified = true;
         this.timestamp = LocalDateTime.now();
         this.catalog = DataCatalog.getInstance();
+        this.nextPageId = -1;
         recordList = new ArrayList<Record>();
     }
 
@@ -31,11 +32,11 @@ public class Page {
      * Insert a record into this page.
      *
      * @param record The record to insert
-     * @param schema The table schema
      * @throws Exception If the DataCatalog instance cannot be retrieved
      */
-    public void insertIntoPage(Record record, TableSchema schema) throws Exception {
+    public void insertIntoPage(Record record) throws Exception {
         int pageSize = catalog.getPageSize();
+        TableSchema schema = catalog.getTableSchema(tableName);
 
         if (recordList.isEmpty()) {
             recordList.addFirst(record);
@@ -53,7 +54,7 @@ public class Page {
                 // If the page is full, split it
                 if (currentSize + record.getSize() > pageSize) {
                     splitPage();
-                    insertIntoPage(record, schema);
+                    insertIntoPage(record);
                 }
                 // Otherwise insert the record in the correct place
                 recordList.add(i, record);
@@ -63,8 +64,12 @@ public class Page {
                 return;
             }
         }
-
-        BufferManager.getPage(nextPageId).insertIntoPage(record, schema);
+        if(nextPageId == -1){
+            nextPageId = DataCatalog.getInstance().getNextAvailablePageID();
+            BufferManager.createNewPage(nextPageId, tableName).insertIntoPage(record);
+        }else {
+            BufferManager.getPage(nextPageId).insertIntoPage(record);
+        }
     }
 
     /**

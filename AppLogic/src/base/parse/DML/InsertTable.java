@@ -110,51 +110,6 @@ public class InsertTable {
 
     }
 
-    private static boolean isDuplicatePK(TableSchema tableSchema, int pkIndex, Object candidate) throws Exception {
-
-        int pageId = tableSchema.getRootPageID();
-        while (pageId >= 0) {
-
-            Page p = BufferManager.getPage(pageId);
-            for(Record r : p.recordList) {
-
-                if(pkIndex >= r.attributeList.size()) {
-
-                    continue;
-
-                }
-
-                Object exists = r.attributeList.get(pkIndex).data;
-                if(exists != null && exists.equals(candidate)) {
-
-                    return true;
-
-                }
-
-            }
-
-            pageId = p.nextPageId;
-
-        }
-
-        return false;
-
-    }
-
-    public static void insertIntoLastPage(TableSchema tableSchema, Record record) throws Exception {
-
-        int pageId = tableSchema.getRootPageID();
-        Page p = BufferManager.getPage(pageId);
-        while(p.nextPageId >= 0) {
-
-            p = BufferManager.getPage(p.nextPageId);
-
-        }
-
-        p.insertIntoPage(record, tableSchema);
-
-    }
-
     private static List<String> splitValue(String s) throws Exception {
 
         List<String> list = new ArrayList<>();
@@ -211,7 +166,6 @@ public class InsertTable {
             throw new Exception();
 
         }
-
         if(!trimmedCommand.endsWith(";")) {
 
             System.out.println("Missing ';'");
@@ -271,7 +225,7 @@ public class InsertTable {
             record.attributeList.add(convertLiteral(vals.get(i), attributeSchemas.get(i)));
 
         }
-        insertIntoLastPage(tableSchema, record);
+        BufferManager.getPage(tableSchema.getRootPageID()).insertIntoPage(record);
 
     }
 
