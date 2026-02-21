@@ -120,15 +120,15 @@ public class BufferManager {
                             encodedIndex+=1;
                             break;
                         case DataTypes.CHAR:
-                            dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
+                            byte[] charLengthByte = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
                             encodedIndex+=Integer.BYTES;
-                            int charLength = ByteBuffer.wrap(dataSegment).getInt();
+                            int charLength = ByteBuffer.wrap(charLengthByte).getInt();
                             encodedIndex+=charLength;
                             break;
                         case DataTypes.VARCHAR:
-                            dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
+                            byte[] varLengthByte = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
                             encodedIndex+=Integer.BYTES;
-                            int varLength = ByteBuffer.wrap(dataSegment).getInt();
+                            int varLength = ByteBuffer.wrap(varLengthByte).getInt();
                             encodedIndex+=varLength;
                             break;
                         default:
@@ -274,9 +274,9 @@ public class BufferManager {
         //return finalByteArray;
         ByteBuffer buffer = ByteBuffer.wrap(finalByteArray);
 
-        //todo fix this
-        System.out.println("buffer lengeth: "+buffer.array().length);
-        System.out.println("final byte array: "+Arrays.toString(buffer.array()));
+
+        //System.out.println("buffer lengeth: "+buffer.array().length);
+        //System.out.println("final byte array: "+Arrays.toString(buffer.array()));
         StorageManager.writePage(page.pageId, buffer);
     }
 
@@ -326,6 +326,7 @@ public class BufferManager {
 
                         byte[] strBytes = str.getBytes(StandardCharsets.UTF_8);
                         byteLists.add(strBytes);
+                        break;
                     case DataTypes.VARCHAR:
                         String var = (String)attributeValue.data;
                         ByteBuffer varSize = ByteBuffer.allocate(Integer.BYTES);
@@ -334,6 +335,7 @@ public class BufferManager {
 
                         byte[] varBytes = var.getBytes(StandardCharsets.UTF_8);
                         byteLists.add(varBytes);
+                        break;
 
                     default:
                         break;
@@ -350,7 +352,7 @@ public class BufferManager {
         //find size of final array
         int finalByteArraySize = 0;
         for(int i=0; i<byteLists.size(); i++){
-            System.out.println(Arrays.toString(byteLists.get(i)));
+            //System.out.println(Arrays.toString(byteLists.get(i)));
             finalByteArraySize+=byteLists.get(i).length;
         }
 
@@ -366,7 +368,7 @@ public class BufferManager {
         }
 
 
-        System.out.println("byte array: "+Arrays.toString(finalByteArray));
+        //System.out.println("byte array: "+Arrays.toString(finalByteArray));
         return finalByteArray;
 
     }
@@ -377,7 +379,7 @@ public class BufferManager {
 class BufferMain{
     public static void main(String[] args) throws Exception {
         DataCatalog.buildCatalog(5000,"data");
-        System.out.println("page size: "+DataCatalog.getInstance().getPageSize());
+        //System.out.println("page size: "+DataCatalog.getInstance().getPageSize());
         BufferManager bufferManager = new BufferManager(5000, "C:/Users/mprok/JavaProjects/Database Impemented Systems/JottQL");
 
         //make a test table structure
@@ -444,7 +446,7 @@ class BufferMain{
         tableSchema.addAttributeSchema(var);
 
         for(AttributeSchema a : DataCatalog.getInstance().getTableSchema(testPage.tableName).getAttributeSchemas().sequencedValues()){
-            System.out.println("datatype: "+a.getDataType());
+            //System.out.println("datatype: "+a.getDataType());
         }
 
 
