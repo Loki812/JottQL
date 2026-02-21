@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.SequencedCollection;
 
 import base.models.Record;
 import base.storage.StorageManager;
@@ -72,20 +73,9 @@ public class BufferManager {
         buffer.remove(pageId);
     }
 
-    /*
-    private Page readPageFromHardware(int pageId) throws IOException {
-
-        //todo send pageId to storage managers -> get a ByteBuffer
-        ByteBuffer pageData = StorageManager.readPage(id);
-        //todo convert byteBuffers to Page -> return page
-
-    }
-     */
 
 
-    //todo make this just take in an (int pageId) instead of an array of bytes
-    //public Page readPageFromHardware(int pageId, byte[] encodedByteArray, ArrayList<DataTypes> fakeTableSchema) throws IOException {
-    public static Page readPageFromHardware(int pageId, ArrayList<DataTypes> fakeTableSchema) throws IOException {
+    public static Page readPageFromHardware(int pageId) throws IOException {
 
         //get byte array from hardware
         //ByteBuffer buffer = StorageManager.readPage(pageId);
@@ -102,17 +92,22 @@ public class BufferManager {
         //System.out.println("tableName:" +tableName);
 
         Page finalPage = new Page(pageId, tableName);
+        //SequencedCollection<AttributeSchema> tableSchema = DataCatalog.getInstance().getTableSchema(tableName).getAttributeSchemas().sequencedValues();
+        ArrayList<AttributeSchema> tableSchema = new ArrayList<>(DataCatalog.getInstance().getTableSchema(tableName).getAttributeSchemas().sequencedValues());
+
+
         while(encodedIndex<encodedByteArray.length){
-            Record finalRecord = new Record();
+            Record finalRecord;
             int startByte = encodedIndex;
             //null-byte array
-            byte[] nullByteArray = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+fakeTableSchema.size()));
-            encodedIndex+=fakeTableSchema.size();
+            byte[] nullByteArray = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+tableSchema.size()));
+            encodedIndex+=tableSchema.size();
             //System.out.println("null-byte array: "+Arrays.toString(nullByteArray));
 
             //objects in byte array
             for(int i=0; i<nullByteArray.length; i++){
-                DataTypes dataType = fakeTableSchema.get(i);
+                AttributeSchema attributeSchema = tableSchema.get(i);
+                DataTypes dataType = attributeSchema.getDataType();
                 //check that data is != null
                 if(nullByteArray[i]!=1){
                     switch(dataType){
@@ -131,7 +126,7 @@ public class BufferManager {
                 }
             }
             int endByte = encodedIndex;
-            finalRecord = convertBytesToRecord(Arrays.copyOfRange(encodedByteArray,startByte,endByte), fakeTableSchema);
+            finalRecord = convertBytesToRecord(Arrays.copyOfRange(encodedByteArray,startByte,endByte), tableSchema);
             finalPage.recordList.add(finalRecord);
         }
 
@@ -139,11 +134,9 @@ public class BufferManager {
     }
 
 
-    public static Record convertBytesToRecord(byte[] encodedByteArray, ArrayList<DataTypes> fakeTableSchema) throws IOException {
+    public static Record convertBytesToRecord(byte[] encodedByteArray, ArrayList<AttributeSchema> fakeTableSchema) throws IOException {
 
-        //todo the null byte array should be the same size as the length of characters
-        System.out.println("encoded byteArray: "+Arrays.toString(encodedByteArray));
-
+        //System.out.println("encoded byteArray: "+Arrays.toString(encodedByteArray));
 
         int encodedIndex = 0;
         //null-byte array
@@ -155,7 +148,8 @@ public class BufferManager {
         Record record = new Record();
         for(int i=0; i<nullByteArray.length; i++){
             AttributeValue attribute = null;
-            DataTypes dataType = fakeTableSchema.get(i);
+            AttributeSchema attributeSchema = fakeTableSchema.get(i);
+            DataTypes dataType = attributeSchema.getDataType();
             //check if null data
             if(nullByteArray[i]==1){
                 attribute = new AttributeValue<>(null, dataType);
@@ -201,14 +195,15 @@ public class BufferManager {
     }
 
 
-    //todo make this void and send the byte array to the sotrage manager
-    //public byte[] writePageToHardware(Page page, ArrayList<DataTypes> fakeTableSchema){
-    public static void writePageToHardware(Page page, ArrayList<DataTypes> fakeTableSchema) throws IOException {
+
+    public static void writePageToHardware(Page page) throws IOException {
 
         //prevent a page from writing if it has not been modified
         if(page.hasBeenModified==false){
             return;
         }
+
+        //SequencedCollection<AttributeSchema> tableSchema = DataCatalog.getInstance().getTableSchema(page.tableName).getAttributeSchemas().sequencedValues();
 
         ArrayList<byte[]> byteLists = new ArrayList<>();
 
@@ -224,7 +219,7 @@ public class BufferManager {
 
         //store records
         for(Record record : page.recordList){
-            byteLists.add(convertRecordToBytes(record, fakeTableSchema));
+            byteLists.add(convertRecordToBytes(record));
         }
 
         //find size of final array
@@ -245,7 +240,6 @@ public class BufferManager {
             }
         }
 
-
         //return finalByteArray;
         ByteBuffer buffer = ByteBuffer.wrap(finalByteArray);
 
@@ -256,7 +250,7 @@ public class BufferManager {
     }
 
 
-    public static byte[] convertRecordToBytes(Record record, ArrayList<DataTypes> fakeTableSchema){
+    public static byte[] convertRecordToBytes(Record record){
 
         ArrayList<byte[]> byteLists = new ArrayList<>();
 
@@ -329,18 +323,6 @@ public class BufferManager {
         System.out.println("byte array: "+Arrays.toString(finalByteArray));
         return finalByteArray;
 
-        /*
-        TableSchema tableSchema = dataCatalog.getTableSchema(page.tableName);
-
-        for(AttributeSchema value : tableSchema.attributeSchemas.values()){
-            dataTypes.add(value.getDataType());
-            //todo iterate through this to get datatypes of attributes and their length
-        }
-
-         */
-
-
-
     }
 
 }
@@ -356,6 +338,7 @@ class BufferMain{
         AttributeValue attribute1 = new AttributeValue(1, DataTypes.INTEGER);
         AttributeValue attribute2 = new AttributeValue(null, DataTypes.DOUBLE);
         AttributeValue attribute3 = new AttributeValue(false, DataTypes.BOOLEAN);
+
         Record record1 = new Record();
         record1.attributeList.add(attribute1);
         record1.attributeList.add(attribute2);
@@ -380,30 +363,46 @@ class BufferMain{
         testPage.recordList.add(record2);
 
         //todo make a test table schema
-        TableSchema tableSchema = DataCatalog.getInstance().getTableSchema(testPage.tableName);
-        AttributeSchema integer = new AttributeSchema();
-        integer.dat
-        tableSchema.addAttributeSchema();
-        //todo datatype is the datatype
-        //todo length is maximum length
+        TableSchema  tableSchema = new TableSchema();
+        tableSchema.tableName = testPage.tableName;
+        DataCatalog.getInstance().addTableSchema(tableSchema);
+
+        AttributeSchema integer = AttributeSchema.createAttributeSchemaFromQuery("a INTEGER");
+        tableSchema.addAttributeSchema(integer);
+
+        AttributeSchema dub = AttributeSchema.createAttributeSchemaFromQuery("b DOUBLE");
+        tableSchema.addAttributeSchema(dub);
+
+        AttributeSchema bool = AttributeSchema.createAttributeSchemaFromQuery("c BOOLEAN");
+        tableSchema.addAttributeSchema(bool);
+
+        for(AttributeSchema a : DataCatalog.getInstance().getTableSchema(testPage.tableName).getAttributeSchemas().sequencedValues()){
+            System.out.println("datatype: "+a.getDataType());
+        }
 
 
+
+        /*
         ArrayList<DataTypes> fakeTableSchema = new ArrayList<>();
         fakeTableSchema.add(DataTypes.INTEGER);
         fakeTableSchema.add(DataTypes.DOUBLE);
         fakeTableSchema.add(DataTypes.BOOLEAN);
 
+         */
+
+
+
 
         // write it
         byte[] encodedByteArray;
         //ncodedByteArray = bufferManager.writePageToHardware(testPage, fakeTableSchema);
-        bufferManager.writePageToHardware(testPage, fakeTableSchema);
+        bufferManager.writePageToHardware(testPage);
 
 
         //read it
         System.out.println("Reading...");
         //Page decodedPage = bufferManager.readPageFromHardware(1,encodedByteArray, fakeTableSchema);
-        Page decodedPage = bufferManager.readPageFromHardware(1, fakeTableSchema);
+        Page decodedPage = bufferManager.readPageFromHardware(1);
         System.out.println("decoded record");
         for(Record record : decodedPage.recordList){
             System.out.println("next record");
