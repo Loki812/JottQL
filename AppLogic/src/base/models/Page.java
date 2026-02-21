@@ -1,6 +1,7 @@
 package base.models;
 
 import base.buffer.BufferManager;
+import base.storage.StorageManager;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -52,7 +53,7 @@ public class Page {
             if (record.compareTo(recordList.get(i), schema) < 0) {
                 // If the page is full, split it
                 if (currentSize + recordSize > pageSize) {
-                    splitPage(schema);
+                    splitPage();
                     insertIntoPage(record, schema);
                 }
                 // Otherwise insert the record in the correct place
@@ -70,17 +71,16 @@ public class Page {
     /**
      * Split a full page and insert a record into one of the pages.
      *
-     * @param schema The table schema
      * @throws Exception If the next page cannot be retrieved
      * @throws IllegalStateException If no next page is available
      */
-    private void splitPage(TableSchema schema) throws Exception {
+    private void splitPage() throws Exception {
         if (nextPageId < 0) {
             throw new IllegalStateException("No next page available for split");
         }
 
         // Create a new page and re-order the pointers
-        Page nextPage = BufferManager.createNewPage(catalog.getNextAvailablePageID());
+        Page nextPage = BufferManager.createNewPage(catalog.getNextAvailablePageID(), tableName);
         nextPage.nextPageId = nextPageId;
         this.nextPageId = nextPage.pageId;
 
@@ -102,7 +102,33 @@ public class Page {
         // Record timestamps
         this.timestamp = java.time.LocalDateTime.now();
         nextPage.timestamp = java.time.LocalDateTime.now();
+    }
+    public void deleteTable(){
+        Page page = BufferManager.getPage(nextPageId);
+        if(page != null){
+            page.deleteTable();
+        }
+        StorageManager.deletePage(pageId);
+        BufferManager.deletePage(pageId);
+    }
+    public void deleteColumn(int index){
+        for(Record record : recordList){
+            record.attributeList.remove(index);
+        }
+        Page page = BufferManager.getPage(nextPageId);
+        if(page != null){
+            page.deleteColumn(index);
+        }
+        hasBeenModified = true;
+    }
 
-        BufferManager.writePageToHardware(nextPage, schema);
+    public void addColumn(AttributeValue<?> defaultValue){
+        for(Record record : recordList){
+            record.attributeList.add(defaultValue);
+        }
+        BufferManager.getPage(nextPageId).addColumn(defaultValue);
+        if (currentSize > DataCatalog.getInstance().getPageSize()) {
+            // splitPage(schema);
+        }
     }
 }
