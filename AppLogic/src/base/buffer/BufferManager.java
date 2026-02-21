@@ -3,6 +3,7 @@ import base.models.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,15 +53,15 @@ public class BufferManager {
         } else {
             //todo actually make a proper getPage function
             Page decodedPage; // = bufferManager.readPageFromHardware(1,encodedByteArray, fakeTableSchema);
-            decodedPage = new Page(id);
+            decodedPage = new Page(id, "table");
             buffer.put(decodedPage.pageId, decodedPage);
             decodedPage.timestamp = LocalDateTime.now();
             return decodedPage;
         }
     }
 
-    public static Page createNewPage(int id){
-        Page page = new Page(id);
+    public static Page createNewPage(int id, String table){
+        Page page = new Page(id, table);
         buffer.put(page.pageId, page);
         page.timestamp = LocalDateTime.now();
         return page;
@@ -86,7 +87,16 @@ public class BufferManager {
         byte[] encodedByteArray = StorageManager.readPage(pageId);
 
         int encodedIndex = 0;
-        Page finalPage = new Page(pageId);
+        byte[] dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
+        encodedIndex+=Integer.BYTES;
+        int tableLength = ByteBuffer.wrap(dataSegment).getInt();
+
+        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+tableLength));
+        encodedIndex+= tableLength;
+        String tableName = new String(dataSegment, StandardCharsets.UTF_8);
+        //System.out.println("tableName:" +tableName);
+
+        Page finalPage = new Page(pageId, tableName);
         while(encodedIndex<encodedByteArray.length){
             Record finalRecord = new Record();
             int startByte = encodedIndex;
@@ -191,6 +201,18 @@ public class BufferManager {
     public static void writePageToHardware(Page page, ArrayList<DataTypes> fakeTableSchema) throws IOException {
 
         ArrayList<byte[]> byteLists = new ArrayList<>();
+
+
+        //store name of table
+        String tableName = page.tableName;
+        ByteBuffer tableSize = ByteBuffer.allocate(Integer.BYTES);
+        tableSize.putInt(tableName.length());
+        byteLists.add(tableSize.array());
+
+        byte[] tableNameBytes = tableName.getBytes(StandardCharsets.UTF_8);
+        byteLists.add(tableNameBytes);
+
+        //store records
         for(Record record : page.recordList){
             byteLists.add(convertRecordToBytes(record, fakeTableSchema));
         }
@@ -219,6 +241,7 @@ public class BufferManager {
 
         //todo fix this
         System.out.println("buffer lengeth: "+buffer.array().length);
+        System.out.println("final byte array: "+Arrays.toString(buffer.array()));
         StorageManager.writePage(page.pageId, buffer);
     }
 
@@ -341,7 +364,7 @@ class BufferMain{
 
 
 
-        Page testPage = new Page(1);
+        Page testPage = new Page(1, "table");
         testPage.recordList.add(record1);
         testPage.recordList.add(record2);
 
