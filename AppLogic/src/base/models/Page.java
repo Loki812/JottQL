@@ -9,7 +9,7 @@ import java.util.ArrayList;
 public class Page {
 
     public int pageId;
-    public String tableName;
+    public int tableId;
     public int nextPageId;
     public int currentSize;
     public boolean hasBeenModified;
