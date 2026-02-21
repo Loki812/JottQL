@@ -15,7 +15,7 @@ public class DataCatalog {
     private int pageSize; // represent in terms of bytes?
     private int tableCount; // in header of bin file, needed for extracting
     private int nextAvailablePageID; //  if free list is empty, use this offset
-    private List<Integer> freePageList; // List of free page IDs within the DB
+    private static ArrayList<Integer> freePageList; // List of free page IDs within the DB
     private Map<String, TableSchema> tables;
 
     private static boolean isInitialized = false;
@@ -184,4 +184,12 @@ public class DataCatalog {
         }
     }
 
+    /**
+     * Get the ArrayList of free pages.
+     *
+     * @return the freePages ArrayList of Integers
+     */
+    public static ArrayList<Integer> getFreePageList() {
+        return freePageList;
+    }
 }
