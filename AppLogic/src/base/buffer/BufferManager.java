@@ -42,6 +42,9 @@ public class BufferManager {
 
 
     public static Page getPage(int id){
+        if(id==-1){
+            return null;
+        }
         if(buffer.containsKey(id)){
             Page page = buffer.get(id);
             page.timestamp = LocalDateTime.now();
@@ -91,6 +94,7 @@ public class BufferManager {
             byte[] nullByteArray = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+fakeTableSchema.size()));
             encodedIndex+=fakeTableSchema.size();
             //System.out.println("null-byte array: "+Arrays.toString(nullByteArray));
+
             //objects in byte array
             for(int i=0; i<nullByteArray.length; i++){
                 DataTypes dataType = fakeTableSchema.get(i);
@@ -99,6 +103,12 @@ public class BufferManager {
                     switch(dataType){
                         case DataTypes.INTEGER:
                             encodedIndex+=Integer.BYTES;
+                            break;
+                        case DataTypes.DOUBLE:
+                            encodedIndex+=Double.BYTES;
+                            break;
+                        case DataTypes.BOOLEAN:
+                            encodedIndex+=1;
                             break;
                         default:
                             break;
@@ -117,7 +127,7 @@ public class BufferManager {
     public static Record convertBytesToRecord(byte[] encodedByteArray, ArrayList<DataTypes> fakeTableSchema) throws IOException {
 
         //todo the null byte array should be the same size as the length of characters
-        //System.out.println("encoded byteArray: "+Arrays.toString(encodedByteArray));
+        System.out.println("encoded byteArray: "+Arrays.toString(encodedByteArray));
 
 
         int encodedIndex = 0;
@@ -135,11 +145,29 @@ public class BufferManager {
             if(nullByteArray[i]==1){
                 attribute = new AttributeValue<>(null, dataType);
             } else {
+                byte[] dataSegment;
                 switch(dataType){
                     case DataTypes.INTEGER:
-                        byte[] dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
+                        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
                         encodedIndex+=Integer.BYTES;
                         attribute = new AttributeValue<>(ByteBuffer.wrap(dataSegment).getInt(), dataType);
+                        break;
+                    case DataTypes.DOUBLE:
+                        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Double.BYTES));
+                        encodedIndex+=Double.BYTES;
+                        attribute = new AttributeValue<>(ByteBuffer.wrap(dataSegment).getDouble(), dataType);
+                        break;
+                    case DataTypes.BOOLEAN:
+                        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+1));
+                        encodedIndex+=1;
+                        Byte boolByte = ByteBuffer.wrap(dataSegment).get();
+                        boolean bool;
+                        if(boolByte==1){
+                            bool=true;
+                        }else{
+                            bool=false;
+                        }
+                        attribute = new AttributeValue<>(bool, dataType);
                         break;
                     default:
                         break;
@@ -219,14 +247,19 @@ public class BufferManager {
             if(attributeValue.data!=null){
                 switch(attributeValue.type){
                     case DataTypes.INTEGER:
-                        //System.out.println("Its an int!");
                         byteBuffer = ByteBuffer.allocate(Integer.BYTES);
                         byteBuffer.putInt((Integer) attributeValue.data);
                         break;
                     case DataTypes.DOUBLE:
-                        //System.out.println("Its a double!");
                         byteBuffer = ByteBuffer.allocate(Double.BYTES);
                         byteBuffer.putDouble((Double) attributeValue.data);
+                        break;
+                    case DataTypes.BOOLEAN:
+                        System.out.println("Its a bool!");
+                        byteBuffer = ByteBuffer.allocate(1);
+                        boolean bool = (Boolean)attributeValue.data;
+                        Byte boolByte = (byte)(bool ? 1 : 0);
+                        byteBuffer.put(boolByte);
                         break;
 
                     default:
@@ -260,6 +293,7 @@ public class BufferManager {
         }
 
 
+        System.out.println("byte array: "+Arrays.toString(finalByteArray));
         return finalByteArray;
 
         /*
@@ -289,8 +323,8 @@ class BufferMain{
         //make a test table structure
 
         AttributeValue attribute1 = new AttributeValue(1, DataTypes.INTEGER);
-        AttributeValue attribute2 = new AttributeValue(null, DataTypes.INTEGER);
-        AttributeValue attribute3 = new AttributeValue(3, DataTypes.INTEGER);
+        AttributeValue attribute2 = new AttributeValue(null, DataTypes.DOUBLE);
+        AttributeValue attribute3 = new AttributeValue(false, DataTypes.BOOLEAN);
         Record record1 = new Record();
         record1.attributeList.add(attribute1);
         record1.attributeList.add(attribute2);
