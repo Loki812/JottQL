@@ -67,6 +67,10 @@ public class BufferManager {
         return page;
     }
 
+    public static void deletePage(int pageId){
+        buffer.remove(pageId);
+    }
+
     /*
     private Page readPageFromHardware(int pageId) throws IOException {
 
