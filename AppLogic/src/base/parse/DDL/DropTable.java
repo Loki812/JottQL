@@ -1,17 +1,28 @@
 package base.parse.DDL;
+import base.buffer.BufferManager;
 import base.models.DataCatalog;
+import base.models.Page;
+import base.models.TableSchema;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 
 public class DropTable {
-    private static int COMMAND_LENGTH = 11;
-    public static void parse(String command) throws Exception {
-        command = command.substring(COMMAND_LENGTH);
-        String table_Name = command.replace(";", "");
-        //TODO Drop the table
+    public static void execute(String command) throws Exception {
+        String trimmedCommand = command.trim();
+        if(!trimmedCommand.startsWith("DROP TABLE ")) {
+            System.out.println("Invalid DROP TABLE Command");
+            throw new Exception();
+        }
+        if(!trimmedCommand.endsWith(";")) {
+            System.out.println("Missing Semicolon");
+            throw new Exception();
+        }
+        trimmedCommand = trimmedCommand.substring(0, trimmedCommand.length() - 1).trim();
+        String table_Name = trimmedCommand.substring("DROP TABLE ".length()).trim().toUpperCase();
         DataCatalog dc = DataCatalog.getInstance();
+        Page first = BufferManager.getPage(dc.getTableSchema(table_Name).getRootPageID());
+        first.deleteTable();
         dc.removeTableSchema(table_Name);
-
     }
 }

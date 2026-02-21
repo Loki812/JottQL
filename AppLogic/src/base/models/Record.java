@@ -18,9 +18,13 @@ public class Record {
      *      negative if it is less than rec,
      *      0 if they are equal
      */
-    public int compareTo(Record rec, TableSchema schema) {
-        int primaryKeyIndex = schema.getPrimaryIndex();
+    public int compareTo(Record rec, TableSchema schema) throws Exception {
+        int primaryKeyIndex = schema.getIndex(schema.primaryKey);
         AttributeValue primaryKey = attributeList.get(primaryKeyIndex);
+        if(primaryKey.data == null){
+            System.out.println("Primary key is null");
+            throw new Exception();
+        }
         return primaryKey.compareTo(rec.attributeList.get(primaryKeyIndex));
     }
 
