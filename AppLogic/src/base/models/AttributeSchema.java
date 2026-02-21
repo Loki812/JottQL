@@ -4,9 +4,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.NoSuchElementException;
 
 public class AttributeSchema {
 
@@ -57,7 +54,8 @@ public class AttributeSchema {
 
         // each column definition needs atleast <Ident> <type>
         if (tokens.length < 2) {
-            throw new Exception("Invalid column definition: " + field);
+            System.out.println("Invalid column definition:" + field);
+            throw new Exception();
         }
 
         /* ---------- Name -------------- */
@@ -72,7 +70,10 @@ public class AttributeSchema {
             case "BOOLEAN" -> DataTypes.BOOLEAN;
             case "CHAR" -> DataTypes.CHAR;
             case "VARCHAR" -> DataTypes.VARCHAR;
-            default -> throw new Exception("Invalid Datatype Specified: " + type + " is not valid");
+            default -> {
+                System.out.println("Invalid Datatype Specified: " + type + " is not valid");
+                throw new Exception();
+            }
         };
 
         /*------- Length ---------*/
@@ -87,7 +88,8 @@ public class AttributeSchema {
                 if (closeParen != -1 && openParen != -1 && closeParen > openParen) {
                     yield Integer.parseInt(tokens[1].substring(openParen + 1, closeParen));
                 } else {
-                    throw new Exception("Column definition was not valid");
+                    System.out.println("Column definition was not valid");
+                    throw new Exception();
                 }
             }
         };
@@ -109,8 +111,6 @@ public class AttributeSchema {
                 }
             }
         }
-
-
         return abtSch;
     }
 
@@ -136,8 +136,6 @@ public class AttributeSchema {
 
     public boolean isUnique() { return unique; }
 
-    public boolean isHasDefaultValue() { return hasDefaultValue; }
-
     public Object getDefaultVal() { return defaultVal; }
 
     public DataTypes getDataType() { return dataType; }
@@ -155,24 +153,28 @@ public class AttributeSchema {
             case BOOLEAN -> Boolean.parseBoolean(defValue);
             case CHAR -> {
                 if (!(defValue.startsWith("\"") && defValue.endsWith("\""))) {
-                    throw new Exception("Default Value was not valid: " + defValue);
+                    System.out.println("Default Value was not valid: " + defValue);
+                    throw new Exception();
                 }
                 String strippedValue = defValue.substring(1, defValue.length() - 1);
 
                 if (length != strippedValue.length()) {
-                    throw new Exception("Default value was not prescribed length: " + defValue);
+                    System.out.println("Default value was not prescribed length: " + defValue);
+                    throw new Exception();
                 }
 
                 yield strippedValue;
             }
             case VARCHAR -> {
                 if (!(defValue.startsWith("\"") && defValue.endsWith("\""))) {
-                    throw new Exception("Default Value was not valid: " + defValue);
+                    System.out.println("Default Value was not valid: " + defValue);
+                    throw new Exception();
                 }
                 String strippedValue = defValue.substring(1, defValue.length() - 1);
 
                 if (length < strippedValue.length()) {
-                    throw new Exception("Default value was too large to fit: " + defValue);
+                    System.out.println("Default value was too large to fit: " + defValue);
+                    throw new Exception();
                 }
 
                 yield strippedValue;

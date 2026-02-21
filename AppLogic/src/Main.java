@@ -21,23 +21,17 @@ public class Main {
      *
      * **/
     public static void main(String[] args) throws Exception {
-//
-//        // Check if exists build File, if not create new file.
-//        try {
-//            File dbFile = new File(args[0] + "db.bin");
-//            // docs say it only creates new file if file existed before
-//            // therefore we don't have to check if it exists beforehand
-//            boolean madeNew = dbFile.createNewFile();
-//            if (madeNew) {
-//                System.out.println("Database found at " + args[0] + " initializing...");
-//            } else {
-//                System.out.println("No file found at " + args[0] + " creating new file...");
-//            }
-//        } catch (IOException e) {
-//            System.err.println("An error occurred while attempting to initialize database: " + e);
-//            System.exit(1);
-//        }
 
+        // Check if exists build File, if not create new file.
+        File dbFile = new File(args[0], "catalog.bin");
+        // docs say it only creates new file if file existed before
+        // therefore we don't have to check if it exists beforehand
+        boolean madeNew = dbFile.exists();
+        if (madeNew) {
+            System.out.println("Database found at " + args[0] + " initializing...");
+        } else {
+            System.out.println("No file found at " + args[0] + " creating new file...");
+        }
         // build data catalog with page-size and data directory
         DataCatalog.buildCatalog(Integer.parseInt(args[1]), args[0]);
         DataCatalog dc = DataCatalog.getInstance();
@@ -48,9 +42,6 @@ public class Main {
 
         //infinite command-line loop
 
-        //todo call the Datacatalog.buildCatalog() function
-        //todo call the BufferManager.buildBufferManager
-
         System.out.println("Welcome to JottQL!");
 
         while(true){
@@ -59,17 +50,45 @@ public class Main {
             String firstWord = input.split(" ")[0].toUpperCase();
 
             switch (firstWord) {
-                case "CREATE" -> CreateTable.execute(input);
+                case "CREATE" -> {
+                    try {
+                        CreateTable.execute(input);
+                        System.out.println("Table Created Successfully");
+                    }catch (Exception e){
+                        System.out.println("Table Creation Failed");
+                    }
+                }
                 case "SELECT" -> {
-                    base.parse.DML.SelectTable.parse(input);
+                    try {
+                        base.parse.DML.SelectTable.parse(input);
+                    }catch (Exception e){
+                        System.out.println("Table Select Failed");
+                    }
                 }
-
                 case "INSERT" -> {
-                    base.parse.DML.InsertTable.parse(input);
-                }
+                    try {
+                        base.parse.DML.InsertTable.parse(input);
+                    }catch (Exception e){
+                        // do nothing
+                    }
 
-                case "DROP" -> DropTable.execute(input);
-                case "ALTER" -> AtlerTable.execute(input);
+                }
+                case "DROP" -> {
+                    try {
+                        DropTable.execute(input);
+                        System.out.println("Table Drop Successfully");
+                    }catch (Exception e){
+                        System.out.println("Table Drop Failed");
+                    }
+                }
+                case "ALTER" -> {
+                    try {
+                        AtlerTable.execute(input);
+                        System.out.println("Table Alter Successfully");
+                    }catch (Exception e){
+                        System.out.println("Table Alter Failed");
+                    }
+                }
                 case "EXIT" -> {
                     DataCatalog.saveToDisk();
                     // BufferManager (save before exiting_)

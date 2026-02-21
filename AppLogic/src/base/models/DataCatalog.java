@@ -58,7 +58,6 @@ public class DataCatalog {
         } else {
             // Build new one at given directory
             catalog.dataDirectory = dataDirectory;
-
             catalog.pageSize = suggestedSize;
             catalog.tableCount = 0;
             catalog.nextAvailablePageID = 0;
@@ -87,10 +86,10 @@ public class DataCatalog {
         catalog.tableCount = in.readInt();
         catalog.nextAvailablePageID = in.readInt();
 
-        catalog.freePageList = new ArrayList<>();
+        freePageList = new ArrayList<>();
         int freePageListSize = in.readInt();
         for (int i = 0; i < freePageListSize; i++) {
-            catalog.freePageList.add(in.readInt());
+            freePageList.add(in.readInt());
         }
 
         catalog.tables = new HashMap<String, TableSchema>();
@@ -115,10 +114,10 @@ public class DataCatalog {
             out.writeInt(catalog.pageSize);
             out.writeInt(catalog.tableCount);
             out.writeInt(catalog.nextAvailablePageID);
-            out.writeInt(catalog.freePageList.size());
+            out.writeInt(freePageList.size());
 
-            for (int i = 0; i < catalog.freePageList.size(); i++) {
-                out.writeInt(catalog.freePageList.get(i));
+            for (int i = 0; i < freePageList.size(); i++) {
+                out.writeInt(freePageList.get(i));
             }
 
             for (TableSchema t : catalog.tables.values()) {
