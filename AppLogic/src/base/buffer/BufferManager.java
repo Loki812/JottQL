@@ -24,9 +24,9 @@ public class BufferManager {
     //todo make static instance of the BufferManager similar to how the bufferManager is done
     private static BufferManager bufferManager = null;
 
-    public BufferManager(int maxPageCount, String filename) throws Exception {
+    public BufferManager(int maxPageCount, String directory) throws Exception {
         this.maxPageCount = maxPageCount;
-        this.storageManager = new StorageManager(filename);
+        this.storageManager = new StorageManager(directory+"/storage.bin/");
         //this.dataCatalog = DataCatalog.getInstance();
     }
 
@@ -204,6 +204,11 @@ public class BufferManager {
     //public byte[] writePageToHardware(Page page, ArrayList<DataTypes> fakeTableSchema){
     public static void writePageToHardware(Page page, ArrayList<DataTypes> fakeTableSchema) throws IOException {
 
+        //prevent a page from writing if it has not been modified
+        if(page.hasBeenModified==false){
+            return;
+        }
+
         ArrayList<byte[]> byteLists = new ArrayList<>();
 
 
@@ -333,9 +338,7 @@ public class BufferManager {
 
          */
 
-        //todo if page has been modified:
-        //todo convert pages to byteBuffer
-        //todo send (page id, byteBuffer) to storage manager
+
 
     }
 
