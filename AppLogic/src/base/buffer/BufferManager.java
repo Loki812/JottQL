@@ -349,7 +349,7 @@ public class BufferManager {
 class BufferMain{
     public static void main(String[] args) throws Exception {
         DataCatalog.buildCatalog(500,"data");
-        BufferManager bufferManager = new BufferManager(500, "storage.bin");
+        BufferManager bufferManager = new BufferManager(500, "C:/Users/mprok/JavaProjects/Database Impemented Systems/JottQL");
 
         //make a test table structure
 
@@ -371,12 +371,23 @@ class BufferMain{
         record2.attributeList.add(attribute6);
 
 
+        bufferManager.createNewPage(1,"table");
 
-        Page testPage = new Page(1, "table");
+
+        //Page testPage = new Page(1, "table");
+        Page testPage = bufferManager.getPage(1);
         testPage.recordList.add(record1);
         testPage.recordList.add(record2);
 
-        //make a test table schema
+        //todo make a test table schema
+        TableSchema tableSchema = DataCatalog.getInstance().getTableSchema(testPage.tableName);
+        AttributeSchema integer = new AttributeSchema();
+        integer.dat
+        tableSchema.addAttributeSchema();
+        //todo datatype is the datatype
+        //todo length is maximum length
+
+
         ArrayList<DataTypes> fakeTableSchema = new ArrayList<>();
         fakeTableSchema.add(DataTypes.INTEGER);
         fakeTableSchema.add(DataTypes.DOUBLE);
