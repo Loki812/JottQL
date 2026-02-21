@@ -16,8 +16,9 @@ public class Page {
     private DataCatalog catalog;
     public ArrayList<Record> recordList;
 
-    public Page(int pageId){
+    public Page(int pageId, String tableName){
         this.pageId = pageId;
+        this.tableName = tableName;
         this.currentSize = 0;
         this.hasBeenModified = true;
         this.timestamp = LocalDateTime.now();
