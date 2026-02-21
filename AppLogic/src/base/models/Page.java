@@ -3,6 +3,7 @@ package base.models;
 import base.buffer.BufferManager;
 import base.storage.StorageManager;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
@@ -78,7 +79,7 @@ public class Page {
      * @throws Exception If the next page cannot be retrieved
      * @throws IllegalStateException If no next page is available
      */
-    private void splitPage(){
+    private void splitPage() throws IOException {
         if (nextPageId < 0) {
             throw new IllegalStateException("No next page available for split");
         }
@@ -132,7 +133,7 @@ public class Page {
         hasBeenModified = true;
     }
 
-    public void addColumn(AttributeValue<?> defaultValue){
+    public void addColumn(AttributeValue<?> defaultValue) throws IOException {
         for(Record record : recordList){
             currentSize -= record.getSize();
             record.attributeList.add(defaultValue);

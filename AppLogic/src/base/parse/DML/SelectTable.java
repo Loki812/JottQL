@@ -130,14 +130,25 @@ public class SelectTable {
         }
 
         int pageId = tableSchema.getRootPageID();
-        Page p = BufferManager.getPage(pageId);
 
         ArrayList<String> attrNames = new ArrayList<>();
         for (AttributeSchema att : tableSchema.getAttributeSchemas().sequencedValues()) {
             attrNames.add(att.attributeName);
         }
 
-        DMLParser.printResultSet(attrNames, p.recordList);
+        ArrayList<Record> records = new ArrayList<>();
+
+        while (true) {
+            Page p = BufferManager.getPage(pageId);
+            records.addAll(p.recordList);
+            if (p.nextPageId == -1) {
+                break;
+            } else {
+                pageId = p.nextPageId;
+            }
+        }
+
+        DMLParser.printResultSet(attrNames, records);
 
     }
 
