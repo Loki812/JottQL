@@ -78,7 +78,6 @@ public class BufferManager {
     public static Page readPageFromHardware(int pageId) throws IOException {
 
         //get byte array from hardware
-        //ByteBuffer buffer = StorageManager.readPage(pageId);
         byte[] encodedByteArray = StorageManager.readPage(pageId);
 
         int encodedIndex = 0;
@@ -119,6 +118,18 @@ public class BufferManager {
                             break;
                         case DataTypes.BOOLEAN:
                             encodedIndex+=1;
+                            break;
+                        case DataTypes.CHAR:
+                            dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
+                            encodedIndex+=Integer.BYTES;
+                            int charLength = ByteBuffer.wrap(dataSegment).getInt();
+                            encodedIndex+=charLength;
+                            break;
+                        case DataTypes.VARCHAR:
+                            dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
+                            encodedIndex+=Integer.BYTES;
+                            int varLength = ByteBuffer.wrap(dataSegment).getInt();
+                            encodedIndex+=varLength;
                             break;
                         default:
                             break;
@@ -177,6 +188,26 @@ public class BufferManager {
                             bool=false;
                         }
                         attribute = new AttributeValue<>(bool, dataType);
+                        break;
+                    case DataTypes.CHAR:
+                        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
+                        encodedIndex+=Integer.BYTES;
+                        int charLength = ByteBuffer.wrap(dataSegment).getInt();
+
+                        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+charLength));
+                        encodedIndex+= charLength;
+                        String charArray = new String(dataSegment, StandardCharsets.UTF_8);
+                        attribute = new AttributeValue<>(charArray, dataType);
+                        break;
+                    case DataTypes.VARCHAR:
+                        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
+                        encodedIndex+=Integer.BYTES;
+                        int varLength = ByteBuffer.wrap(dataSegment).getInt();
+
+                        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+varLength));
+                        encodedIndex+= varLength;
+                        String varArray = new String(dataSegment, StandardCharsets.UTF_8);
+                        attribute = new AttributeValue<>(varArray, dataType);
                         break;
                     default:
                         break;
@@ -282,12 +313,27 @@ public class BufferManager {
                         byteBuffer.putDouble((Double) attributeValue.data);
                         break;
                     case DataTypes.BOOLEAN:
-                        System.out.println("Its a bool!");
                         byteBuffer = ByteBuffer.allocate(1);
                         boolean bool = (Boolean)attributeValue.data;
                         Byte boolByte = (byte)(bool ? 1 : 0);
                         byteBuffer.put(boolByte);
                         break;
+                    case DataTypes.CHAR:
+                        String str = (String)attributeValue.data;
+                        ByteBuffer strSize = ByteBuffer.allocate(Integer.BYTES);
+                        strSize.putInt(str.length());
+                        byteLists.add(strSize.array());
+
+                        byte[] strBytes = str.getBytes(StandardCharsets.UTF_8);
+                        byteLists.add(strBytes);
+                    case DataTypes.VARCHAR:
+                        String var = (String)attributeValue.data;
+                        ByteBuffer varSize = ByteBuffer.allocate(Integer.BYTES);
+                        varSize.putInt(var.length());
+                        byteLists.add(varSize.array());
+
+                        byte[] varBytes = var.getBytes(StandardCharsets.UTF_8);
+                        byteLists.add(varBytes);
 
                     default:
                         break;
@@ -330,28 +376,42 @@ public class BufferManager {
 
 class BufferMain{
     public static void main(String[] args) throws Exception {
-        DataCatalog.buildCatalog(500,"data");
-        BufferManager bufferManager = new BufferManager(500, "C:/Users/mprok/JavaProjects/Database Impemented Systems/JottQL");
+        DataCatalog.buildCatalog(5000,"data");
+        System.out.println("page size: "+DataCatalog.getInstance().getPageSize());
+        BufferManager bufferManager = new BufferManager(5000, "C:/Users/mprok/JavaProjects/Database Impemented Systems/JottQL");
 
         //make a test table structure
+
 
         AttributeValue attribute1 = new AttributeValue(1, DataTypes.INTEGER);
         AttributeValue attribute2 = new AttributeValue(null, DataTypes.DOUBLE);
         AttributeValue attribute3 = new AttributeValue(false, DataTypes.BOOLEAN);
+        AttributeValue attribute4 = new AttributeValue("hello", DataTypes.CHAR);
+        AttributeValue attribute5 = new AttributeValue("world", DataTypes.VARCHAR);
 
         Record record1 = new Record();
+
         record1.attributeList.add(attribute1);
         record1.attributeList.add(attribute2);
         record1.attributeList.add(attribute3);
+        record1.attributeList.add(attribute4);
+        record1.attributeList.add(attribute5);
 
 
-        AttributeValue attribute4 = new AttributeValue(4, DataTypes.INTEGER);
-        AttributeValue attribute5 = new AttributeValue(5.5, DataTypes.DOUBLE);
-        AttributeValue attribute6 = new AttributeValue(true, DataTypes.BOOLEAN);
+
+        AttributeValue attribute6 = new AttributeValue(4, DataTypes.INTEGER);
+        AttributeValue attribute7 = new AttributeValue(5.5, DataTypes.DOUBLE);
+        AttributeValue attribute8 = new AttributeValue(true, DataTypes.BOOLEAN);
+        AttributeValue attribute9 = new AttributeValue("tuple", DataTypes.CHAR);
+        AttributeValue attribute10 = new AttributeValue("varvar char", DataTypes.VARCHAR);
         Record record2 = new Record();
-        record2.attributeList.add(attribute4);
-        record2.attributeList.add(attribute5);
+
+
         record2.attributeList.add(attribute6);
+        record2.attributeList.add(attribute7);
+        record2.attributeList.add(attribute8);
+        record2.attributeList.add(attribute9);
+        record2.attributeList.add(attribute10);
 
 
         bufferManager.createNewPage(1,"table");
@@ -367,6 +427,7 @@ class BufferMain{
         tableSchema.tableName = testPage.tableName;
         DataCatalog.getInstance().addTableSchema(tableSchema);
 
+
         AttributeSchema integer = AttributeSchema.createAttributeSchemaFromQuery("a INTEGER");
         tableSchema.addAttributeSchema(integer);
 
@@ -376,19 +437,16 @@ class BufferMain{
         AttributeSchema bool = AttributeSchema.createAttributeSchemaFromQuery("c BOOLEAN");
         tableSchema.addAttributeSchema(bool);
 
+        AttributeSchema car = AttributeSchema.createAttributeSchemaFromQuery("d CHAR(5)");
+        tableSchema.addAttributeSchema(car);
+
+        AttributeSchema var = AttributeSchema.createAttributeSchemaFromQuery("e VARCHAR(10)");
+        tableSchema.addAttributeSchema(var);
+
         for(AttributeSchema a : DataCatalog.getInstance().getTableSchema(testPage.tableName).getAttributeSchemas().sequencedValues()){
             System.out.println("datatype: "+a.getDataType());
         }
 
-
-
-        /*
-        ArrayList<DataTypes> fakeTableSchema = new ArrayList<>();
-        fakeTableSchema.add(DataTypes.INTEGER);
-        fakeTableSchema.add(DataTypes.DOUBLE);
-        fakeTableSchema.add(DataTypes.BOOLEAN);
-
-         */
 
 
 
