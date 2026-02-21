@@ -20,14 +20,17 @@ public class AtlerTable {
         }
         trimmedCommand = trimmedCommand.substring(0, trimmedCommand.length() - 1).trim();
         command = trimmedCommand.substring("ALTER TABLE ".length()).trim();
-
         String table_Name = command.substring(0, command.indexOf(" ")).toUpperCase();
+        DataCatalog dc = DataCatalog.getInstance();
+        TableSchema ts = dc.getTableSchema(table_Name);
+        if(ts == null) {
+            System.out.println("Table " + table_Name + " not found");
+            throw new Exception();
+        }
         command = command.substring(command.indexOf(" ") + 1);
         String operation = command.substring(0, command.indexOf(" "));
         command = command.substring(command.indexOf(" ") + 1);
 
-        DataCatalog dc = DataCatalog.getInstance();
-        TableSchema ts = dc.getTableSchema(table_Name);
         if(operation.equals("ADD")) {
             AttributeSchema attribute = AttributeSchema.createAttributeSchemaFromQuery(command);
             ts.addAttributeSchema(attribute);

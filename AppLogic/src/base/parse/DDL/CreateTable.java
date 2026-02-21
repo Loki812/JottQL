@@ -35,6 +35,5 @@ public class CreateTable {
             System.out.println("Missing closing parentheses");
             throw new Exception();
         }
-        System.out.println("Table Created Successfully... \n");
     }
 }

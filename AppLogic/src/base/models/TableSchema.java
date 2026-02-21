@@ -19,7 +19,6 @@ public class TableSchema {
     private int numOfAttributes;
     private LinkedHashMap<String, AttributeSchema> attributeSchemas;
     public String primaryKey;
-    private int recordSize; // not stored on disk, calculated on load from disk or instantiation.
     public int rootPageID;
     private static final DataCatalog dc = DataCatalog.getInstance();
 
@@ -50,7 +49,6 @@ public class TableSchema {
             }
             ts.attributeSchemas.put(a.attributeName, a);
         }
-        ts.recordSize = tempSize;
         ts.rootPageID = in.readInt();
 
         return ts;
@@ -94,11 +92,9 @@ public class TableSchema {
             a.saveAttributeSchemaToDisk(out);
         }
 
-        out.writeInt(recordSize);
         out.writeInt(rootPageID);
     }
 
-    public int getRecordSize() { return recordSize; }
 
     public int getRootPageID() { return rootPageID; }
 
@@ -126,6 +122,10 @@ public class TableSchema {
             throw new Exception();
         }
         Integer index = getIndex(name);
+        if(index == null){
+            System.out.println("Column does not exist");
+            throw new Exception();
+        }
         BufferManager.getPage(rootPageID).deleteColumn(index);
         attributeSchemas.remove(name);
         numOfAttributes -= 1;
