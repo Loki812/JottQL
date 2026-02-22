@@ -107,6 +107,7 @@ public class BufferManager {
 
         //get byte array from hardware
         byte[] encodedByteArray = StorageManager.readPage(pageId);
+        //System.out.println(Arrays.toString(encodedByteArray));
 
         int encodedIndex = 0;
         byte[] dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
@@ -288,10 +289,18 @@ public class BufferManager {
             finalByteArraySize+=byteLists.get(i).length;
         }
 
-        byte[] finalByteArray = new byte[finalByteArraySize];
+        byte[] finalByteArray = new byte[finalByteArraySize+Integer.BYTES];
+
+        //put int in array showing how long the page is
+        ByteBuffer byteCount = ByteBuffer.allocate(Integer.BYTES);
+        byteCount.putInt(finalByteArraySize+Integer.BYTES);
+        int finalArrayIndex =0;
+        for(byte b : byteCount.array()){
+            finalByteArray[finalArrayIndex]=b;
+            finalArrayIndex++;
+        }
 
         //populate final array
-        int finalArrayIndex = 0;
         for(byte[] list : byteLists){
             for(byte b : list){
                 finalByteArray[finalArrayIndex]=b;
