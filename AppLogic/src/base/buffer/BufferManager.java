@@ -59,11 +59,12 @@ public class BufferManager {
                 return decodedPage;
             } catch (Exception e){
                 System.out.println("Inconsistent Database");
-                System.exit(0);
+                throw new RuntimeException(e);
+                //System.exit(0);
             }
 
         }
-        return null;
+        //return null;
     }
 
     public static Page createNewPage(int id, String table) throws IOException {

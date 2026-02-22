@@ -51,19 +51,19 @@ public class Main {
 
             switch (firstWord) {
                 case "CREATE" -> {
-//                    try {
+                    try {
                         CreateTable.execute(input);
-//                        System.out.println("Table Created Successfully");
-//                    }catch (Exception e){
-//                        System.out.println("Table Creation Failed");
-//                    }
+                        System.out.println("Table Created Successfully");
+                    }catch (Exception e){
+                        System.out.println("Table Creation Failed");
+                    }
                 }
                 case "SELECT" -> {
-                    try {
+//                    try {
                         base.parse.DML.SelectTable.parse(input);
-                    }catch (Exception e){
-                        System.out.println("Table Select Failed");
-                    }
+//                    }catch (Exception e){
+//                        System.out.println("Table Select Failed");
+//                    }
                 }
                 case "INSERT" -> {
                     try {
@@ -74,12 +74,12 @@ public class Main {
 
                 }
                 case "DROP" -> {
-//                    try {
-                      DropTable.execute(input);
-//                        System.out.println("Table Drop Successfully");
-//                    }catch (Exception e){
-//                        System.out.println("Table Drop Failed");
-//                    }
+                    try {
+                        DropTable.execute(input);
+                        System.out.println("Table Drop Successfully");
+                    }catch (Exception e){
+                        System.out.println("Table Drop Failed");
+                    }
                 }
                 case "ALTER" -> {
                     try {
