@@ -110,7 +110,15 @@ public class BufferManager {
         //System.out.println(Arrays.toString(encodedByteArray));
 
         int encodedIndex = 0;
+
+        //get nextPageId
         byte[] dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
+        encodedIndex+=Integer.BYTES;
+        int nextPageId = ByteBuffer.wrap(dataSegment).getInt();
+
+
+        //get table name
+        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
         encodedIndex+=Integer.BYTES;
         int tableLength = ByteBuffer.wrap(dataSegment).getInt();
 
@@ -120,6 +128,7 @@ public class BufferManager {
         //System.out.println("tableName:" +tableName);
 
         Page finalPage = new Page(pageId, tableName);
+        finalPage.nextPageId = nextPageId;
         //SequencedCollection<AttributeSchema> tableSchema = DataCatalog.getInstance().getTableSchema(tableName).getAttributeSchemas().sequencedValues();
         ArrayList<AttributeSchema> tableSchema = new ArrayList<>(DataCatalog.getInstance().getTableSchema(tableName).getAttributeSchemas().sequencedValues());
 
@@ -267,6 +276,11 @@ public class BufferManager {
 
         ArrayList<byte[]> byteLists = new ArrayList<>();
 
+
+        //store nextPageId
+        ByteBuffer nextPageId = ByteBuffer.allocate(Integer.BYTES);
+        nextPageId.putInt(page.nextPageId);
+        byteLists.add(nextPageId.array());
 
         //store name of table
         String tableName = page.tableName;
