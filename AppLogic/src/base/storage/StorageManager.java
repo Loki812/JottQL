@@ -3,6 +3,7 @@ import base.models.DataCatalog;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,7 +16,7 @@ public class StorageManager {
     private static RandomAccessFile file;
     private static DataCatalog catalog;
     private static ArrayList<Integer> freePages;
-    private static HashMap<Integer, Integer> idSizeMapper;
+    //private static HashMap<Integer, Integer> idSizeMapper;
 
     /**
      * Create a new StorageManager instance.
@@ -27,7 +28,7 @@ public class StorageManager {
         StorageManager.file = new RandomAccessFile(filename, "rw");
         StorageManager.catalog = DataCatalog.getInstance();
         StorageManager.freePages = new ArrayList<>();
-        idSizeMapper = new HashMap<Integer, Integer>();
+        //idSizeMapper = new HashMap<Integer, Integer>();
     }
 
     /**
@@ -59,11 +60,20 @@ public class StorageManager {
         ByteBuffer buffer = ByteBuffer.allocate(pageSize);
         file.seek(offset);
 
-        byte[] finalByteArray = new byte[idSizeMapper.get(pageId)];
-
-        for(int i =0; i<idSizeMapper.get(pageId); i++){
+        byte[] byteCount = new byte[Integer.BYTES];
+        for(int i =0; i<Integer.BYTES; i++){
             file.seek(offset+i);
             //System.out.println(file.readByte());
+            byteCount[i] = file.readByte();
+        }
+
+
+        int pageByteSize = (ByteBuffer.wrap(byteCount).getInt())-Integer.BYTES;
+
+        byte[] finalByteArray = new byte[pageByteSize];
+
+        for(int i =0; i<pageByteSize; i++){
+            file.seek(offset+i+Integer.BYTES);
             finalByteArray[i] = file.readByte();
         }
 
@@ -84,7 +94,7 @@ public class StorageManager {
      */
     public static void writePage(int pageId, ByteBuffer pageData) throws IOException {
 
-        idSizeMapper.put(pageId,pageData.array().length);
+        //todo idSizeMapper.put(pageId,pageData.array().length);
 
         int pageSize = catalog.getPageSize();
 
