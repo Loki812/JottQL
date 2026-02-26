@@ -13,17 +13,26 @@ public class AttributeSchema {
     private boolean notNull;
     private boolean primaryKey;
     private boolean unique;
-    private boolean hasDefaultValue;
-    private int defaultVarcharLength;
     private Object defaultVal;
+    public String ogTable;
 
     public AttributeSchema() {
         this.notNull = false;
         this.primaryKey = false;
         this.unique = false;
-        this.hasDefaultValue = false;
-        this.defaultVarcharLength = 0;
         this.defaultVal = null;
+    }
+
+    public  AttributeSchema(AttributeSchema attributeSchema, String table){
+        this.attributeName = attributeSchema.attributeName;
+        this.dataType = attributeSchema.dataType;
+        this.length = attributeSchema.length;
+        this.notNull = attributeSchema.notNull;
+        this.unique = attributeSchema.unique;
+        this.ogTable = attributeSchema.ogTable;
+        if(this.ogTable == null){
+            this.ogTable = table;
+        }
     }
 
     public static AttributeSchema createAttributeSchemaFromDisk(DataInputStream in, int offSet) throws IOException {
@@ -99,7 +108,6 @@ public class AttributeSchema {
             switch (tokens[i]) {
                 case "PRIMARYKEY" -> {
                     abtSch.primaryKey = true;
-                    abtSch.unique = true;
                     abtSch.notNull = true;
                 }
                 case "NOTNULL" -> abtSch.notNull = true;

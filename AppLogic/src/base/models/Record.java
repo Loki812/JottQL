@@ -36,15 +36,16 @@ public class Record {
 
             //add bytes based on data type
             switch (a.type){
-                case DataTypes.INTEGER:
+                case INTEGER:
                     byteSize+=Integer.BYTES;
-                case DataTypes.DOUBLE:
+                case DOUBLE:
                     byteSize+=Double.BYTES;
-                case DataTypes.BOOLEAN:
+                case BOOLEAN:
                     byteSize+=1;
-                    //todo char[] and varchar[]
-                default:
-                    break;
+                case CHAR:
+                    byteSize+=a.toString().length();
+                case VARCHAR:
+                    byteSize+=a.toString().length();
             }
 
         }

@@ -73,6 +73,21 @@ public class Page {
         }
     }
 
+    public void insertNoOrder(Record record) throws Exception {
+        int pageSize = catalog.getPageSize();
+        if(currentSize + record.getSize() > pageSize){
+            if(nextPageId == -1) {
+                nextPageId = DataCatalog.getInstance().getNextAvailablePageID();
+                BufferManager.createNewPage(nextPageId, tableName).insertNoOrder(record);
+            }else {
+                BufferManager.getPage(nextPageId).insertNoOrder(record);
+            }
+        }else {
+            recordList.add(record);
+            this.currentSize += record.getSize();
+        }
+    }
+
     /**
      * Split a full page and insert a record into one of the pages.
      *

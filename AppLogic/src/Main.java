@@ -59,11 +59,11 @@ public class Main {
                     }
                 }
                 case "SELECT" -> {
-//                    try {
+                    try {
                         base.parse.DML.SelectTable.parse(input);
-//                    }catch (Exception e){
-//                        System.out.println("Table Select Failed");
-//                    }
+                    }catch (Exception e){
+                        System.out.println("Table Select Failed");
+                    }
                 }
                 case "INSERT" -> {
                     try {
@@ -91,7 +91,6 @@ public class Main {
                 }
                 case "EXIT" -> {
                     DataCatalog.saveToDisk();
-                    // BufferManager (save before exiting_)
                     BufferManager.flushBuffer();
                     System.out.println("Exiting Application");
                     System.exit(0);

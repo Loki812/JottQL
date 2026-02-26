@@ -3,8 +3,10 @@ package base.parse.DML;
 import base.buffer.BufferManager;
 import base.models.*;
 import base.models.Record;
+import base.parse.DDL.DropTable;
 
 import java.util.ArrayList;
+import java.util.List;
 
 
 public class SelectTable {
@@ -112,14 +114,18 @@ public class SelectTable {
         }
 
         remainder = remainder.substring("FROM".length()).trim();
-        if(remainder.isEmpty()) {
+        ArrayList<String> tableNames = new ArrayList<>(List.of(remainder.split(",")));
+        if(tableNames.isEmpty()) {
 
             System.out.println("Missing table name");
             throw new Exception();
 
         }
-
-        String tableName = remainder.trim().toUpperCase();
+        ArrayList<String> tempTables = new ArrayList<>();
+        String tableName = Cartesian.Product(tableNames);
+        if(tableName.startsWith("_")){
+            tempTables.add(tableName);
+        }
         DataCatalog dataCatalog = DataCatalog.getInstance();
         TableSchema tableSchema = dataCatalog.getTableSchema(tableName);
         if(tableSchema == null) {
@@ -149,7 +155,9 @@ public class SelectTable {
         }
 
         DMLParser.printResultSet(attrNames, records);
-
+        for(String table: tempTables) {
+            DropTable.execute("DROP TABLE " + table.trim().toUpperCase()+";");
+        }
     }
 
 }
