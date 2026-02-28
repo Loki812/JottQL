@@ -50,8 +50,10 @@ public class DataCatalog {
                 loadFromDisk(in);
             } catch (FileNotFoundException e) {
                 System.err.println("File not found (this shouldn't happen):" + e.getMessage());
+                System.exit(1);
             } catch (IOException e) {
                 System.err.println("Failed to load catalog: " + e.getMessage());
+                System.exit(1);
             }
 
 

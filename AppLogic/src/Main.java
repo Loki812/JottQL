@@ -5,7 +5,7 @@ import base.parse.DDL.CreateTable;
 import base.parse.DDL.DropTable;
 
 import java.io.File;
-import java.io.IOException;
+
 import java.nio.file.*;
 
 import java.util.Scanner;
@@ -20,7 +20,7 @@ public class Main {
      *       - indexing - will indexing be used True or False
      *
      * **/
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
 
         // Check if exists build File, if not create new file.
         File dbFile = new File(args[0], "catalog.bin");
@@ -37,6 +37,7 @@ public class Main {
         DataCatalog dc = DataCatalog.getInstance();
 
         BufferManager bm = new BufferManager(Integer.parseInt(args[2]),args[0]);
+
 
         Scanner scanner = new Scanner(System.in);
 

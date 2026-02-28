@@ -126,6 +126,8 @@ public class TableSchema {
             System.out.println("Column does not exist");
             throw new Exception();
         }
+        // TODO: remove this, data catalog does not touch Buffer.
+        // LOL wtf
         BufferManager.getPage(rootPageID).deleteColumn(index);
         attributeSchemas.remove(name);
         numOfAttributes -= 1;

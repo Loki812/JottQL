@@ -1,6 +1,7 @@
 package base.storage;
 import base.models.DataCatalog;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.Buffer;
@@ -16,19 +17,22 @@ public class StorageManager {
     private static RandomAccessFile file;
     private static DataCatalog catalog;
     private static ArrayList<Integer> freePages;
-    //private static HashMap<Integer, Integer> idSizeMapper;
 
     /**
      * Create a new StorageManager instance.
      *
      * @param filename The database file name
-     * @throws Exception If the file cannot be opened or created
      */
-    public StorageManager(String filename) throws Exception {
-        StorageManager.file = new RandomAccessFile(filename, "rw");
-        StorageManager.catalog = DataCatalog.getInstance();
-        StorageManager.freePages = new ArrayList<>();
-        //idSizeMapper = new HashMap<Integer, Integer>();
+    public StorageManager(String filename) {
+        try {
+            StorageManager.file = new RandomAccessFile(filename, "rw");
+            StorageManager.catalog = DataCatalog.getInstance();
+            StorageManager.freePages = new ArrayList<>();
+        } catch (FileNotFoundException e) {
+            System.err.println("Database File could not be created or found:" + e);
+            System.err.println("Exiting Gracefully...");
+            System.exit(1);
+        }
     }
 
     /**
@@ -117,25 +121,23 @@ public class StorageManager {
      * Delete a page by clearing its contents and marking it as free.
      *
      * @param pageId The ID of the page to delete
-     * @throws IllegalArgumentException If the page does not exist
      */
-    public static void deletePage(int pageId) {
-        try {
-            int pageSize = catalog.getPageSize();
-            long offset = (long) pageId * pageSize;
+    public static void deletePage(int pageId) throws IOException {
+        int pageSize = catalog.getPageSize();
+        long offset = (long) pageId * pageSize;
 
-            if (offset >= file.length()) {
-                return;
-            }
-
-            // Create an empty ByteBuffer and overwrite the page at its location
-            ByteBuffer emptyPage = ByteBuffer.allocate(pageSize);
-            file.seek(offset);
-            file.write(emptyPage.array());
-            freePages.add(pageId);  // The page becomes free, so we add it to the free pages list
-
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to delete page", e);
+        // TODO: if this is called and the page isnt found,
+        // should throw and error?
+        if (offset >= file.length()) {
+            return;
         }
+
+        // Create an empty ByteBuffer and overwrite the page at its location
+        ByteBuffer emptyPage = ByteBuffer.allocate(pageSize);
+        file.seek(offset);
+        file.write(emptyPage.array());
+        freePages.add(pageId);  // The page becomes free, so we add it to the free pages list
+
+
     }
 }

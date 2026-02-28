@@ -118,7 +118,11 @@ public class Page {
         if(page != null){
             page.deleteTable();
         }
-        StorageManager.deletePage(pageId);
+        try {
+            StorageManager.deletePage(pageId);
+        } catch (IOException e) {
+            System.err.println("Failed to Delete Page, details: \n" + e);
+        }
         BufferManager.deletePage(pageId);
     }
 
