@@ -148,22 +148,22 @@ public class BufferManager {
                 //check that data is != null
                 if(nullByteArray[i]!=1){
                     switch(dataType){
-                        case DataTypes.INTEGER:
+                        case INTEGER:
                             encodedIndex+=Integer.BYTES;
                             break;
-                        case DataTypes.DOUBLE:
+                        case DOUBLE:
                             encodedIndex+=Double.BYTES;
                             break;
-                        case DataTypes.BOOLEAN:
+                        case BOOLEAN:
                             encodedIndex+=1;
                             break;
-                        case DataTypes.CHAR:
+                        case CHAR:
                             byte[] charLengthByte = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
                             encodedIndex+=Integer.BYTES;
                             int charLength = ByteBuffer.wrap(charLengthByte).getInt();
                             encodedIndex+=charLength;
                             break;
-                        case DataTypes.VARCHAR:
+                        case VARCHAR:
                             byte[] varLengthByte = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
                             encodedIndex+=Integer.BYTES;
                             int varLength = ByteBuffer.wrap(varLengthByte).getInt();
@@ -205,17 +205,17 @@ public class BufferManager {
             } else {
                 byte[] dataSegment;
                 switch(dataType){
-                    case DataTypes.INTEGER:
+                    case INTEGER:
                         dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
                         encodedIndex+=Integer.BYTES;
                         attribute = new AttributeValue<>(ByteBuffer.wrap(dataSegment).getInt(), dataType);
                         break;
-                    case DataTypes.DOUBLE:
+                    case DOUBLE:
                         dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Double.BYTES));
                         encodedIndex+=Double.BYTES;
                         attribute = new AttributeValue<>(ByteBuffer.wrap(dataSegment).getDouble(), dataType);
                         break;
-                    case DataTypes.BOOLEAN:
+                    case BOOLEAN:
                         dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+1));
                         encodedIndex+=1;
                         Byte boolByte = ByteBuffer.wrap(dataSegment).get();
@@ -227,7 +227,7 @@ public class BufferManager {
                         }
                         attribute = new AttributeValue<>(bool, dataType);
                         break;
-                    case DataTypes.CHAR:
+                    case CHAR:
                         dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
                         encodedIndex+=Integer.BYTES;
                         int charLength = ByteBuffer.wrap(dataSegment).getInt();
@@ -237,7 +237,7 @@ public class BufferManager {
                         String charArray = new String(dataSegment, StandardCharsets.UTF_8);
                         attribute = new AttributeValue<>(charArray, dataType);
                         break;
-                    case DataTypes.VARCHAR:
+                    case VARCHAR:
                         dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
                         encodedIndex+=Integer.BYTES;
                         int varLength = ByteBuffer.wrap(dataSegment).getInt();
@@ -355,21 +355,21 @@ public class BufferManager {
             //System.out.println("Attribute: "+attributeValue);
             if(attributeValue.data!=null){
                 switch(attributeValue.type){
-                    case DataTypes.INTEGER:
+                    case INTEGER:
                         byteBuffer = ByteBuffer.allocate(Integer.BYTES);
                         byteBuffer.putInt((Integer) attributeValue.data);
                         break;
-                    case DataTypes.DOUBLE:
+                    case DOUBLE:
                         byteBuffer = ByteBuffer.allocate(Double.BYTES);
                         byteBuffer.putDouble((Double) attributeValue.data);
                         break;
-                    case DataTypes.BOOLEAN:
+                    case BOOLEAN:
                         byteBuffer = ByteBuffer.allocate(1);
                         boolean bool = (Boolean)attributeValue.data;
                         Byte boolByte = (byte)(bool ? 1 : 0);
                         byteBuffer.put(boolByte);
                         break;
-                    case DataTypes.CHAR:
+                    case CHAR:
                         String str = (String)attributeValue.data;
                         ByteBuffer strSize = ByteBuffer.allocate(Integer.BYTES);
                         strSize.putInt(str.length());
@@ -378,7 +378,7 @@ public class BufferManager {
                         byte[] strBytes = str.getBytes(StandardCharsets.UTF_8);
                         byteLists.add(strBytes);
                         break;
-                    case DataTypes.VARCHAR:
+                    case VARCHAR:
                         String var = (String)attributeValue.data;
                         ByteBuffer varSize = ByteBuffer.allocate(Integer.BYTES);
                         varSize.putInt(var.length());
