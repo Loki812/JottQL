@@ -44,15 +44,17 @@ public class StorageManager {
         return freePages;
     }
 
+
     /**
-     * Read a page from disk.
+     * Version 2 of read page from disk. Instead of dynamically calculating how many bytes to pull,
+     * readPageV2 simply reads all 'x' bytes from disk starting at offset. Buffermanager then uses
+     * metadata from the header to determine when the real data ends and padding starts.
      *
-     * @param pageId The ID of the page to read
-     * @return A ByteBuffer object containing the page data
-     * @throws IOException If an I/O error occurs
-     * @throws IllegalArgumentException If the page does not exist
+     * @param pageId the id of the page we want
+     * @return a byte array read directly from disk
+     * @throws IOException if the disk fails
      */
-    public static byte[] readPage(int pageId) throws IOException {
+    public static byte[] readPageV2(int pageId) throws IOException {
         int pageSize = catalog.getPageSize();
         long offset = (long) pageId * pageSize;
 
@@ -60,32 +62,14 @@ public class StorageManager {
             throw new IllegalArgumentException("Page does not exist");
         }
 
-        // Allocate a new buffer and read page contents into it at the page's location
-        ByteBuffer buffer = ByteBuffer.allocate(pageSize);
+        // always read full page, no dynamically calculating how much to read
+        // massive performance gains
+        byte[] fullPage = new byte[pageSize];
+
         file.seek(offset);
+        file.readFully(fullPage);
 
-        byte[] byteCount = new byte[Integer.BYTES];
-        for(int i =0; i<Integer.BYTES; i++){
-            file.seek(offset+i);
-            //System.out.println(file.readByte());
-            byteCount[i] = file.readByte();
-        }
-
-
-        int pageByteSize = (ByteBuffer.wrap(byteCount).getInt())-Integer.BYTES;
-
-        byte[] finalByteArray = new byte[pageByteSize];
-
-        for(int i =0; i<pageByteSize; i++){
-            file.seek(offset+i+Integer.BYTES);
-            finalByteArray[i] = file.readByte();
-        }
-
-        //file.readFully(buffer.array());
-
-        buffer.position(0); // Reset buffer cursor back to beginning
-
-        return finalByteArray;
+        return fullPage;
     }
 
     /**

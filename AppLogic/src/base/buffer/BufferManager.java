@@ -104,7 +104,7 @@ public class BufferManager {
         if (buffer.size()>= maxPageCount){
             Page oldestPage = Collections.min(buffer.values(), Comparator.comparing(p -> p.timestamp));
             try {
-                writePageToHardware(oldestPage);
+                writePageToHardwareV2(oldestPage);
                 buffer.remove(oldestPage.pageId);
             } catch (Exception e) {
                 System.err.println("Failed to flush page from Buffer");
@@ -121,7 +121,7 @@ public class BufferManager {
     public static void flushBuffer() {
         for(Page p : buffer.values()){
             try {
-                writePageToHardware(p);
+                writePageToHardwareV2(p);
             } catch (Exception e) {
                 System.err.println("Failed to flush page id=" + p.pageId + " from Buffer");
                 throw new RuntimeException(e);
@@ -156,7 +156,7 @@ public class BufferManager {
         DataCatalog dc = DataCatalog.getInstance();
 
         // get byte array from hardware
-        byte[] encodedByteArray = StorageManager.readPage(pageId);
+        byte[] encodedByteArray = StorageManager.readPageV2(pageId);
         ByteBuffer buffer = ByteBuffer.wrap(encodedByteArray);
 
         // instantiate page with first few fields
@@ -164,6 +164,8 @@ public class BufferManager {
         int tableNameLength = buffer.getInt();
         byte[] tableNameBytes = new byte[tableNameLength];
         buffer.get(tableNameBytes);
+        int numOfRecords = buffer.getInt();
+
         String tableName = new String(tableNameBytes, StandardCharsets.UTF_8);
         Page p = new Page(pageId, tableName);
         p.nextPageId = nextPageId;
@@ -172,7 +174,7 @@ public class BufferManager {
                 .getAttributeSchemas().sequencedValues());
 
         // process records until buffer is empty
-        while (buffer.hasRemaining()) {
+        for (int i = 0; i < numOfRecords; i++) {
             Record record = convertBytesToRecordV2(buffer, attributes);
             p.recordList.add(record);
         }
@@ -222,171 +224,86 @@ public class BufferManager {
 
 
     /**
+     * Writes a page to disk, features readability and performance improvements from V1.
      *
-     * @param page
+     * @param page The page object we wish to write to disk
      */
-    private static void writePageToHardware(Page page) {
-
+    private static void writePageToHardwareV2(Page page) {
         //prevent a page from writing if it has not been modified
         if(!page.hasBeenModified){
             return;
         }
 
-        ArrayList<byte[]> byteLists = new ArrayList<>();
+        DataCatalog dc = DataCatalog.getInstance();
+        ByteBuffer byteBuffer = ByteBuffer.allocate(dc.getPageSize());
 
-
-        //store nextPageId
-        ByteBuffer nextPageId = ByteBuffer.allocate(Integer.BYTES);
-        nextPageId.putInt(page.nextPageId);
-        byteLists.add(nextPageId.array());
-
-        //store name of table
-        String tableName = page.tableName;
-        ByteBuffer tableSize = ByteBuffer.allocate(Integer.BYTES);
-        tableSize.putInt(tableName.length());
-        byteLists.add(tableSize.array());
-
-        byte[] tableNameBytes = tableName.getBytes(StandardCharsets.UTF_8);
-        byteLists.add(tableNameBytes);
-
-        //store records
-        for(Record record : page.recordList){
-            byteLists.add(convertRecordToBytes(record));
-        }
-
-        //find size of final array
-        int finalByteArraySize = 0;
-        for(int i=0; i<byteLists.size(); i++){
-            finalByteArraySize+=byteLists.get(i).length;
-        }
-
-        byte[] finalByteArray = new byte[finalByteArraySize+Integer.BYTES];
-
-        //put int in array showing how long the page is
-        ByteBuffer byteCount = ByteBuffer.allocate(Integer.BYTES);
-        byteCount.putInt(finalByteArraySize+Integer.BYTES);
-        int finalArrayIndex =0;
-        for(byte b : byteCount.array()){
-            finalByteArray[finalArrayIndex]=b;
-            finalArrayIndex++;
-        }
-
-        //populate final array
-        for(byte[] list : byteLists){
-            for(byte b : list){
-                finalByteArray[finalArrayIndex]=b;
-                finalArrayIndex++;
-            }
-        }
-
-        ByteBuffer buffer = ByteBuffer.wrap(finalByteArray);
 
         try {
-            StorageManager.writePage(page.pageId, buffer);
+            byteBuffer.putInt(page.nextPageId);
+            byte[] tableNameBytes = page.tableName.getBytes(StandardCharsets.UTF_8);
+            byteBuffer.putInt(tableNameBytes.length);
+            byteBuffer.put(tableNameBytes);
+
+            // put in number of records, used for reading from hardware for loop counter
+            byteBuffer.putInt(page.recordList.size());
+
+            ArrayList<AttributeSchema> attributes = new ArrayList<>(dc.getTableSchema(page.tableName)
+                    .getAttributeSchemas().sequencedValues());
+
+            for (Record r : page.recordList) {
+                convertRecordToBytesV2(r, attributes, byteBuffer);
+            }
+
+            byteBuffer.flip(); // resets position, clips length. prepares for it to be sent to storage manager
+            StorageManager.writePage(page.pageId, byteBuffer);
+
+
         } catch (IOException e) {
-            System.err.println("Failed to write page to disk...");
+            System.err.println("Error occurred while attempting to write page " + page.pageId + " to disk...");
             throw new RuntimeException(e);
         }
 
     }
 
-    // TODO: Logic checking
     /**
-     * Coverts a record instance to a byte array
+     * Converts a Record object to bytes, to later be written to disk.
      *
-     * @param record the given record instance
-     * @return
+     * @param r the record we wish to convert to bytes
+     * @param attributes the list of attributes, and their corresponding DataTypes
+     * @param buffer the bytebuffer, at a position ready for the record data to be written
      */
-    private static byte[] convertRecordToBytes(Record record){
-
-        ArrayList<byte[]> byteLists = new ArrayList<>();
-
-        //make null-bit
-        byte[] nullBitArray = new byte[record.attributeList.size()];
-        for(int i=0; i<record.attributeList.size(); i++){
-            if(record.attributeList.get(i).data==null){
-                nullBitArray[i]=1;
+    private static void convertRecordToBytesV2(Record r, ArrayList<AttributeSchema> attributes, ByteBuffer buffer) {
+        // write null bit array into buffer
+        for (AttributeValue a : r.attributeList) {
+            if (a.data == null) {
+                buffer.put((byte) 1);
             } else {
-                nullBitArray[i]=0;
+                buffer.put((byte) 0);
             }
         }
-        byteLists.add(nullBitArray);
 
-        //encode values
-        for(AttributeValue attributeValue : record.attributeList){
+        for (int i = 0; i < attributes.size(); i++) {
+            Object value = r.attributeList.get(i).data;
+            if (value != null) {
+                DataTypes dataType = attributes.get(i).getDataType();
+                switch (dataType) {
+                    case INTEGER -> buffer.putInt((int) value);
+                    case DOUBLE -> buffer.putDouble((double) value);
+                    // in-case value is Boolean and not boolean, haven't checked full codebase
+                    case BOOLEAN -> buffer.put((byte) ((boolean) value ? 1 : 0));
+                    case CHAR, VARCHAR -> {
+                        String s = (String) value;
 
-            ByteBuffer byteBuffer = null;
+                        byte[] strBytes = s.getBytes(StandardCharsets.UTF_8);
+                        // write the length of value
+                        buffer.putInt(strBytes.length);
 
-            //System.out.println("Attribute: "+attributeValue);
-            if(attributeValue.data!=null){
-                switch(attributeValue.type){
-                    case DataTypes.INTEGER:
-                        byteBuffer = ByteBuffer.allocate(Integer.BYTES);
-                        byteBuffer.putInt((Integer) attributeValue.data);
-                        break;
-                    case DataTypes.DOUBLE:
-                        byteBuffer = ByteBuffer.allocate(Double.BYTES);
-                        byteBuffer.putDouble((Double) attributeValue.data);
-                        break;
-                    case DataTypes.BOOLEAN:
-                        byteBuffer = ByteBuffer.allocate(1);
-                        boolean bool = (Boolean)attributeValue.data;
-                        Byte boolByte = (byte)(bool ? 1 : 0);
-                        byteBuffer.put(boolByte);
-                        break;
-                    case DataTypes.CHAR:
-                        String str = (String)attributeValue.data;
-                        ByteBuffer strSize = ByteBuffer.allocate(Integer.BYTES);
-                        strSize.putInt(str.length());
-                        byteLists.add(strSize.array());
-
-                        byte[] strBytes = str.getBytes(StandardCharsets.UTF_8);
-                        byteLists.add(strBytes);
-                        break;
-                    case DataTypes.VARCHAR:
-                        String var = (String)attributeValue.data;
-                        ByteBuffer varSize = ByteBuffer.allocate(Integer.BYTES);
-                        varSize.putInt(var.length());
-                        byteLists.add(varSize.array());
-
-                        byte[] varBytes = var.getBytes(StandardCharsets.UTF_8);
-                        byteLists.add(varBytes);
-                        break;
-
-                    default:
-                        break;
+                        buffer.put(strBytes);
+                    }
                 }
             }
-
-            if(byteBuffer!=null){
-                byte[] byteList = byteBuffer.array();
-                byteLists.add(byteList);
-            }
-
         }
-
-        //find size of final array
-        int finalByteArraySize = 0;
-        for(int i=0; i<byteLists.size(); i++){
-            //System.out.println(Arrays.toString(byteLists.get(i)));
-            finalByteArraySize+=byteLists.get(i).length;
-        }
-
-        byte[] finalByteArray = new byte[finalByteArraySize];
-
-        //populate final array
-        int finalArrayIndex = 0;
-        for(byte[] list : byteLists){
-            for(byte b : list){
-                finalByteArray[finalArrayIndex]=b;
-                finalArrayIndex++;
-            }
-        }
-
-
-        //System.out.println("byte array: "+Arrays.toString(finalByteArray));
-        return finalByteArray;
-
     }
+
 
 }

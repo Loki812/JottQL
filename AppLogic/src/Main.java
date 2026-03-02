@@ -20,7 +20,7 @@ public class Main {
      *       - indexing - will indexing be used True or False
      *
      * **/
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
 
         // Check if exists build File, if not create new file.
         File dbFile = new File(args[0], "catalog.bin");
@@ -60,11 +60,11 @@ public class Main {
                     }
                 }
                 case "SELECT" -> {
-//                    try {
+                  try {
                         base.parse.DML.SelectTable.parse(input);
-//                    }catch (Exception e){
-//                        System.out.println("Table Select Failed");
-//                    }
+                   }catch (Exception e){
+                       System.out.println("Table Select Failed" + e);
+                   }
                 }
                 case "INSERT" -> {
                     try {
