@@ -121,7 +121,5 @@ public class StorageManager {
         file.seek(offset);
         file.write(emptyPage.array());
         freePages.add(pageId);  // The page becomes free, so we add it to the free pages list
-
-
     }
 }
