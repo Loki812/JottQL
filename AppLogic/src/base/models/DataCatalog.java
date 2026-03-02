@@ -149,6 +149,8 @@ public class DataCatalog {
     }
 
     public void addTableSchema(TableSchema schema) throws Exception {
+        BufferManager bm = BufferManager.getInstance();
+
         if(catalog.tables.containsKey(schema.tableName)){
             System.out.println("Table already exists: " + schema.tableName);
             throw new Exception();
@@ -156,7 +158,7 @@ public class DataCatalog {
         schema.rootPageID = getNextAvailablePageID();
         catalog.tables.put(schema.tableName, schema);
         catalog.tableCount += 1;
-        BufferManager.createNewPage(schema.getRootPageID(), schema.tableName);
+        bm.createNewPage(schema.getRootPageID(), schema.tableName);
     }
 
     /**

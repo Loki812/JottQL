@@ -12,30 +12,57 @@ import base.storage.StorageManager;
 
 public class BufferManager {
 
-    //max number of pages that can be in buffer before flushing
-    private static int maxPageCount;
-    private static HashMap<Integer,Page> buffer;
-    private DataCatalog dataCatalog;
-    private StorageManager storageManager;
+    private static BufferManager instance = null;
 
-    //todo make static instance of the BufferManager similar to how the bufferManager is done
-    private static BufferManager bufferManager = null;
+    // singleton variables
+    private final int maxPageCount;
+    private final HashMap<Integer,Page> buffer;
+    private final StorageManager storageManager;
 
 
-    // TODO follow singleton pattern for storage manager,
-    // no need for field that isnt used
+    private final DataCatalog dataCatalog;
+
+
+
     /**
-     * Creates an instance of the bufferManager class
+     * Creates a singlton instance of the bufferManager class
      *
      *
      * @param maxPageCount the maximum number of pages that can be stored in memory, as Java Objects
      *                     at one time.
      * @param directory the directory the storage.bin file is stored in.
      */
-    public BufferManager(int maxPageCount, String directory)  {
-        BufferManager.maxPageCount = maxPageCount;
-        this.storageManager = new StorageManager(directory+"/storage.bin/");
+    private BufferManager(int maxPageCount, String directory)  {
+        this.maxPageCount = maxPageCount;
+        this.storageManager = StorageManager.buildStorageManager(directory);
         buffer = new HashMap<>();
+        dataCatalog = DataCatalog.getInstance();
+    }
+
+    /**
+     *
+     * @param maxPageCount the maximum number of pages that can be stored in memory, as Java Objects
+     *                     at one time.
+     * @param directory the directory the storage.bin file is stored in.
+     * @return the singleton instance of the BufferManager
+     */
+    public static synchronized BufferManager buildBufferManager(int maxPageCount, String directory) {
+        if (instance == null) {
+            instance = new BufferManager(maxPageCount, directory);
+        }
+        return instance;
+    }
+
+    /**
+     * getInstance checks if the buffermanager has been built, then returns it or throws an error.
+     *
+     * @return the singleton instance of the BufferManager
+     */
+    public static BufferManager getInstance() {
+        if (instance == null) {
+            throw new RuntimeException("BufferManager not built. An error Occurred");
+        }
+        return instance;
     }
 
 
@@ -48,7 +75,7 @@ public class BufferManager {
      * @param pageId the ID of the page
      * @return A Page Object with the given id, or null dependent on ID
      */
-    public static Page getPage(int pageId){
+    public Page getPage(int pageId){
         if(pageId==-1){
             return null;
         }
@@ -82,7 +109,7 @@ public class BufferManager {
      * @param tableName the name of table this page belongs to
      * @return the newly created page object
      */
-    public static Page createNewPage(int id, String tableName)  {
+    public  Page createNewPage(int id, String tableName)  {
         try {
             flushOldestIfNeeded();
             Page page = new Page(id, tableName);
@@ -100,7 +127,7 @@ public class BufferManager {
      * is ejected from the buffer, clearing space
      *
      */
-    public static void flushOldestIfNeeded() {
+    public void flushOldestIfNeeded() {
         if (buffer.size()>= maxPageCount){
             Page oldestPage = Collections.min(buffer.values(), Comparator.comparing(p -> p.timestamp));
             try {
@@ -118,7 +145,7 @@ public class BufferManager {
      * flushBuffer should only be called when exiting the database. It writes all existing
      * pages in the dataBase back to the disk.
      */
-    public static void flushBuffer() {
+    public void flushBuffer() {
         for(Page p : buffer.values()){
             try {
                 writePageToHardwareV2(p);
@@ -130,14 +157,13 @@ public class BufferManager {
         }
     }
 
-    //TODO refactor, this should call storage manager.
-
     /**
      *
      * @param pageId
      */
-    public static void deletePage(int pageId){
+    public void deletePage(int pageId) throws IOException {
         buffer.remove(pageId);
+        storageManager.deletePage(pageId);
     }
 
     /**
@@ -150,13 +176,11 @@ public class BufferManager {
      * @return a page object read from disk
      * @throws IOException thrown from storage manager, since this is a private function we pass it up.
      */
-    private static Page readPageFromHardwareV2(int pageId) throws IOException {
+    private Page readPageFromHardwareV2(int pageId) throws IOException {
 
-        // TODO: remove this once design patterns sorted
-        DataCatalog dc = DataCatalog.getInstance();
 
         // get byte array from hardware
-        byte[] encodedByteArray = StorageManager.readPageV2(pageId);
+        byte[] encodedByteArray = storageManager.readPageV2(pageId);
         ByteBuffer buffer = ByteBuffer.wrap(encodedByteArray);
 
         // instantiate page with first few fields
@@ -170,7 +194,7 @@ public class BufferManager {
         Page p = new Page(pageId, tableName);
         p.nextPageId = nextPageId;
 
-        ArrayList<AttributeSchema> attributes = new ArrayList<>(dc.getTableSchema(tableName)
+        ArrayList<AttributeSchema> attributes = new ArrayList<>(dataCatalog.getTableSchema(tableName)
                 .getAttributeSchemas().sequencedValues());
 
         // process records until buffer is empty
@@ -228,14 +252,12 @@ public class BufferManager {
      *
      * @param page The page object we wish to write to disk
      */
-    private static void writePageToHardwareV2(Page page) {
+    private void writePageToHardwareV2(Page page) {
         //prevent a page from writing if it has not been modified
         if(!page.hasBeenModified){
             return;
         }
-
-        DataCatalog dc = DataCatalog.getInstance();
-        ByteBuffer byteBuffer = ByteBuffer.allocate(dc.getPageSize());
+        ByteBuffer byteBuffer = ByteBuffer.allocate(dataCatalog.getPageSize());
 
 
         try {
@@ -247,7 +269,7 @@ public class BufferManager {
             // put in number of records, used for reading from hardware for loop counter
             byteBuffer.putInt(page.recordList.size());
 
-            ArrayList<AttributeSchema> attributes = new ArrayList<>(dc.getTableSchema(page.tableName)
+            ArrayList<AttributeSchema> attributes = new ArrayList<>(dataCatalog.getTableSchema(page.tableName)
                     .getAttributeSchemas().sequencedValues());
 
             for (Record r : page.recordList) {
@@ -255,7 +277,7 @@ public class BufferManager {
             }
 
             byteBuffer.flip(); // resets position, clips length. prepares for it to be sent to storage manager
-            StorageManager.writePage(page.pageId, byteBuffer);
+            storageManager.writePage(page.pageId, byteBuffer);
 
 
         } catch (IOException e) {

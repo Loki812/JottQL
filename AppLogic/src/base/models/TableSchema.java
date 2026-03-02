@@ -21,6 +21,7 @@ public class TableSchema {
     public String primaryKey;
     public int rootPageID;
     private static final DataCatalog dc = DataCatalog.getInstance();
+    private static final BufferManager bm = BufferManager.getInstance();
 
     public TableSchema() {
         rootPageID = dc.getNextAvailablePageID();
@@ -128,7 +129,7 @@ public class TableSchema {
         }
         // TODO: remove this, data catalog does not touch Buffer.
         // LOL wtf
-        BufferManager.getPage(rootPageID).deleteColumn(index);
+        bm.getPage(rootPageID).deleteColumn(index);
         attributeSchemas.remove(name);
         numOfAttributes -= 1;
 
@@ -147,7 +148,7 @@ public class TableSchema {
         }
         attributeSchemas.put(a.attributeName, a);
         numOfAttributes += 1;
-        Page page = BufferManager.getPage(rootPageID);
+        Page page = bm.getPage(rootPageID);
         assert page != null;
         page.addColumn(new AttributeValue<>(a.getDefaultVal(),a.getDataType()));
 

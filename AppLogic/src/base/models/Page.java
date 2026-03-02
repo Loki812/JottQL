@@ -17,6 +17,7 @@ public class Page {
     public LocalDateTime timestamp;
     private DataCatalog catalog;
     public ArrayList<Record> recordList;
+    private BufferManager bufferManager;
 
     public Page(int pageId, String tableName){
         this.pageId = pageId;
@@ -27,6 +28,7 @@ public class Page {
         this.catalog = DataCatalog.getInstance();
         this.nextPageId = -1;
         recordList = new ArrayList<Record>();
+        this.bufferManager = BufferManager.getInstance();
     }
 
     /**
@@ -36,6 +38,7 @@ public class Page {
      * @throws Exception If the DataCatalog instance cannot be retrieved
      */
     public void insertIntoPage(Record record) throws Exception {
+
         int pageSize = catalog.getPageSize();
         TableSchema schema = catalog.getTableSchema(tableName);
 
@@ -67,9 +70,9 @@ public class Page {
         }
         if(nextPageId == -1){
             nextPageId = DataCatalog.getInstance().getNextAvailablePageID();
-            BufferManager.createNewPage(nextPageId, tableName).insertIntoPage(record);
+            bufferManager.createNewPage(nextPageId, tableName).insertIntoPage(record);
         }else {
-            BufferManager.getPage(nextPageId).insertIntoPage(record);
+            bufferManager.getPage(nextPageId).insertIntoPage(record);
         }
     }
 
@@ -85,7 +88,7 @@ public class Page {
         }
 
         // Create a new page and re-order the pointers
-        Page nextPage = BufferManager.createNewPage(catalog.getNextAvailablePageID(), tableName);
+        Page nextPage = bufferManager.createNewPage(catalog.getNextAvailablePageID(), tableName);
         nextPage.nextPageId = nextPageId;
         this.nextPageId = nextPage.pageId;
 
@@ -114,23 +117,22 @@ public class Page {
     }
 
     public void deleteTable(){
-        Page page = BufferManager.getPage(nextPageId);
+        Page page = bufferManager.getPage(nextPageId);
         if(page != null){
             page.deleteTable();
         }
         try {
-            StorageManager.deletePage(pageId);
+            bufferManager.deletePage(pageId);
         } catch (IOException e) {
             System.err.println("Failed to Delete Page, details: \n" + e);
         }
-        BufferManager.deletePage(pageId);
     }
 
     public void deleteColumn(int index){
         for(Record record : recordList){
             record.attributeList.remove(index);
         }
-        Page page = BufferManager.getPage(nextPageId);
+        Page page = bufferManager.getPage(nextPageId);
         if(page != null){
             page.deleteColumn(index);
         }
@@ -143,7 +145,7 @@ public class Page {
             record.attributeList.add(defaultValue);
             currentSize += record.getSize();
         }
-        Page page = BufferManager.getPage(nextPageId);
+        Page page = bufferManager.getPage(nextPageId);
         if(page != null){
             page.addColumn(defaultValue);
         }

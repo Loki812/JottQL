@@ -3,6 +3,7 @@ import base.models.DataCatalog;
 import base.parse.DDL.AtlerTable;
 import base.parse.DDL.CreateTable;
 import base.parse.DDL.DropTable;
+import base.storage.StorageManager;
 
 import java.io.File;
 
@@ -35,9 +36,7 @@ public class Main {
         // build data catalog with page-size and data directory
         DataCatalog.buildCatalog(Integer.parseInt(args[1]), args[0]);
         DataCatalog dc = DataCatalog.getInstance();
-
-        BufferManager bm = new BufferManager(Integer.parseInt(args[2]),args[0]);
-
+        BufferManager bm = BufferManager.buildBufferManager(Integer.parseInt(args[2]),args[0]);
 
         Scanner scanner = new Scanner(System.in);
 
@@ -93,7 +92,7 @@ public class Main {
                 case "EXIT" -> {
                     DataCatalog.saveToDisk();
                     // BufferManager (save before exiting_)
-                    BufferManager.flushBuffer();
+                    bm.flushBuffer();
                     System.out.println("Exiting Application");
                     System.exit(0);
                 }

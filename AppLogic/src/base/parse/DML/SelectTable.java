@@ -53,6 +53,8 @@ public class SelectTable {
     }
 
     private static int[] findSpacing(Page page, TableSchema tableSchema) {
+
+        BufferManager bm = BufferManager.getInstance();
         try{
             int[] spacing = new int[page.recordList.getFirst().attributeList.size()];
             ArrayList<AttributeSchema> attributeSchemas = new ArrayList<>(tableSchema.getAttributeSchemas().sequencedValues());
@@ -69,7 +71,7 @@ public class SelectTable {
                         }
                     }
                 }
-                page = BufferManager.getPage(page.nextPageId);
+                page = bm.getPage(page.nextPageId);
             }
             return spacing;
         }catch (Exception e) {
@@ -79,6 +81,7 @@ public class SelectTable {
 
     public static void parse(String command) throws Exception {
 
+        BufferManager bm = BufferManager.getInstance();
         String trimmedCommand = command.trim();
         if(!trimmedCommand.startsWith("SELECT")) {
 
@@ -139,7 +142,7 @@ public class SelectTable {
         ArrayList<Record> records = new ArrayList<>();
 
         while (true) {
-            Page p = BufferManager.getPage(pageId);
+            Page p = bm.getPage(pageId);
             records.addAll(p.recordList);
             if (p.nextPageId == -1) {
                 break;

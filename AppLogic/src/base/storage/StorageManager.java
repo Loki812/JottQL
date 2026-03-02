@@ -4,30 +4,30 @@ import base.models.DataCatalog;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 
 /**
  * The StorageManager handles low-level disk I/O operations.
  */
 public class StorageManager {
-    private static RandomAccessFile file;
-    private static DataCatalog catalog;
-    private static ArrayList<Integer> freePages;
+    private RandomAccessFile file;
+    private ArrayList<Integer> freePages;
+
+    // singleton class style
+    private static StorageManager instance;
+
+
 
     /**
      * Create a new StorageManager instance.
      *
-     * @param filename The database file name
+     * @param directory The database file directory
      */
-    public StorageManager(String filename) {
+    private StorageManager(String directory) {
         try {
-            StorageManager.file = new RandomAccessFile(filename, "rw");
-            StorageManager.catalog = DataCatalog.getInstance();
-            StorageManager.freePages = new ArrayList<>();
+            file = new RandomAccessFile(directory+"/storage.bin/", "rw");
+            freePages = new ArrayList<>();
         } catch (FileNotFoundException e) {
             System.err.println("Database File could not be created or found:" + e);
             System.err.println("Exiting Gracefully...");
@@ -35,14 +35,21 @@ public class StorageManager {
         }
     }
 
-    /**
-     * Get the ArrayList of free pages.
-     *
-     * @return the freePages ArrayList of Integers
-     */
-    public static ArrayList<Integer> getFreePages() {
-        return freePages;
+    public static StorageManager buildStorageManager(String directory) {
+        if (instance == null) {
+            instance = new StorageManager(directory);
+            return instance;
+        }
+        return instance;
     }
+
+    public static StorageManager getInstance() {
+        if (instance == null) {
+            throw new RuntimeException("Storage Manager not instantiated");
+        }
+        return instance;
+    }
+
 
 
     /**
@@ -54,8 +61,10 @@ public class StorageManager {
      * @return a byte array read directly from disk
      * @throws IOException if the disk fails
      */
-    public static byte[] readPageV2(int pageId) throws IOException {
-        int pageSize = catalog.getPageSize();
+    public byte[] readPageV2(int pageId) throws IOException {
+        DataCatalog dc = DataCatalog.getInstance();
+
+        int pageSize = dc.getPageSize();
         long offset = (long) pageId * pageSize;
 
         if (offset >= file.length()) {
@@ -80,11 +89,11 @@ public class StorageManager {
      * @throws IOException If an I/O error occurs
      * @throws IllegalArgumentException If the page size does not match
      */
-    public static void writePage(int pageId, ByteBuffer pageData) throws IOException {
+    public void writePage(int pageId, ByteBuffer pageData) throws IOException {
 
-        //todo idSizeMapper.put(pageId,pageData.array().length);
+        DataCatalog dc = DataCatalog.getInstance();
 
-        int pageSize = catalog.getPageSize();
+        int pageSize = dc.getPageSize();
 
         if (pageData.array().length > pageSize) {
             throw new IllegalArgumentException("Page size mismatch");
@@ -106,14 +115,17 @@ public class StorageManager {
      *
      * @param pageId The ID of the page to delete
      */
-    public static void deletePage(int pageId) throws IOException {
-        int pageSize = catalog.getPageSize();
+    public void deletePage(int pageId) throws IOException {
+
+        DataCatalog dc = DataCatalog.getInstance();
+
+        int pageSize = dc.getPageSize();
         long offset = (long) pageId * pageSize;
 
         // TODO: if this is called and the page isnt found,
         // should throw and error?
         if (offset >= file.length()) {
-            return;
+            throw new RuntimeException("Attempted to delete page that did not exist...");
         }
 
         // Create an empty ByteBuffer and overwrite the page at its location
