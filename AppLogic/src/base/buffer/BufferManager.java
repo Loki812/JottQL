@@ -87,7 +87,6 @@ public class BufferManager {
         }
 
         // Page not in buffer, fetch from disk.
-        // TODO figure out error handling architecture
         try{
             flushOldestIfNeeded();
             Page decodedPage = readPageFromHardwareV2(pageId);
@@ -328,4 +327,71 @@ public class BufferManager {
     }
 
 
+    public void insertRecordIntoTable(String tableName, Record r) throws Exception {
+        TableSchema ts = dataCatalog.getTableSchema(tableName);
+
+        int currentPageId = ts.getRootPageID();
+
+        while (currentPageId != -1) {
+            Page page = getPage(currentPageId);
+
+            // if the page is empty, insert it
+            // if the last record on the page is 'greater' than the current record, insert it
+            if (page.recordList.isEmpty() || r.compareTo(page.recordList.getLast(), ts) <= 0) {
+                handleSortedPageInsertion(page, r, ts);
+            }
+
+            // we are at the final page, insert here and split if needed
+            if (page.nextPageId == -1) {
+                handleSortedPageInsertion(page, r, ts);
+            }
+
+            currentPageId = page.nextPageId;
+        }
+    }
+
+    private void handleSortedPageInsertion(Page page, Record record, TableSchema schema) throws Exception {
+
+        for (int i = 0; i < page.recordList.size(); i++) {
+            Record currRecord = page.recordList.get(i);
+            if (record.compareTo(currRecord, schema) == 0) {
+                throw new RuntimeException("Duplicate Primary Key Insertion Failed...");
+            }
+
+            if (record.compareTo(currRecord, schema) < 0) {
+                // check if we have to split
+                if (page.getTotalRecordsSize() + record.getSize() > dataCatalog.getPageSize()) {
+                    // TODO spliting + insert function
+
+                } else {
+                    page.recordList.add(i, record);
+                    page.hasBeenModified = true;
+                    page.timestamp = LocalDateTime.now();
+                }
+
+            }
+        }
+    }
+
+    private void splitAndInsertPage(Page page, Record record, TableSchema ts, int index) {
+        // split page.records in half
+        // new page id = dc.getNextAvailablePageId()
+        // old page next id = new pages id
+        // new page next id = old pages next id
+
+
+
+    }
+
+    public void deleteTable(String tableName) {
+
+    }
+
+    public void addColumn(AttributeValue<?> defaultValue, String tableName) {
+
+    }
+
+    public void deleteColumn(String columnName, String tableName) {
+
+    }
 }

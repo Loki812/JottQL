@@ -153,4 +153,12 @@ public class Page {
             splitPage();
         }
     }
+
+    public int getTotalRecordsSize() {
+        int accum = 0;
+        for (Record r : recordList) {
+            accum += r.getSize();
+        }
+        return accum;
+    }
 }
