@@ -1,6 +1,5 @@
 package base.models;
 
-import base.buffer.BufferManager;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -8,7 +7,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
+
 
 import static base.models.AttributeSchema.createAttributeSchemaFromQuery;
 
@@ -96,7 +95,6 @@ public class TableSchema {
 
     public int getRootPageID() { return rootPageID; }
 
-    public String getPrimaryKey() { return primaryKey; }
 
     public Integer getIndex(String attribute_key) {
         Integer index = 0;

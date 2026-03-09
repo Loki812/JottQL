@@ -18,14 +18,13 @@ public class Page {
         this.hasBeenModified = true;
         this.timestamp = LocalDateTime.now();
         this.nextPageId = -1;
-        recordList = new ArrayList<Record>();
+        recordList = new ArrayList<>();
     }
 
 
     /**
      * tryInsert attempts to insert the record into the given page.
      * THIS FUNCTION ASSUMES LINEAR SEARCH AND PAGES WITH SMALLER VALUES HAVE BEEN ALREADY CHECKED
-     *
      * If this is the last page within a table, it inserts no matter what.
      * lets the caller know if the page needs to be split.
      *
