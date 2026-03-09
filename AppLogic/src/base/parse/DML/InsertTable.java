@@ -306,7 +306,7 @@ public class InsertTable {
                     System.exit(0);
                 }
 
-                p.insertIntoPage(record);
+                bm.insertRecordIntoTable(tableName, record);
                 inserted++;
 
             }

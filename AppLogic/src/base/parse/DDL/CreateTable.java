@@ -1,4 +1,5 @@
 package base.parse.DDL;
+import base.buffer.BufferManager;
 import base.models.DataCatalog;
 import base.models.TableSchema;
 
@@ -30,7 +31,10 @@ public class CreateTable {
             ArrayList<String> columns = new ArrayList<String>(Arrays.asList(command.split(",")));
             TableSchema ts = TableSchema.createTableSchemaFromQuery(table_Name, columns);
             DataCatalog dc = DataCatalog.getInstance();
+            BufferManager bm = BufferManager.getInstance();
             dc.addTableSchema(ts);
+            bm.createNewPage(ts.rootPageID, ts.tableName);
+
         }else {
             System.out.println("Missing closing parentheses");
             throw new Exception();

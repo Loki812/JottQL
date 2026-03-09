@@ -20,11 +20,8 @@ public class TableSchema {
     private LinkedHashMap<String, AttributeSchema> attributeSchemas;
     public String primaryKey;
     public int rootPageID;
-    private static final DataCatalog dc = DataCatalog.getInstance();
-    private static final BufferManager bm = BufferManager.getInstance();
 
     public TableSchema() {
-        rootPageID = dc.getNextAvailablePageID();
         attributeSchemas = new LinkedHashMap<>();
     }
 
@@ -56,7 +53,7 @@ public class TableSchema {
     }
 
     public static TableSchema createTableSchemaFromQuery(String name, ArrayList<String> attributes) throws Exception {
-
+        // root pageID gets set in DataCatalog.addTableSchema()
         TableSchema ts = new TableSchema();
         ts.tableName = name;
 
@@ -113,23 +110,17 @@ public class TableSchema {
         return null;
     }
 
-    public AttributeSchema getAttributeSchema(String name) {
-        return attributeSchemas.get(name);
-    }
 
     public void removeAttributeSchema(String name) throws Exception {
         if(primaryKey.equals(name)){
             System.out.println("Cannot remove primary key");
             throw new Exception();
         }
-        Integer index = getIndex(name);
-        if(index == null){
+
+        if(!attributeSchemas.containsKey(name)){
             System.out.println("Column does not exist");
             throw new Exception();
         }
-        // TODO: remove this, data catalog does not touch Buffer.
-        // LOL wtf
-        bm.getPage(rootPageID).deleteColumn(index);
         attributeSchemas.remove(name);
         numOfAttributes -= 1;
 
@@ -148,10 +139,6 @@ public class TableSchema {
         }
         attributeSchemas.put(a.attributeName, a);
         numOfAttributes += 1;
-        Page page = bm.getPage(rootPageID);
-        assert page != null;
-        page.addColumn(new AttributeValue<>(a.getDefaultVal(),a.getDataType()));
-
     }
 
     public LinkedHashMap<String, AttributeSchema> getAttributeSchemas() {
