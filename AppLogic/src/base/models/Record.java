@@ -1,12 +1,13 @@
 package base.models;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 public class Record {
     public ArrayList<AttributeValue> attributeList;
 
     public Record(){
-        this.attributeList = new ArrayList<AttributeValue>();
+        this.attributeList = new ArrayList<>();
     }
 
     /**
@@ -18,33 +19,32 @@ public class Record {
      *      negative if it is less than rec,
      *      0 if they are equal
      */
-    public int compareTo(Record rec, TableSchema schema) throws Exception {
+    public int compareTo(Record rec, TableSchema schema)  {
         int primaryKeyIndex = schema.getIndex(schema.primaryKey);
-        AttributeValue primaryKey = attributeList.get(primaryKeyIndex);
+        AttributeValue<?> primaryKey = attributeList.get(primaryKeyIndex);
         if(primaryKey.data == null){
             System.out.println("Primary key is null");
-            throw new Exception();
+            throw new RuntimeException();
         }
         return primaryKey.compareTo(rec.attributeList.get(primaryKeyIndex));
     }
 
     public int getSize(){
         int byteSize = 0;
-        for (AttributeValue a : attributeList){
+        for (AttributeValue<?> a : attributeList){
             //add 1 for null bit array
             byteSize+=1;
 
             //add bytes based on data type
             switch (a.type){
-                case DataTypes.INTEGER:
-                    byteSize+=Integer.BYTES;
-                case DataTypes.DOUBLE:
-                    byteSize+=Double.BYTES;
-                case DataTypes.BOOLEAN:
-                    byteSize+=1;
-                    //todo char[] and varchar[]
-                default:
-                    break;
+                case DataTypes.INTEGER ->  byteSize += Integer.BYTES;
+                case DataTypes.DOUBLE -> byteSize+=Double.BYTES;
+                case DataTypes.BOOLEAN -> byteSize+=1;
+                case DataTypes.CHAR, DataTypes.VARCHAR -> {
+                    String s = (String) a.data;
+                    byteSize += Integer.BYTES + s.getBytes(StandardCharsets.UTF_8).length;
+                }
+
             }
 
         }
