@@ -25,7 +25,6 @@ public class DropTable {
         trimmedCommand = trimmedCommand.substring(0, trimmedCommand.length() - 1).trim();
         String table_Name = trimmedCommand.substring("DROP TABLE ".length()).trim().toUpperCase();
 
-        dc.removeTableSchema(table_Name);
         bm.deleteTable(table_Name);
     }
 }

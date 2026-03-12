@@ -4,6 +4,7 @@ import base.models.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -113,6 +114,9 @@ public class BufferManager {
             flushOldestIfNeeded();
             Page page = new Page(id, tableName);
             buffer.put(page.pageId, page);
+
+            // immediately write a blank page for edge case.
+            writePageToHardwareV2(page);
         } catch (Exception e) {
             System.err.println("Failed to create page");
             throw new RuntimeException(e);
@@ -345,7 +349,9 @@ public class BufferManager {
      */
     private void writePageToHardwareV2(Page page) {
         //prevent a page from writing if it has not been modified
-        if(!page.hasBeenModified){
+        // need to add if table was recently touched as well with timestamp. for initial disk allocation.
+        long secondsActive = Duration.between(page.timestamp, java.time.LocalDateTime.now()).getSeconds();
+        if(!page.hasBeenModified && secondsActive > 5){
             return;
         }
         ByteBuffer byteBuffer = ByteBuffer.allocate(dataCatalog.getPageSize());

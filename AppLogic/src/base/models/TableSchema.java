@@ -78,7 +78,7 @@ public class TableSchema {
     }
 
     public void saveTableSchemaToDisk(DataOutputStream out) throws IOException {
-        out.writeInt(tableName.length());
+        out.writeInt(tableName.getBytes(StandardCharsets.UTF_8).length);
 
         byte[] nameBytes = tableName.getBytes(StandardCharsets.UTF_8);
         out.write(nameBytes);

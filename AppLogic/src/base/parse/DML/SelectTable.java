@@ -11,7 +11,7 @@ public class SelectTable {
     public static void parse(String command) throws Exception {
 
         BufferManager bm = BufferManager.getInstance();
-        String trimmedCommand = command.trim();
+        String trimmedCommand = command.trim().toUpperCase();
         if(!trimmedCommand.startsWith("SELECT")) {
 
             System.out.println("Invalid SELECT Command");

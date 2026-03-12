@@ -45,10 +45,15 @@ public class AtlerTable {
         } else if(operation.equals("DROP")) {
             String attribute = command;
             try {
-                // remove from data catalog check if it is a valid operation
-                ts.removeAttributeSchema(attribute);
-                // remove column from disk lastly
+
+                if (attribute.equalsIgnoreCase(ts.primaryKey)) {
+                    System.err.println("Cannot drop primary key from table");
+                    return;
+                }
+                // remove column from disk first
                 BufferManager.getInstance().deleteColumn(attribute, table_Name);
+                // finally, remove from data catalog;
+                ts.removeAttributeSchema(attribute);
             } catch (Exception e) {
                 System.err.println(e.getMessage());
             }

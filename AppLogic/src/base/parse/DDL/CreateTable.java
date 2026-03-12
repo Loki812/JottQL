@@ -8,7 +8,7 @@ import java.util.Arrays;
 
 public class CreateTable {
     public static void execute(String command) throws Exception {
-        String trimmedCommand = command.trim();
+        String trimmedCommand = command.trim().toUpperCase();
         if(!trimmedCommand.startsWith("CREATE TABLE ")) {
             System.out.println("Invalid CREATE TABLE Command");
             throw new Exception();
