@@ -12,45 +12,47 @@ import java.util.List;
 public class SelectTable {
     public static void parse(String command) throws Exception {
 
-        BufferManager bm = BufferManager.getInstance();
         String trimmedCommand = command.trim().toUpperCase();
         if(!trimmedCommand.startsWith("SELECT")) {
 
-            System.out.println("Invalid SELECT Command");
-            throw new Exception();
+            System.err.println("Invalid SELECT Command");
+            return;
 
         }
 
         if(!trimmedCommand.endsWith(";")) {
 
-            System.out.println("Missing Semicolon");
-            throw new Exception();
+            System.err.println("Missing Semicolon");
+            return;
 
         }
 
         trimmedCommand = trimmedCommand.substring(0, trimmedCommand.length() - 1).trim();
-        String remainder = trimmedCommand.substring("SELECT ".length()).trim();
-        if(!remainder.startsWith("*")) {
 
-            System.out.println("Invalid Query Command");
-            throw new Exception();
-
+        if (trimmedCommand.length() <= "SELECT".length()) {
+            System.err.println("Invalid SELECT command");
+            return;
         }
 
-        remainder = remainder.substring(1).trim();
-        if(!remainder.startsWith("FROM")) {
+        String remainder = trimmedCommand.substring("SELECT".length()).trim();
 
-            System.out.println("Missing from");
-            throw new Exception();
-
+        int fromIndex = remainder.indexOf("FROM");
+        if (fromIndex == -1) {
+            System.err.println("Missing FROM");
+            return;
         }
 
-        remainder = remainder.substring("FROM".length()).trim();
-        if(remainder.isEmpty()) {
+        String projectionPart = remainder.substring(0, fromIndex).trim();
+        String tablePart = remainder.substring(fromIndex + "FROM".length()).trim();
 
-            System.out.println("Missing table name");
-            throw new Exception();
+        if (projectionPart.isEmpty()) {
+            System.err.println("Missing projection attributes");
+            return;
+        }
 
+        if (tablePart.isEmpty()) {
+            System.err.println("Missing table name");
+            return;
         }
         ArrayList<String> tableNames = new ArrayList<>(List.of(remainder.split(",")));
         ArrayList<String> tempTables = new ArrayList<>();
@@ -63,37 +65,89 @@ public class SelectTable {
         TableSchema tableSchema = dataCatalog.getTableSchema(tableName);
         if(tableSchema == null) {
 
-            System.out.println("Table " + tableName + " not found");
-            throw new Exception();
+            System.err.println("Table " + tableName + " not found");
+            return;
 
+        }
+
+        ArrayList<AttributeSchema> tableAttributes =
+                new ArrayList<>(tableSchema.getAttributeSchemas().sequencedValues());
+
+        ArrayList<String> attrNames = new ArrayList<>();
+        ArrayList<Integer> selectedIndexes = new ArrayList<>();
+
+        if (projectionPart.equals("*")) {
+            for (int i = 0; i < tableAttributes.size(); i++) {
+                attrNames.add(tableAttributes.get(i).attributeName);
+                selectedIndexes.add(i);
+            }
+        }
+        else {
+            String[] requestedAttributes = projectionPart.split(",");
+
+            for (String rawAttr : requestedAttributes) {
+                String attr = rawAttr.trim();
+
+                if (attr.isEmpty()) {
+                    System.err.println("Invalid projection list");
+                    return;
+                }
+
+                boolean found = false;
+                for (int i = 0; i < tableAttributes.size(); i++) {
+                    if (tableAttributes.get(i).attributeName.equalsIgnoreCase(attr)) {
+                        attrNames.add(tableAttributes.get(i).attributeName);
+                        selectedIndexes.add(i);
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    System.err.println("Attribute " + attr + " not found in table " + tableName);
+                    return;
+                }
+            }
         }
 
         int pageId = tableSchema.getRootPageID();
 
-        ArrayList<String> attrNames = new ArrayList<>();
-        for (AttributeSchema att : tableSchema.getAttributeSchemas().sequencedValues()) {
-            attrNames.add(att.attributeName);
-        }
-
         ArrayList<Integer> widths = DMLParser.printTopLine(attrNames);
-        int totalNumRecords = 0;
 
         while (true) {
-            Page p = bm.getPage(pageId);
+            Page p = BufferManager.getInstance().getPage(pageId);
+
+            if (p == null) {
+                System.err.println("Error: page " + pageId + " could not be loaded.");
+                return;
+            }
+
+            for (Record originalRecord : p.recordList) {
+                Record projectedRecord = new Record();
+
+                for (Integer index : selectedIndexes) {
+                    projectedRecord.attributeList.add(originalRecord.attributeList.get(index));
+                }
+
+            }
+
             DMLParser.printRecords(widths, p.recordList);
-            totalNumRecords += p.recordList.size();
             if (p.nextPageId == -1) {
                 break;
-            } else {
+            }
+            else {
                 pageId = p.nextPageId;
             }
+
+
+
         }
 
         for(String table: tempTables) {
             DropTable.execute("DROP TABLE " + table.trim().toUpperCase()+";");
         }
 
-        System.out.println("\n" + totalNumRecords + " Rows Returned");
+
     }
 
 }
