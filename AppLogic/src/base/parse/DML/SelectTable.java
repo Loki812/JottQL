@@ -8,9 +8,8 @@ import java.util.ArrayList;
 
 
 public class SelectTable {
-    public static void parse(String command) throws Exception {
+    public static void parse(String command) {
 
-        BufferManager bm = BufferManager.getInstance();
         String trimmedCommand = command.trim().toUpperCase();
         if(!trimmedCommand.startsWith("SELECT")) {
 
@@ -105,10 +104,11 @@ public class SelectTable {
         }
 
         int pageId = tableSchema.getRootPageID();
-        ArrayList<Record> records = new ArrayList<>();
+
+        ArrayList<Integer> widths = DMLParser.printTopLine(attrNames);
 
         while (true) {
-            Page p = BufferManager.getPage(pageId);
+            Page p = BufferManager.getInstance().getPage(pageId);
 
             if (p == null) {
                 System.err.println("Error: page " + pageId + " could not be loaded.");
@@ -122,18 +122,21 @@ public class SelectTable {
                     projectedRecord.attributeList.add(originalRecord.attributeList.get(index));
                 }
 
-                records.add(projectedRecord);
             }
 
+            DMLParser.printRecords(widths, p.recordList);
             if (p.nextPageId == -1) {
                 break;
             }
             else {
                 pageId = p.nextPageId;
             }
+
+
+
         }
 
-        DMLParser.printResultSet(attrNames, records);
+
     }
 
 }
