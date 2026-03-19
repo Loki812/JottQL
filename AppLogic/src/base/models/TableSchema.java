@@ -31,8 +31,6 @@ public class TableSchema {
         for (AttributeSchema attributeSchema : attributeSchemas) {
             this.attributeSchemas.put(attributeSchema.attributeName, attributeSchema);
         }
-        this.rootPageID = dc.getNextAvailablePageID();
-        dc.addTableSchema(this);
     }
 
 

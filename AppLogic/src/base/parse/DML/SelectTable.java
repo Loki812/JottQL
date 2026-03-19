@@ -3,8 +3,10 @@ package base.parse.DML;
 import base.buffer.BufferManager;
 import base.models.*;
 import base.models.Record;
+import base.parse.DDL.DropTable;
 
 import java.util.ArrayList;
+import java.util.List;
 
 
 public class SelectTable {
@@ -50,8 +52,13 @@ public class SelectTable {
             throw new Exception();
 
         }
+        ArrayList<String> tableNames = new ArrayList<>(List.of(remainder.split(",")));
+        ArrayList<String> tempTables = new ArrayList<>();
+        String tableName = Cartesian.Product(tableNames);
+        if(tableName.startsWith("_")){
+            tempTables.add(tableName);
+        }
 
-        String tableName = remainder.trim().toUpperCase();
         DataCatalog dataCatalog = DataCatalog.getInstance();
         TableSchema tableSchema = dataCatalog.getTableSchema(tableName);
         if(tableSchema == null) {
@@ -80,6 +87,10 @@ public class SelectTable {
             } else {
                 pageId = p.nextPageId;
             }
+        }
+
+        for(String table: tempTables) {
+            DropTable.execute("DROP TABLE " + table.trim().toUpperCase()+";");
         }
 
         System.out.println("\n" + totalNumRecords + " Rows Returned");

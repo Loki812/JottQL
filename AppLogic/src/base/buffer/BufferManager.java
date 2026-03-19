@@ -190,6 +190,32 @@ public class BufferManager {
         }
     }
 
+    public void insertRecordIntoTableNoOrder(String tableName, Record record) throws Exception {
+        TableSchema ts = dataCatalog.getTableSchema(tableName);
+
+        int currentPageId = ts.getRootPageID();
+
+        while (currentPageId != -1) {
+            Page page = getPage(currentPageId);
+
+            InsertionResult result = page.insertNoOrder(record);
+            switch (result) {
+                case SUCCESS -> {
+                    return;
+                }
+                case NOT_IN_RANGE -> {
+                    currentPageId = page.nextPageId;
+                    if (currentPageId != -1) {
+                        int newPageId = dataCatalog.getNextAvailablePageID();
+                        page.nextPageId = newPageId;
+                        createNewPage(newPageId, tableName);
+                    }
+                }
+
+            }
+        }
+    }
+
     /**
      * Deletes a table by iterate going through the list of linked pages, deleting each one
      * from Disk.

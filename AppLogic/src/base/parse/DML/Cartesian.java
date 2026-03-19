@@ -9,6 +9,7 @@ import java.util.ArrayList;
 
 public class Cartesian {
     private static final DataCatalog catalog = DataCatalog.getInstance();
+    private static final BufferManager buffer = BufferManager.getInstance();
     public static String Product(ArrayList<String> tableNames) throws Exception {
         if(tableNames.size() == 1){
             return tableNames.getFirst();
@@ -30,10 +31,11 @@ public class Cartesian {
             newAttributeSchemas.add(new AttributeSchema(schema, table2));
         }
         TableSchema newTableSchema = new TableSchema(newTable, newAttributeSchemas);
-        BufferManager.createNewPage(newTableSchema.getRootPageID(), newTable);
-        Page newRoot = BufferManager.getPage(newTableSchema.getRootPageID());
-        Page table1page = BufferManager.getPage(table1Schema.rootPageID);
-        Page table2page = BufferManager.getPage(table2Schema.rootPageID);
+        catalog.addTableSchema(newTableSchema);
+        buffer.createNewPage(newTableSchema.getRootPageID(), newTable);
+        Page newRoot = buffer.getPage(newTableSchema.getRootPageID());
+        Page table1page = buffer.getPage(table1Schema.rootPageID);
+        Page table2page = buffer.getPage(table2Schema.rootPageID);
         while(table1page != null) {
             ArrayList<Record> table1Records = new ArrayList<>(table1page.recordList);
             while (table2page != null) {
@@ -44,12 +46,12 @@ public class Cartesian {
                         newRecordList.addAll(record2.attributeList);
                         Record newRecord = new Record();
                         newRecord.attributeList = newRecordList;
-                        newRoot.insertNoOrder(newRecord);
+                        buffer.insertRecordIntoTableNoOrder(newTable, newRecord);
                     }
                 }
-                table2page = BufferManager.getPage(table2page.nextPageId);
+                table2page = buffer.getPage(table2page.nextPageId);
             }
-            table1page = BufferManager.getPage(table1page.nextPageId);
+            table1page = buffer.getPage(table1page.nextPageId);
         }
         if(table1.startsWith("_")){
             DropTable.execute("DROP TABLE "+table1+";");

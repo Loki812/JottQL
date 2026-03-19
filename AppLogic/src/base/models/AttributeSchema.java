@@ -24,7 +24,11 @@ public class AttributeSchema {
     }
 
     public  AttributeSchema(AttributeSchema attributeSchema, String table){
-        this.attributeName = attributeSchema.attributeName;
+        if(attributeSchema.attributeName.contains(".")){
+            this.attributeName = attributeSchema.attributeName;
+        }else{
+            this.attributeName = table+"."+attributeSchema.attributeName;
+        }
         this.dataType = attributeSchema.dataType;
         this.length = attributeSchema.length;
         this.notNull = attributeSchema.notNull;
