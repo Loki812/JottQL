@@ -1,6 +1,5 @@
 package base.models;
 
-import base.buffer.BufferManager;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -8,7 +7,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
+
 
 import static base.models.AttributeSchema.createAttributeSchemaFromQuery;
 
@@ -20,10 +19,8 @@ public class TableSchema {
     private LinkedHashMap<String, AttributeSchema> attributeSchemas;
     public String primaryKey;
     public int rootPageID;
-    private static final DataCatalog dc = DataCatalog.getInstance();
 
     public TableSchema() {
-        rootPageID = dc.getNextAvailablePageID();
         attributeSchemas = new LinkedHashMap<>();
     }
 
@@ -66,7 +63,7 @@ public class TableSchema {
     }
 
     public static TableSchema createTableSchemaFromQuery(String name, ArrayList<String> attributes) throws Exception {
-
+        // root pageID gets set in DataCatalog.addTableSchema()
         TableSchema ts = new TableSchema();
         ts.tableName = name;
 
@@ -92,7 +89,7 @@ public class TableSchema {
     }
 
     public void saveTableSchemaToDisk(DataOutputStream out) throws IOException {
-        out.writeInt(tableName.length());
+        out.writeInt(tableName.getBytes(StandardCharsets.UTF_8).length);
 
         byte[] nameBytes = tableName.getBytes(StandardCharsets.UTF_8);
         out.write(nameBytes);
@@ -109,7 +106,6 @@ public class TableSchema {
 
     public int getRootPageID() { return rootPageID; }
 
-    public String getPrimaryKey() { return primaryKey; }
 
     public Integer getIndex(String attribute_key) {
         Integer index = 0;
@@ -123,21 +119,17 @@ public class TableSchema {
         return null;
     }
 
-    public AttributeSchema getAttributeSchema(String name) {
-        return attributeSchemas.get(name);
-    }
 
     public void removeAttributeSchema(String name) throws Exception {
         if(primaryKey.equals(name)){
             System.out.println("Cannot remove primary key");
             throw new Exception();
         }
-        Integer index = getIndex(name);
-        if(index == null){
+
+        if(!attributeSchemas.containsKey(name)){
             System.out.println("Column does not exist");
             throw new Exception();
         }
-        BufferManager.getPage(rootPageID).deleteColumn(index);
         attributeSchemas.remove(name);
         numOfAttributes -= 1;
 
@@ -156,10 +148,6 @@ public class TableSchema {
         }
         attributeSchemas.put(a.attributeName, a);
         numOfAttributes += 1;
-        Page page = BufferManager.getPage(rootPageID);
-        assert page != null;
-        page.addColumn(new AttributeValue<>(a.getDefaultVal(),a.getDataType()));
-
     }
 
     public LinkedHashMap<String, AttributeSchema> getAttributeSchemas() {

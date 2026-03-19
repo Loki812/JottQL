@@ -1,9 +1,5 @@
 package base.models;
 
-import base.buffer.BufferManager;
-import base.storage.StorageManager;
-
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
@@ -12,65 +8,68 @@ public class Page {
     public final String tableName;
     public int pageId;
     public int nextPageId;
-    public int currentSize;
     public boolean hasBeenModified;
     public LocalDateTime timestamp;
-    private DataCatalog catalog;
     public ArrayList<Record> recordList;
 
     public Page(int pageId, String tableName){
         this.pageId = pageId;
         this.tableName = tableName;
-        this.currentSize = 0;
         this.hasBeenModified = true;
         this.timestamp = LocalDateTime.now();
-        this.catalog = DataCatalog.getInstance();
         this.nextPageId = -1;
-        recordList = new ArrayList<Record>();
+        recordList = new ArrayList<>();
+    }
+
+
+    /**
+     * tryInsert attempts to insert the record into the given page.
+     * THIS FUNCTION ASSUMES LINEAR SEARCH AND PAGES WITH SMALLER VALUES HAVE BEEN ALREADY CHECKED
+     * If this is the last page within a table, it inserts no matter what.
+     * lets the caller know if the page needs to be split.
+     *
+     * @param record the record you are attempting to insert
+     * @param schema the schema you are using for reference
+     * @return SUCCESS if record is inserted, NOT_IN_RANGE if record primary key is not in range of page
+     * NEEDS_SPLIT if the record is in range, but the page is full.
+     */
+    public InsertionResult tryInsert(Record record, TableSchema schema) {
+        // 1. Check if record is in range of page
+        if (!recordList.isEmpty() && record.compareTo(recordList.getLast(), schema) > 0) {
+            // If we are not on the last page, send signal to buffer manager to iterate to next page
+            if (nextPageId != -1) return InsertionResult.NOT_IN_RANGE;
+        }
+
+        // 2. Check if record fits in page
+        int pageSize = DataCatalog.getInstance().getPageSize();
+        if (getTotalRecordsSize() + record.getSize() > pageSize) {
+            return InsertionResult.NEEDS_SPLIT;
+        }
+
+        // 3. Insert into page if both of those pass
+        insertSorted(record, schema);
+        this.hasBeenModified = true;
+        this.timestamp = java.time.LocalDateTime.now();
+        return InsertionResult.SUCCESS;
+
     }
 
     /**
-     * Insert a record into this page.
-     *
-     * @param record The record to insert
-     * @throws Exception If the DataCatalog instance cannot be retrieved
+     * insertSorted maintains record order on a page, inserting by linear search and using record.compareTO
+     * @param record the given record you are inserting
+     * @param schema the schema you are using as reference
      */
-    public void insertIntoPage(Record record) throws Exception {
-        int pageSize = catalog.getPageSize();
-        TableSchema schema = catalog.getTableSchema(tableName);
-
-        if (recordList.isEmpty()) {
-            recordList.addFirst(record);
-            this.currentSize += record.getSize();
-            this.hasBeenModified = true;
-            this.timestamp = LocalDateTime.now();
-            return;
-        }
+    public void insertSorted(Record record, TableSchema schema) {
 
         for (int i = 0; i < recordList.size(); i++) {
-            if (record.compareTo(recordList.get(i), schema) == 0) {
-                throw new Exception("Duplicate primary key detected");
-            }
             if (record.compareTo(recordList.get(i), schema) < 0) {
-                // If the page is full, split it
-                if (currentSize + record.getSize() > pageSize) {
-                    splitPage();
-                    insertIntoPage(record);
-                }
-                // Otherwise insert the record in the correct place
                 recordList.add(i, record);
-                this.currentSize += record.getSize();
-                this.hasBeenModified = true;
-                this.timestamp = LocalDateTime.now();
                 return;
             }
         }
-        if(nextPageId == -1){
-            nextPageId = DataCatalog.getInstance().getNextAvailablePageID();
-            BufferManager.createNewPage(nextPageId, tableName).insertIntoPage(record);
-        }else {
-            BufferManager.getPage(nextPageId).insertIntoPage(record);
-        }
+
+        // We iterated over entire record list and this record is greater than all
+        recordList.add(record);
     }
 
     public void insertNoOrder(Record record) throws Exception {
@@ -89,77 +88,40 @@ public class Page {
     }
 
     /**
-     * Split a full page and insert a record into one of the pages.
+     * deletes a column for this page and THIS PAGE only
      *
-     * @throws Exception If the next page cannot be retrieved
-     * @throws IllegalStateException If no next page is available
+     * @param index the index of the given column
      */
-    private void splitPage() throws IOException {
-        if (nextPageId < 0) {
-            throw new IllegalStateException("No next page available for split");
-        }
-
-        // Create a new page and re-order the pointers
-        Page nextPage = BufferManager.createNewPage(catalog.getNextAvailablePageID(), tableName);
-        nextPage.nextPageId = nextPageId;
-        this.nextPageId = nextPage.pageId;
-
-        // Split the record list into two equal halves
-        int split = recordList.size() / 2;
-
-        // Move half of the records to the next page
-        nextPage.recordList.addAll(recordList.subList(split, recordList.size()));
-        recordList.subList(split, recordList.size()).clear();
-
-        // Recalculate each page's current size
-        for(Record record : recordList){
-            currentSize += record.getSize();
-        }
-        for (Record record : nextPage.recordList) {
-            nextPage.currentSize += record.getSize();
-        }
-
-        // Mark both pages as having been modified
-        this.hasBeenModified = true;
-        nextPage.hasBeenModified = true;
-
-        // Record timestamps
-        this.timestamp = java.time.LocalDateTime.now();
-        nextPage.timestamp = java.time.LocalDateTime.now();
-    }
-
-    public void deleteTable(){
-        Page page = BufferManager.getPage(nextPageId);
-        if(page != null){
-            page.deleteTable();
-        }
-        StorageManager.deletePage(pageId);
-        BufferManager.deletePage(pageId);
-    }
-
     public void deleteColumn(int index){
         for(Record record : recordList){
             record.attributeList.remove(index);
         }
-        Page page = BufferManager.getPage(nextPageId);
-        if(page != null){
-            page.deleteColumn(index);
-        }
         hasBeenModified = true;
+        timestamp = LocalDateTime.now();
     }
 
-    public void addColumn(AttributeValue<?> defaultValue) throws IOException {
-        for(Record record : recordList){
-            currentSize -= record.getSize();
-            record.attributeList.add(defaultValue);
-            currentSize += record.getSize();
+    /**
+     * adds a column for this page and this page ONLY
+     * @param defaultValue the default value being added to the page
+     */
+    public void addColumn(AttributeValue<?> defaultValue) {
+        for (Record r : recordList) {
+            r.attributeList.add(defaultValue);
         }
-        Page page = BufferManager.getPage(nextPageId);
-        if(page != null){
-            page.addColumn(defaultValue);
+        hasBeenModified = true;
+        timestamp = LocalDateTime.now();
+    }
+
+
+    /**
+     * calculates the pages size on the fly by accumulating the size of each record.
+     * @return the total size of the page
+     */
+    public int getTotalRecordsSize() {
+        int accum = 0;
+        for (Record r : recordList) {
+            accum += r.getSize();
         }
-        if (currentSize > DataCatalog.getInstance().getPageSize()) {
-            splitPage();
-        }
+        return accum;
     }
 }

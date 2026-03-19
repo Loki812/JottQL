@@ -210,6 +210,7 @@ public class InsertTable {
 
     public static void parse(String command) throws Exception {
 
+        BufferManager bm = BufferManager.getInstance();
         String trimmedCommand = command.trim();
         if (!trimmedCommand.startsWith("INSERT ")) {
 
@@ -299,13 +300,13 @@ public class InsertTable {
 
             try {
 
-                Page p = BufferManager.getPage(tableSchema.getRootPageID());
+                Page p = bm.getPage(tableSchema.getRootPageID());
                 if (p == null) {
                     System.out.println("Inconsistent Database Cannot recover");
                     System.exit(0);
                 }
 
-                p.insertIntoPage(record);
+                bm.insertRecordIntoTable(tableName, record);
                 inserted++;
 
             }
