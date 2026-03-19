@@ -50,8 +50,10 @@ public class DataCatalog {
                 loadFromDisk(in);
             } catch (FileNotFoundException e) {
                 System.err.println("File not found (this shouldn't happen):" + e.getMessage());
+                System.exit(1);
             } catch (IOException e) {
                 System.err.println("Failed to load catalog: " + e.getMessage());
+                System.exit(1);
             }
 
 
@@ -140,13 +142,23 @@ public class DataCatalog {
         return catalog.tables.get(tableName);
     }
 
+    /**
+     * removes a tableschema from the database
+     *
+     * @param tableName the name of the table you are adding
+     */
     public void removeTableSchema(String tableName) {
         catalog.tableCount -= 1;
         catalog.tables.remove(tableName);
-        // wherever this is called, ensure saveToDisk() is called
     }
 
+    /**
+     *
+     * @param schema the table schema you are adding to the database
+     * @throws Exception if the given schema shares a name with a database already inside the disk.
+     */
     public void addTableSchema(TableSchema schema) throws Exception {
+
         if(catalog.tables.containsKey(schema.tableName)){
             System.out.println("Table already exists: " + schema.tableName);
             throw new Exception();
@@ -154,7 +166,6 @@ public class DataCatalog {
         schema.rootPageID = getNextAvailablePageID();
         catalog.tables.put(schema.tableName, schema);
         catalog.tableCount += 1;
-        BufferManager.createNewPage(schema.getRootPageID(), schema.tableName);
     }
 
     /**
@@ -162,21 +173,14 @@ public class DataCatalog {
      * @return the lowest indexed free page, first checks the free page list. if it is empty it 'allocates' a new page
      */
     public int getNextAvailablePageID() {
-        if (catalog.freePageList.isEmpty()) {
+        if (freePageList.isEmpty()) {
             int next = catalog.nextAvailablePageID;
             catalog.nextAvailablePageID += 1;
             return next;
         } else {
-            return catalog.freePageList.removeFirst();
+            return freePageList.removeFirst();
         }
     }
 
-    /**
-     * Get the ArrayList of free pages.
-     *
-     * @return the freePages ArrayList of Integers
-     */
-    public static ArrayList<Integer> getFreePageList() {
-        return freePageList;
-    }
+
 }

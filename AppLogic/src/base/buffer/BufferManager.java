@@ -4,524 +4,469 @@ import base.models.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.SequencedCollection;
+import java.util.*;
 
 import base.models.Record;
 import base.storage.StorageManager;
 
 public class BufferManager {
 
-    //max number of pages that can be in buffer before flushing
-    private static int maxPageCount;
-    private static HashMap<Integer,Page> buffer;
-    private DataCatalog dataCatalog;
-    private StorageManager storageManager;
+    private static BufferManager instance = null;
 
-    //todo make static instance of the BufferManager similar to how the bufferManager is done
-    private static BufferManager bufferManager = null;
+    // singleton variables
+    private final int maxPageCount;
+    private final HashMap<Integer,Page> buffer;
+    private final StorageManager storageManager;
 
-    public BufferManager(int maxPageCount, String directory) throws Exception {
+
+    private final DataCatalog dataCatalog;
+
+
+
+    /**
+     * Creates a singlton instance of the bufferManager class
+     *
+     *
+     * @param maxPageCount the maximum number of pages that can be stored in memory, as Java Objects
+     *                     at one time.
+     * @param directory the directory the storage.bin file is stored in.
+     */
+    private BufferManager(int maxPageCount, String directory)  {
         this.maxPageCount = maxPageCount;
-        this.storageManager = new StorageManager(directory+"/storage.bin/");
+        this.storageManager = StorageManager.buildStorageManager(directory);
         buffer = new HashMap<>();
+        dataCatalog = DataCatalog.getInstance();
+    }
+
+    /**
+     *
+     * @param maxPageCount the maximum number of pages that can be stored in memory, as Java Objects
+     *                     at one time.
+     * @param directory the directory the storage.bin file is stored in.
+     * @return the singleton instance of the BufferManager
+     */
+    public static synchronized BufferManager buildBufferManager(int maxPageCount, String directory) {
+        if (instance == null) {
+            instance = new BufferManager(maxPageCount, directory);
+        }
+        return instance;
+    }
+
+    /**
+     * getInstance checks if the buffermanager has been built, then returns it or throws an error.
+     *
+     * @return the singleton instance of the BufferManager
+     */
+    public static BufferManager getInstance() {
+        if (instance == null) {
+            throw new RuntimeException("BufferManager not built. An error Occurred");
+        }
+        return instance;
     }
 
 
-    //todo buffer is inside of the buffermanage (stored as Hashmap of Pages)
-
-    //todo to get least recently used page, get the values and find the oldest timestamp
-
-    //todo createNewPage() -> create new Page object and store it in the hashmap
-
-    //todo if createNewPage() is called and the # of entries in the hash, eject the least recently used page to hardware.
-    //todo call storage manager to save the page
-
-
-
-    public static Page getPage(int pageId){
+    /**
+     * getPage first checks if the id is valid, -1 indicating that it is invalid.
+     * after it checks if the page is in the buffer.
+     * if it is not in the buffer, it ejects a page from the buffer, before reading
+     * the page from hardware.
+     *
+     * @param pageId the ID of the page
+     * @return A Page Object with the given id, or null dependent on ID
+     */
+    public Page getPage(int pageId){
         if(pageId==-1){
             return null;
-        } else if(buffer.containsKey(pageId)){
+        }
+
+        if(buffer.containsKey(pageId)){
             Page page = buffer.get(pageId);
             page.timestamp = LocalDateTime.now();
             return page;
-        } else {
-            try{
-                flushOldestPage();
-                Page decodedPage = readPageFromHardware(pageId);
-                buffer.put(decodedPage.pageId, decodedPage);
-                decodedPage.timestamp = LocalDateTime.now();
-                return decodedPage;
-            } catch (Exception e){
-                System.out.println("Inconsistent Database");
+        }
+
+        // Page not in buffer, fetch from disk.
+        try{
+            flushOldestIfNeeded();
+            Page decodedPage = readPageFromHardwareV2(pageId);
+            buffer.put(decodedPage.pageId, decodedPage);
+            decodedPage.timestamp = LocalDateTime.now();
+            return decodedPage;
+        } catch (IOException e){
+            System.err.println("Inconsistent Database");
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    /**
+     * createNewPage first checks if there is space in the buffer.
+     * after which it creates a new page and adds it to the buffer
+     *
+     * @param id the id of the new table
+     * @param tableName the name of table this page belongs to
+     * @return the newly created page object
+     */
+    public  void createNewPage(int id, String tableName)  {
+        try {
+            flushOldestIfNeeded();
+            Page page = new Page(id, tableName);
+            buffer.put(page.pageId, page);
+
+            // immediately write a blank page for edge case.
+            writePageToHardwareV2(page);
+        } catch (Exception e) {
+            System.err.println("Failed to create page");
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * flushOldestIfNeeded checks the buffer size against the maxPageCount field.
+     * if buffer is equal (or larger, which shouldn't occur), then the oldest page
+     * is ejected from the buffer, clearing space
+     *
+     */
+    public void flushOldestIfNeeded() {
+        if (buffer.size()>= maxPageCount){
+            Page oldestPage = Collections.min(buffer.values(), Comparator.comparing(p -> p.timestamp));
+            try {
+                writePageToHardwareV2(oldestPage);
+                buffer.remove(oldestPage.pageId);
+            } catch (Exception e) {
+                System.err.println("Failed to flush page from Buffer");
                 throw new RuntimeException(e);
-                //System.exit(0);
+            }
+        }
+
+    }
+
+    /**
+     * flushBuffer should only be called when exiting the database. It writes all existing
+     * pages in the dataBase back to the disk.
+     */
+    public void flushBuffer() {
+        for(Page p : buffer.values()){
+            try {
+                writePageToHardwareV2(p);
+            } catch (Exception e) {
+                System.err.println("Failed to flush page id=" + p.pageId + " from Buffer");
+                throw new RuntimeException(e);
             }
 
         }
-        //return null;
     }
 
-    public static Page createNewPage(int id, String table) throws IOException {
-        flushOldestPage();
-        Page page = new Page(id, table);
-        buffer.put(page.pageId, page);
-        page.timestamp = LocalDateTime.now();
-        return page;
-    }
+    /**
+     * inserts a record into a given table.
+     * iterates through the pages until it finds where it belongs,
+     * if required to split it calls the helper function handlePageSplit()
+     *
+     * @param tableName the name of the table you are inserting into
+     * @param record the given record you are inserting
+     */
+    public void insertRecordIntoTable(String tableName, Record record) {
+        TableSchema ts = dataCatalog.getTableSchema(tableName);
 
-    public static void flushOldestPage() throws IOException {
-        if (buffer.size()>= bufferManager.maxPageCount){
-            ArrayList<Page> pages = new ArrayList<Page>(buffer.values());
-            Page oldestPage = pages.get(0);
-            for(Page p : pages){
-                if(p.timestamp.isBefore(oldestPage.timestamp)){
-                    oldestPage = p;
+        int currentPageId = ts.getRootPageID();
+
+        while (currentPageId != -1) {
+            Page page = getPage(currentPageId);
+
+            InsertionResult result = page.tryInsert(record, ts);
+            switch (result) {
+                case SUCCESS -> {
+                    return;
                 }
+                case NEEDS_SPLIT -> {
+                    handlePageSplit(page, record, ts);
+                    return;
+                }
+                case NOT_IN_RANGE -> currentPageId = page.nextPageId;
+
             }
-            writePageToHardware(oldestPage);
-            buffer.remove(oldestPage.pageId);
+        }
+    }
+
+    /**
+     * Deletes a table by iterate going through the list of linked pages, deleting each one
+     * from Disk.
+     * @param tableName the name of the table you are deleting
+     * @throws IOException if the storagemanager fails (bad ID or IO failure)
+     */
+    public void deleteTable(String tableName) throws IOException {
+        // Grab table schema, iterate through pages until -1, deleting pages.
+        TableSchema tableSchema = DataCatalog.getInstance().getTableSchema(tableName);
+        int pageId = tableSchema.rootPageID;
+
+        while (pageId != -1) {
+            Page p = getPage(pageId);
+            int nextPageId = p.nextPageId;
+
+            buffer.remove(pageId);
+            storageManager.deletePage(pageId);
+            pageId = nextPageId;
+        }
+
+        // Once all pages are deleted, remove tableschema from DataCatalog
+        DataCatalog.getInstance().removeTableSchema(tableName);
+    }
+
+    /**
+     * Adds a column to a given table.
+     * After adding a column on each page it checks if a split is required.
+     *
+     * @param defaultValue the default value for the new column
+     * @param tableName the name of the given table.
+     */
+    public void addColumn(AttributeValue<?> defaultValue, String tableName) {
+        TableSchema ts = DataCatalog.getInstance().getTableSchema(tableName);
+        int pageSize = DataCatalog.getInstance().getPageSize();
+
+        int pageId = ts.getRootPageID();
+        while (pageId != -1) {
+            Page page = getPage(pageId);
+
+            page.addColumn(defaultValue);
+
+            if (page.getTotalRecordsSize() > pageSize) {
+                int originalNextPageId = page.nextPageId; // Save old id so we don't repeat the split pages
+                handlePageSplit(page, ts);
+
+                pageId = originalNextPageId;
+            } else {
+                pageId = page.nextPageId;
+            }
+        }
+    }
+
+    /**
+     * Deletes a column on a given table by attribute name.
+     * TODO: possibly look at page merging in the future for unused space?
+     * @param columnName the name of the attribute you are deleting
+     * @param tableName the name of the table you are deleting from
+     */
+    public void deleteColumn(String columnName, String tableName) {
+        TableSchema ts = DataCatalog.getInstance().getTableSchema(tableName);
+
+        int attributeIndex = ts.getIndex(columnName);
+
+        int pageId = ts.rootPageID;
+        while (pageId != -1) {
+            Page page = getPage(pageId);
+            page.deleteColumn(attributeIndex);
+            pageId = page.nextPageId;
+        }
+    }
+
+    /**
+     * An updated version of readPageFromHardWare utilizing ByteBuffer functionality and cutting
+     * out unnecessary calls to Array.CopyOfRange()
+     * Better performance and readability.
+     *
+     *
+     * @param pageId the ID of the page you are requesting
+     * @return a page object read from disk
+     * @throws IOException thrown from storage manager, since this is a private function we pass it up.
+     */
+    private Page readPageFromHardwareV2(int pageId) throws IOException {
+
+
+        // get byte array from hardware
+        byte[] encodedByteArray = storageManager.readPageV2(pageId);
+        ByteBuffer buffer = ByteBuffer.wrap(encodedByteArray);
+
+        // instantiate page with first few fields
+        int nextPageId = buffer.getInt();
+        int tableNameLength = buffer.getInt();
+        byte[] tableNameBytes = new byte[tableNameLength];
+        buffer.get(tableNameBytes);
+        int numOfRecords = buffer.getInt();
+
+        String tableName = new String(tableNameBytes, StandardCharsets.UTF_8);
+        Page p = new Page(pageId, tableName);
+        p.nextPageId = nextPageId;
+
+        ArrayList<AttributeSchema> attributes = new ArrayList<>(dataCatalog.getTableSchema(tableName)
+                .getAttributeSchemas().sequencedValues());
+
+        // process records until buffer is empty
+        for (int i = 0; i < numOfRecords; i++) {
+            Record record = convertBytesToRecordV2(buffer, attributes);
+            p.recordList.add(record);
+        }
+
+        return p;
+    }
+
+    /**
+     * An Updated Version of convertBytesToRecord that takes in a ByteBuffer instead of a
+     * byte array. Greater performance and readability gains.
+     *
+     *
+     * @param buffer A bytebuffer assumed to be at the start of the record. passed only by convertBytesToPage
+     * @param attributes the list of attributes for the tableSchema
+     * @return a record object
+     */
+    private static Record convertBytesToRecordV2(ByteBuffer buffer, ArrayList<AttributeSchema> attributes) {
+
+        Record record = new Record();
+
+        byte[] nullByteArray = new byte[attributes.size()];
+        buffer.get(nullByteArray); // advances pointer and loads values into nullByte array
+
+        for (int i = 0; i < nullByteArray.length; i++) {
+            DataTypes d = attributes.get(i).getDataType();
+
+            if (nullByteArray[i] == 1) {
+                // if null set data field to null
+                record.attributeList.add(new AttributeValue<>(null, d));
+            } else {
+                Object value = switch(d) {
+                    case INTEGER -> buffer.getInt();
+                    case DOUBLE -> buffer.getDouble();
+                    case BOOLEAN -> buffer.get() == 1;
+                    case CHAR, VARCHAR -> {
+                        int len = buffer.getInt();
+                        byte[] sBytes = new byte[len];
+                        buffer.get(sBytes);
+                        yield new String(sBytes, StandardCharsets.UTF_8);
+                    }
+                };
+                record.attributeList.add(new AttributeValue<>(value, d));
+            }
+        }
+        return record;
+    }
+
+
+    /**
+     * Writes a page to disk, features readability and performance improvements from V1.
+     *
+     * @param page The page object we wish to write to disk
+     */
+    private void writePageToHardwareV2(Page page) {
+        //prevent a page from writing if it has not been modified
+        // need to add if table was recently touched as well with timestamp. for initial disk allocation.
+        long secondsActive = Duration.between(page.timestamp, java.time.LocalDateTime.now()).getSeconds();
+        if(!page.hasBeenModified && secondsActive > 5){
+            return;
+        }
+        ByteBuffer byteBuffer = ByteBuffer.allocate(dataCatalog.getPageSize());
+
+
+        try {
+            byteBuffer.putInt(page.nextPageId);
+            byte[] tableNameBytes = page.tableName.getBytes(StandardCharsets.UTF_8);
+            byteBuffer.putInt(tableNameBytes.length);
+            byteBuffer.put(tableNameBytes);
+
+            // put in number of records, used for reading from hardware for loop counter
+            byteBuffer.putInt(page.recordList.size());
+
+            ArrayList<AttributeSchema> attributes = new ArrayList<>(dataCatalog.getTableSchema(page.tableName)
+                    .getAttributeSchemas().sequencedValues());
+
+            for (Record r : page.recordList) {
+                convertRecordToBytesV2(r, attributes, byteBuffer);
+            }
+
+            byteBuffer.flip(); // resets position, clips length. prepares for it to be sent to storage manager
+            storageManager.writePage(page.pageId, byteBuffer);
+
+
+        } catch (IOException e) {
+            System.err.println("Error occurred while attempting to write page " + page.pageId + " to disk...");
+            throw new RuntimeException(e);
         }
 
     }
 
-    public static void flushBuffer() throws IOException {
-        ArrayList<Page> pages = new ArrayList<Page>(buffer.values());
-        for(Page p : pages){
-            writePageToHardware(p);
+    /**
+     * Converts a Record object to bytes, to later be written to disk.
+     *
+     * @param r the record we wish to convert to bytes
+     * @param attributes the list of attributes, and their corresponding DataTypes
+     * @param buffer the bytebuffer, at a position ready for the record data to be written
+     */
+    private static void convertRecordToBytesV2(Record r, ArrayList<AttributeSchema> attributes, ByteBuffer buffer) {
+        // write null bit array into buffer
+        for (AttributeValue<?> a : r.attributeList) {
+            if (a.data == null) {
+                buffer.put((byte) 1);
+            } else {
+                buffer.put((byte) 0);
+            }
         }
-    }
 
-    public static void deletePage(int pageId){
-        buffer.remove(pageId);
-    }
+        for (int i = 0; i < attributes.size(); i++) {
+            Object value = r.attributeList.get(i).data;
+            if (value != null) {
+                DataTypes dataType = attributes.get(i).getDataType();
+                switch (dataType) {
+                    case INTEGER -> buffer.putInt((int) value);
+                    case DOUBLE -> buffer.putDouble((double) value);
+                    // in-case value is Boolean and not boolean, haven't checked full codebase
+                    case BOOLEAN -> buffer.put((byte) ((boolean) value ? 1 : 0));
+                    case CHAR, VARCHAR -> {
+                        String s = (String) value;
 
+                        byte[] strBytes = s.getBytes(StandardCharsets.UTF_8);
+                        // write the length of value
+                        buffer.putInt(strBytes.length);
 
-
-    public static Page readPageFromHardware(int pageId) throws IOException {
-
-        //get byte array from hardware
-        byte[] encodedByteArray = StorageManager.readPage(pageId);
-        //System.out.println(Arrays.toString(encodedByteArray));
-
-        int encodedIndex = 0;
-
-        //get nextPageId
-        byte[] dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
-        encodedIndex+=Integer.BYTES;
-        int nextPageId = ByteBuffer.wrap(dataSegment).getInt();
-
-
-        //get table name
-        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
-        encodedIndex+=Integer.BYTES;
-        int tableLength = ByteBuffer.wrap(dataSegment).getInt();
-
-        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+tableLength));
-        encodedIndex+= tableLength;
-        String tableName = new String(dataSegment, StandardCharsets.UTF_8);
-        //System.out.println("tableName:" +tableName);
-
-        Page finalPage = new Page(pageId, tableName);
-        finalPage.nextPageId = nextPageId;
-        //SequencedCollection<AttributeSchema> tableSchema = DataCatalog.getInstance().getTableSchema(tableName).getAttributeSchemas().sequencedValues();
-        ArrayList<AttributeSchema> tableSchema = new ArrayList<>(DataCatalog.getInstance().getTableSchema(tableName).getAttributeSchemas().sequencedValues());
-
-
-        while(encodedIndex<encodedByteArray.length){
-            Record finalRecord;
-            int startByte = encodedIndex;
-            //null-byte array
-            byte[] nullByteArray = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+tableSchema.size()));
-            encodedIndex+=tableSchema.size();
-            //System.out.println("null-byte array: "+Arrays.toString(nullByteArray));
-
-            //objects in byte array
-            for(int i=0; i<nullByteArray.length; i++){
-                AttributeSchema attributeSchema = tableSchema.get(i);
-                DataTypes dataType = attributeSchema.getDataType();
-                //check that data is != null
-                if(nullByteArray[i]!=1){
-                    switch(dataType){
-                        case INTEGER:
-                            encodedIndex+=Integer.BYTES;
-                            break;
-                        case DOUBLE:
-                            encodedIndex+=Double.BYTES;
-                            break;
-                        case BOOLEAN:
-                            encodedIndex+=1;
-                            break;
-                        case CHAR:
-                            byte[] charLengthByte = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
-                            encodedIndex+=Integer.BYTES;
-                            int charLength = ByteBuffer.wrap(charLengthByte).getInt();
-                            encodedIndex+=charLength;
-                            break;
-                        case VARCHAR:
-                            byte[] varLengthByte = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
-                            encodedIndex+=Integer.BYTES;
-                            int varLength = ByteBuffer.wrap(varLengthByte).getInt();
-                            encodedIndex+=varLength;
-                            break;
-                        default:
-                            break;
+                        buffer.put(strBytes);
                     }
                 }
             }
-            int endByte = encodedIndex;
-            finalRecord = convertBytesToRecord(Arrays.copyOfRange(encodedByteArray,startByte,endByte), tableSchema);
-            finalPage.recordList.add(finalRecord);
-        }
-
-        return finalPage;
-    }
-
-
-    public static Record convertBytesToRecord(byte[] encodedByteArray, ArrayList<AttributeSchema> fakeTableSchema) throws IOException {
-
-        //System.out.println("encoded byteArray: "+Arrays.toString(encodedByteArray));
-
-        int encodedIndex = 0;
-        //null-byte array
-        byte[] nullByteArray = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+fakeTableSchema.size()));
-        encodedIndex+=fakeTableSchema.size();
-        //System.out.println("null-byte array: "+Arrays.toString(nullByteArray));
-
-        //objectify byte arrays
-        Record record = new Record();
-        for(int i=0; i<nullByteArray.length; i++){
-            AttributeValue attribute = null;
-            AttributeSchema attributeSchema = fakeTableSchema.get(i);
-            DataTypes dataType = attributeSchema.getDataType();
-            //check if null data
-            if(nullByteArray[i]==1){
-                attribute = new AttributeValue<>(null, dataType);
-            } else {
-                byte[] dataSegment;
-                switch(dataType){
-                    case INTEGER:
-                        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
-                        encodedIndex+=Integer.BYTES;
-                        attribute = new AttributeValue<>(ByteBuffer.wrap(dataSegment).getInt(), dataType);
-                        break;
-                    case DOUBLE:
-                        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Double.BYTES));
-                        encodedIndex+=Double.BYTES;
-                        attribute = new AttributeValue<>(ByteBuffer.wrap(dataSegment).getDouble(), dataType);
-                        break;
-                    case BOOLEAN:
-                        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+1));
-                        encodedIndex+=1;
-                        Byte boolByte = ByteBuffer.wrap(dataSegment).get();
-                        boolean bool;
-                        if(boolByte==1){
-                            bool=true;
-                        }else{
-                            bool=false;
-                        }
-                        attribute = new AttributeValue<>(bool, dataType);
-                        break;
-                    case CHAR:
-                        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
-                        encodedIndex+=Integer.BYTES;
-                        int charLength = ByteBuffer.wrap(dataSegment).getInt();
-
-                        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+charLength));
-                        encodedIndex+= charLength;
-                        String charArray = new String(dataSegment, StandardCharsets.UTF_8);
-                        attribute = new AttributeValue<>(charArray, dataType);
-                        break;
-                    case VARCHAR:
-                        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+Integer.BYTES));
-                        encodedIndex+=Integer.BYTES;
-                        int varLength = ByteBuffer.wrap(dataSegment).getInt();
-
-                        dataSegment = Arrays.copyOfRange(encodedByteArray,encodedIndex,(encodedIndex+varLength));
-                        encodedIndex+= varLength;
-                        String varArray = new String(dataSegment, StandardCharsets.UTF_8);
-                        attribute = new AttributeValue<>(varArray, dataType);
-                        break;
-                    default:
-                        break;
-                }
-
-            }
-
-            //AttributeValue attribute = new AttributeValue<>();
-            if(attribute!=null){
-                record.attributeList.add(attribute);
-            }
-        }
-
-        return record;
-
-    }
-
-
-
-    public static void writePageToHardware(Page page) throws IOException {
-
-        //prevent a page from writing if it has not been modified
-        if(page.hasBeenModified==false){
-            return;
-        }
-
-        //SequencedCollection<AttributeSchema> tableSchema = DataCatalog.getInstance().getTableSchema(page.tableName).getAttributeSchemas().sequencedValues();
-
-        ArrayList<byte[]> byteLists = new ArrayList<>();
-
-
-        //store nextPageId
-        ByteBuffer nextPageId = ByteBuffer.allocate(Integer.BYTES);
-        nextPageId.putInt(page.nextPageId);
-        byteLists.add(nextPageId.array());
-
-        //store name of table
-        String tableName = page.tableName;
-        ByteBuffer tableSize = ByteBuffer.allocate(Integer.BYTES);
-        tableSize.putInt(tableName.length());
-        byteLists.add(tableSize.array());
-
-        byte[] tableNameBytes = tableName.getBytes(StandardCharsets.UTF_8);
-        byteLists.add(tableNameBytes);
-
-        //store records
-        for(Record record : page.recordList){
-            byteLists.add(convertRecordToBytes(record));
-        }
-
-        //find size of final array
-        int finalByteArraySize = 0;
-        for(int i=0; i<byteLists.size(); i++){
-            //System.out.println(Arrays.toString(byteLists.get(i)));
-            finalByteArraySize+=byteLists.get(i).length;
-        }
-
-        byte[] finalByteArray = new byte[finalByteArraySize+Integer.BYTES];
-
-        //put int in array showing how long the page is
-        ByteBuffer byteCount = ByteBuffer.allocate(Integer.BYTES);
-        byteCount.putInt(finalByteArraySize+Integer.BYTES);
-        int finalArrayIndex =0;
-        for(byte b : byteCount.array()){
-            finalByteArray[finalArrayIndex]=b;
-            finalArrayIndex++;
-        }
-
-        //populate final array
-        for(byte[] list : byteLists){
-            for(byte b : list){
-                finalByteArray[finalArrayIndex]=b;
-                finalArrayIndex++;
-            }
-        }
-
-        //return finalByteArray;
-        ByteBuffer buffer = ByteBuffer.wrap(finalByteArray);
-
-
-        //System.out.println("buffer lengeth: "+buffer.array().length);
-        //System.out.println("final byte array: "+Arrays.toString(buffer.array()));
-        StorageManager.writePage(page.pageId, buffer);
-    }
-
-
-    public static byte[] convertRecordToBytes(Record record){
-
-        ArrayList<byte[]> byteLists = new ArrayList<>();
-
-        //make null-bit
-        byte[] nullBitArray = new byte[record.attributeList.size()];
-        for(int i=0; i<record.attributeList.size(); i++){
-            if(record.attributeList.get(i).data==null){
-                nullBitArray[i]=1;
-            } else {
-                nullBitArray[i]=0;
-            }
-        }
-        byteLists.add(nullBitArray);
-
-        //encode values
-        for(AttributeValue attributeValue : record.attributeList){
-
-            ByteBuffer byteBuffer = null;
-
-            //System.out.println("Attribute: "+attributeValue);
-            if(attributeValue.data!=null){
-                switch(attributeValue.type){
-                    case INTEGER:
-                        byteBuffer = ByteBuffer.allocate(Integer.BYTES);
-                        byteBuffer.putInt((Integer) attributeValue.data);
-                        break;
-                    case DOUBLE:
-                        byteBuffer = ByteBuffer.allocate(Double.BYTES);
-                        byteBuffer.putDouble((Double) attributeValue.data);
-                        break;
-                    case BOOLEAN:
-                        byteBuffer = ByteBuffer.allocate(1);
-                        boolean bool = (Boolean)attributeValue.data;
-                        Byte boolByte = (byte)(bool ? 1 : 0);
-                        byteBuffer.put(boolByte);
-                        break;
-                    case CHAR:
-                        String str = (String)attributeValue.data;
-                        ByteBuffer strSize = ByteBuffer.allocate(Integer.BYTES);
-                        strSize.putInt(str.length());
-                        byteLists.add(strSize.array());
-
-                        byte[] strBytes = str.getBytes(StandardCharsets.UTF_8);
-                        byteLists.add(strBytes);
-                        break;
-                    case VARCHAR:
-                        String var = (String)attributeValue.data;
-                        ByteBuffer varSize = ByteBuffer.allocate(Integer.BYTES);
-                        varSize.putInt(var.length());
-                        byteLists.add(varSize.array());
-
-                        byte[] varBytes = var.getBytes(StandardCharsets.UTF_8);
-                        byteLists.add(varBytes);
-                        break;
-
-                    default:
-                        break;
-                }
-            }
-
-            if(byteBuffer!=null){
-                byte[] byteList = byteBuffer.array();
-                byteLists.add(byteList);
-            }
-
-        }
-
-        //find size of final array
-        int finalByteArraySize = 0;
-        for(int i=0; i<byteLists.size(); i++){
-            //System.out.println(Arrays.toString(byteLists.get(i)));
-            finalByteArraySize+=byteLists.get(i).length;
-        }
-
-        byte[] finalByteArray = new byte[finalByteArraySize];
-
-        //populate final array
-        int finalArrayIndex = 0;
-        for(byte[] list : byteLists){
-            for(byte b : list){
-                finalByteArray[finalArrayIndex]=b;
-                finalArrayIndex++;
-            }
-        }
-
-
-        //System.out.println("byte array: "+Arrays.toString(finalByteArray));
-        return finalByteArray;
-
-    }
-
-}
-
-
-class BufferMain{
-    public static void main(String[] args) throws Exception {
-        DataCatalog.buildCatalog(5000,"data");
-        //System.out.println("page size: "+DataCatalog.getInstance().getPageSize());
-        BufferManager bufferManager = new BufferManager(5000, "C:/Users/mprok/JavaProjects/Database Impemented Systems/JottQL");
-
-        //make a test table structure
-
-
-        AttributeValue attribute1 = new AttributeValue(1, DataTypes.INTEGER);
-        AttributeValue attribute2 = new AttributeValue(null, DataTypes.DOUBLE);
-        AttributeValue attribute3 = new AttributeValue(false, DataTypes.BOOLEAN);
-        AttributeValue attribute4 = new AttributeValue("hello", DataTypes.CHAR);
-        AttributeValue attribute5 = new AttributeValue("world", DataTypes.VARCHAR);
-
-        Record record1 = new Record();
-
-        record1.attributeList.add(attribute1);
-        record1.attributeList.add(attribute2);
-        record1.attributeList.add(attribute3);
-        record1.attributeList.add(attribute4);
-        record1.attributeList.add(attribute5);
-
-
-
-        AttributeValue attribute6 = new AttributeValue(4, DataTypes.INTEGER);
-        AttributeValue attribute7 = new AttributeValue(5.5, DataTypes.DOUBLE);
-        AttributeValue attribute8 = new AttributeValue(true, DataTypes.BOOLEAN);
-        AttributeValue attribute9 = new AttributeValue("tuple", DataTypes.CHAR);
-        AttributeValue attribute10 = new AttributeValue("varvar char", DataTypes.VARCHAR);
-        Record record2 = new Record();
-
-
-        record2.attributeList.add(attribute6);
-        record2.attributeList.add(attribute7);
-        record2.attributeList.add(attribute8);
-        record2.attributeList.add(attribute9);
-        record2.attributeList.add(attribute10);
-
-
-        bufferManager.createNewPage(1,"table");
-
-
-        //Page testPage = new Page(1, "table");
-        Page testPage = bufferManager.getPage(1);
-        testPage.recordList.add(record1);
-        testPage.recordList.add(record2);
-
-        //make a test table schema
-        TableSchema  tableSchema = new TableSchema();
-        tableSchema.tableName = testPage.tableName;
-        DataCatalog.getInstance().addTableSchema(tableSchema);
-
-
-        AttributeSchema integer = AttributeSchema.createAttributeSchemaFromQuery("a INTEGER");
-        tableSchema.addAttributeSchema(integer);
-
-        AttributeSchema dub = AttributeSchema.createAttributeSchemaFromQuery("b DOUBLE");
-        tableSchema.addAttributeSchema(dub);
-
-        AttributeSchema bool = AttributeSchema.createAttributeSchemaFromQuery("c BOOLEAN");
-        tableSchema.addAttributeSchema(bool);
-
-        AttributeSchema car = AttributeSchema.createAttributeSchemaFromQuery("d CHAR(5)");
-        tableSchema.addAttributeSchema(car);
-
-        AttributeSchema var = AttributeSchema.createAttributeSchemaFromQuery("e VARCHAR(10)");
-        tableSchema.addAttributeSchema(var);
-
-        for(AttributeSchema a : DataCatalog.getInstance().getTableSchema(testPage.tableName).getAttributeSchemas().sequencedValues()){
-            //System.out.println("datatype: "+a.getDataType());
-        }
-
-
-
-
-
-        // write it
-        byte[] encodedByteArray;
-        //ncodedByteArray = bufferManager.writePageToHardware(testPage, fakeTableSchema);
-        bufferManager.writePageToHardware(testPage);
-
-
-        //read it
-        System.out.println("Reading...");
-        //Page decodedPage = bufferManager.readPageFromHardware(1,encodedByteArray, fakeTableSchema);
-        Page decodedPage = bufferManager.readPageFromHardware(1);
-        System.out.println("decoded record");
-        for(Record record : decodedPage.recordList){
-            System.out.println("next record");
-            for(AttributeValue attributeValue : record.attributeList){
-
-                System.out.println("\t"+attributeValue);
-
-            }
         }
     }
+
+
+    /**
+     * Splits the page at the midway point, links the ids to maintain record order on primary key
+     *
+     * @param page the page you wish to split
+     * @param ts the table schema needed for accessing metadata
+     */
+    private void handlePageSplit(Page page, TableSchema ts) {
+        // Link pages in correct order page -> page.nextPage goes to page -> page2 -> page.nextPage
+        int newId = DataCatalog.getInstance().getNextAvailablePageID();
+        Page page2 = new Page(newId, ts.tableName);
+        page2.nextPageId = page.nextPageId;
+        page.nextPageId = newId;
+
+        // Give Each Page half of the records
+        int mid = page.recordList.size() / 2;
+        ArrayList<Record> firstHalf = new ArrayList<>(page.recordList.subList(0, mid));
+        ArrayList<Record> secondHalf = new ArrayList<>(page.recordList.subList(mid, page.recordList.size()));
+        page.recordList = firstHalf;
+        page2.recordList = secondHalf;
+
+        page.hasBeenModified = true;
+        page2.hasBeenModified = true;
+        page.timestamp = java.time.LocalDateTime.now();
+        page2.timestamp = java.time.LocalDateTime.now();
+
+        buffer.put(newId, page2);
+    }
+
+    /**
+     * overloaded version of handlePageSplit for when the split happens
+     * due to the insertion of a new record
+     *
+     * @param page the page you are spliting
+     * @param record the record you are looking to insert
+     * @param ts the tableschema you are using as reference
+     */
+    private void handlePageSplit(Page page, Record record, TableSchema ts) {
+        // Temporarily insert record into page before split to get in order positioning
+        page.insertSorted(record, ts);
+
+        // Call the parent handlePageSplit function
+        handlePageSplit(page, ts);
+    }
+
 }
