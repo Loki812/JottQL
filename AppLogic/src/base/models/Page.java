@@ -62,6 +62,9 @@ public class Page {
     public void insertSorted(Record record, TableSchema schema) {
 
         for (int i = 0; i < recordList.size(); i++) {
+            if(record.compareTo(recordList.get(i), schema) == 0){
+                System.out.println("Duplicate Primary key");
+            }
             if (record.compareTo(recordList.get(i), schema) < 0) {
                 recordList.add(i, record);
                 return;
@@ -71,6 +74,19 @@ public class Page {
         // We iterated over entire record list and this record is greater than all
         recordList.add(record);
     }
+    public InsertionResult insertNoOrder(Record record) throws Exception {
+        // 1. Check if record fits in page
+        int pageSize = DataCatalog.getInstance().getPageSize();
+        if (getTotalRecordsSize() + record.getSize() > pageSize) {
+            return InsertionResult.NOT_IN_RANGE;
+        }
+        // 2. Insert into
+        this.hasBeenModified = true;
+        this.timestamp = java.time.LocalDateTime.now();
+        recordList.add(record);
+        return InsertionResult.SUCCESS;
+    }
+
 
     /**
      * deletes a column for this page and THIS PAGE only
