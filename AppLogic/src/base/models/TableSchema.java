@@ -24,6 +24,15 @@ public class TableSchema {
         attributeSchemas = new LinkedHashMap<>();
     }
 
+    public TableSchema(String tableName, ArrayList<AttributeSchema> attributeSchemas) throws Exception {
+        this.tableName = tableName;
+        this.numOfAttributes = attributeSchemas.size();
+        this.attributeSchemas = new LinkedHashMap<>();
+        for (AttributeSchema attributeSchema : attributeSchemas) {
+            this.attributeSchemas.put(attributeSchema.attributeName, attributeSchema);
+        }
+    }
+
 
 
     public static TableSchema createTableSchemaFromDisk(DataInputStream in) throws IOException {
