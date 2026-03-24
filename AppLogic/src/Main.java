@@ -99,7 +99,6 @@ public class Main {
 
             if (input.equalsIgnoreCase("<QUIT>")) {
                 DataCatalog.saveToDisk();
-                // BufferManager (save before exiting_)
                 BufferManager.getInstance().flushBuffer();
                 System.out.println("Exiting Application");
                 System.exit(0);

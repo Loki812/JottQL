@@ -3,12 +3,14 @@ package base.parse.DML;
 import base.buffer.BufferManager;
 import base.models.*;
 import base.models.Record;
+import base.parse.DDL.DropTable;
 
 import java.util.ArrayList;
+import java.util.List;
 
 
 public class SelectTable {
-    public static void parse(String command) {
+    public static void parse(String command) throws Exception {
 
         String trimmedCommand = command.trim().toUpperCase();
         if(!trimmedCommand.startsWith("SELECT")) {
@@ -52,8 +54,13 @@ public class SelectTable {
             System.err.println("Missing table name");
             return;
         }
+        ArrayList<String> tableNames = new ArrayList<>(List.of(remainder.split(",")));
+        ArrayList<String> tempTables = new ArrayList<>();
+        String tableName = Cartesian.Product(tableNames);
+        if(tableName.startsWith("_")){
+            tempTables.add(tableName);
+        }
 
-        String tableName = tablePart.trim().toUpperCase();
         DataCatalog dataCatalog = DataCatalog.getInstance();
         TableSchema tableSchema = dataCatalog.getTableSchema(tableName);
         if(tableSchema == null) {
@@ -168,6 +175,10 @@ public class SelectTable {
 
 
 
+        }
+
+        for(String table: tempTables) {
+            DropTable.execute("DROP TABLE " + table.trim().toUpperCase()+";");
         }
 
 
