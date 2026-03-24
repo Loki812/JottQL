@@ -22,6 +22,7 @@ public class TableSchema {
     private LinkedHashMap<String, AttributeSchema> attributeSchemas;
     public String primaryKey;
     public int rootPageID;
+    private ArrayList<String> tempTableNames = new ArrayList<>();
 
     public TableSchema() {
         attributeSchemas = new LinkedHashMap<>();
@@ -165,10 +166,15 @@ public class TableSchema {
         // Create new copy of the table schema
         TableSchema copy = new TableSchema();
 
-        // Give it a name indicating that it is temporary
+        // Give the table a name indicating that it is temporary
         Random r = new Random();
-        int rand = r.nextInt(100);
-        copy.tableName = "##temp" + rand + this.tableName;
+        String name = "##temp" + r.nextInt(100000) + this.tableName;
+        // Make sure the name isn't already in use
+        while (tempTableNames.contains(name)) {
+            name = "##temp" + r.nextInt(100000) + this.tableName;
+        }
+        copy.tableName = name;
+        tempTableNames.add(name);
 
         // Copy the other fields
         copy.numOfAttributes = this.numOfAttributes;
