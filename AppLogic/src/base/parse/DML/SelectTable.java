@@ -4,6 +4,7 @@ import base.buffer.BufferManager;
 import base.models.*;
 import base.models.Record;
 import base.parse.DDL.DropTable;
+import base.parse.DML.Cartesian;
 
 import java.util.ArrayList;
 import java.util.List;
