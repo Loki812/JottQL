@@ -92,7 +92,7 @@ public class SelectTable {
                 for(int i = 0; i < tableAttributes.size(); i++) {
 
                     String schemaAttr = tableAttributes.get(i).attributeName;
-
+                    int dotIndex = schemaAttr.lastIndexOf(".");
                     if(schemaAttr.equalsIgnoreCase(attr)) {
 
                         if(matchedIndex != -1) {
@@ -103,11 +103,11 @@ public class SelectTable {
                         matchedIndex = i;
 
                     }
-                    else if(!attr.contains(".")) {
+                    else if(dotIndex != -1) {
 
-                        int dotIndex = schemaAttr.lastIndexOf(".");
+
                         String unqualifiedName =
-                                (dotIndex == -1) ? schemaAttr : schemaAttr.substring(dotIndex + 1);
+                                schemaAttr.substring(dotIndex + 1);
 
                         if(unqualifiedName.equalsIgnoreCase(attr)) {
 
@@ -121,13 +121,6 @@ public class SelectTable {
                         }
 
                     }
-
-                }
-
-                if(ambiguous) {
-
-                    System.err.println("Ambiguous attribute " + attr);
-                    return;
 
                 }
 

@@ -8,6 +8,7 @@ import base.models.DataTypes;
 import base.models.Page;
 import base.models.Record;
 import base.models.TableSchema;
+import base.models.whereNodes.WhereTreeNode;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -84,6 +85,9 @@ public class UpdateTable {
         while (pageId != -1) {
             Page page = bufferManager.getPage(pageId);
 
+            // do where up here
+            // because where() returns array of records
+
             for (Record record : page.recordList) {
                 if (record == null) {
                     continue;
@@ -93,7 +97,7 @@ public class UpdateTable {
 
 
                 if (wherePart != null) {
-
+                    //WhereTreeNode whereTree = buildWhere(wherePart);
                     matchesWhere = false;
                 }
 
