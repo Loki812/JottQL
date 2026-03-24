@@ -53,7 +53,7 @@ public class SelectTable {
             return;
         }
 
-        String tableName = remainder.trim().toUpperCase();
+        String tableName = tablePart.trim().toUpperCase();
         DataCatalog dataCatalog = DataCatalog.getInstance();
         TableSchema tableSchema = dataCatalog.getTableSchema(tableName);
         if(tableSchema == null) {
@@ -86,20 +86,61 @@ public class SelectTable {
                     return;
                 }
 
-                boolean found = false;
-                for (int i = 0; i < tableAttributes.size(); i++) {
-                    if (tableAttributes.get(i).attributeName.equalsIgnoreCase(attr)) {
-                        attrNames.add(tableAttributes.get(i).attributeName);
-                        selectedIndexes.add(i);
-                        found = true;
-                        break;
+                int matchedIndex = -1;
+                boolean ambiguous = false;
+
+                for(int i = 0; i < tableAttributes.size(); i++) {
+
+                    String schemaAttr = tableAttributes.get(i).attributeName;
+
+                    if(schemaAttr.equalsIgnoreCase(attr)) {
+
+                        if(matchedIndex != -1) {
+                            ambiguous = true;
+                            break;
+                        }
+
+                        matchedIndex = i;
+
                     }
+                    else if(!attr.contains(".")) {
+
+                        int dotIndex = schemaAttr.lastIndexOf(".");
+                        String unqualifiedName =
+                                (dotIndex == -1) ? schemaAttr : schemaAttr.substring(dotIndex + 1);
+
+                        if(unqualifiedName.equalsIgnoreCase(attr)) {
+
+                            if(matchedIndex != -1) {
+                                ambiguous = true;
+                                break;
+                            }
+
+                            matchedIndex = i;
+
+                        }
+
+                    }
+
                 }
 
-                if (!found) {
+                if(ambiguous) {
+
+                    System.err.println("Ambiguous attribute " + attr);
+                    return;
+
+                }
+
+                if(matchedIndex == -1) {
+
                     System.err.println("Attribute " + attr + " not found in table " + tableName);
                     return;
+
                 }
+
+                attrNames.add(tableAttributes.get(matchedIndex).attributeName);
+                selectedIndexes.add(matchedIndex);
+
             }
         }
 
