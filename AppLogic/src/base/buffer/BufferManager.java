@@ -495,4 +495,8 @@ public class BufferManager {
         handlePageSplit(page, ts);
     }
 
+    public void deleteTempTables() {
+        // delete all temporary tables
+    }
+
 }
