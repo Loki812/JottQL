@@ -13,6 +13,18 @@ import java.util.List;
 public class SelectTable {
     public static void parse(String command) throws Exception {
 
+        // TODO: test query with "select a, b, c"
+        // TODO: test query with "select a.b"
+
+        // For testing
+        // boot app, insert junk data via command line
+        // or call CREATETABLE(string query);
+        // insert data(string query)
+        // call parse("select a, b, c")
+        // make 2nd table
+        // insert into 2nd table
+        // call parse("select a.a, b.a from a, b")
+        // ensure select * works
         String trimmedCommand = command.trim().toUpperCase();
         if(!trimmedCommand.startsWith("SELECT")) {
 
@@ -50,6 +62,9 @@ public class SelectTable {
             System.err.println("Missing projection attributes");
             return;
         }
+
+
+        // select
 
         if (tablePart.isEmpty()) {
             System.err.println("Missing table name");
