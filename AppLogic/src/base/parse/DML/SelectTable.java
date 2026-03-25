@@ -4,6 +4,7 @@ import base.buffer.BufferManager;
 import base.models.*;
 import base.models.Record;
 import base.parse.DDL.DropTable;
+import base.parse.DML.Cartesian;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -93,20 +94,54 @@ public class SelectTable {
                     return;
                 }
 
-                boolean found = false;
-                for (int i = 0; i < tableAttributes.size(); i++) {
-                    if (tableAttributes.get(i).attributeName.equalsIgnoreCase(attr)) {
-                        attrNames.add(tableAttributes.get(i).attributeName);
-                        selectedIndexes.add(i);
-                        found = true;
-                        break;
+                int matchedIndex = -1;
+                boolean ambiguous = false;
+
+                for(int i = 0; i < tableAttributes.size(); i++) {
+
+                    String schemaAttr = tableAttributes.get(i).attributeName;
+                    int dotIndex = schemaAttr.lastIndexOf(".");
+                    if(schemaAttr.equalsIgnoreCase(attr)) {
+
+                        if(matchedIndex != -1) {
+                            ambiguous = true;
+                            break;
+                        }
+
+                        matchedIndex = i;
+
                     }
+                    else if(dotIndex != -1) {
+
+
+                        String unqualifiedName =
+                                schemaAttr.substring(dotIndex + 1);
+
+                        if(unqualifiedName.equalsIgnoreCase(attr)) {
+
+                            if(matchedIndex != -1) {
+                                ambiguous = true;
+                                break;
+                            }
+
+                            matchedIndex = i;
+
+                        }
+
+                    }
+
                 }
 
-                if (!found) {
+                if(matchedIndex == -1) {
+
                     System.err.println("Attribute " + attr + " not found in table " + tableName);
                     return;
+
                 }
+
+                attrNames.add(tableAttributes.get(matchedIndex).attributeName);
+                selectedIndexes.add(matchedIndex);
+
             }
         }
 
