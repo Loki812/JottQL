@@ -4,9 +4,9 @@ import base.buffer.BufferManager;
 import base.models.*;
 import base.models.Record;
 import base.parse.DDL.DropTable;
-import base.parse.DML.Cartesian;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 
@@ -25,38 +25,45 @@ public class SelectTable {
         // insert into 2nd table
         // call parse("select a.a, b.a from a, b")
         // ensure select * works
-        String trimmedCommand = command.trim().toUpperCase();
-        if(!trimmedCommand.startsWith("SELECT")) {
 
+        // take whitespace off, convert all to uppercase
+        command = command.trim().toUpperCase();
+        if(!command.startsWith("SELECT")) {
             System.err.println("Invalid SELECT Command");
             return;
-
         }
 
-        if(!trimmedCommand.endsWith(";")) {
-
+        if(!command.endsWith(";")) {
             System.err.println("Missing Semicolon");
             return;
-
+        } else {
+            // remove semicolon for cleaner parsing
+            command = command.substring(0, command.length() - 1);
         }
 
-        trimmedCommand = trimmedCommand.substring(0, trimmedCommand.length() - 1).trim();
+        // grab these at start so we know how to break up query
+        int selectIndex = command.indexOf("SELECT");
+        int fromIndex = command.indexOf("FROM");
+        int whereIndex = command.indexOf("WHERE");
+        int orderIndex = command.indexOf("ORDERBY");
 
-        if (trimmedCommand.length() <= "SELECT".length()) {
-            System.err.println("Invalid SELECT command");
-            return;
-        }
 
-        String remainder = trimmedCommand.substring("SELECT".length()).trim();
+        // these lines will never execute due to previous check of .startsWith("SELECT")
+        //        if (trimmedCommand.length() <= "SELECT".length()) {
 
-        int fromIndex = remainder.indexOf("FROM");
         if (fromIndex == -1) {
             System.err.println("Missing FROM");
             return;
         }
 
-        String projectionPart = remainder.substring(0, fromIndex).trim();
-        String tablePart = remainder.substring(fromIndex + "FROM".length()).trim();
+        String projectionPart = command.substring(selectIndex + "SELECT".length(), fromIndex).trim();
+
+        String tablePart;
+        if (whereIndex == -1) {
+            tablePart = command.substring(fromIndex + "FROM".length());
+        } else {
+            tablePart = command.substring(fromIndex + "FROM".length(), whereIndex);
+        }
 
         if (projectionPart.isEmpty()) {
             System.err.println("Missing projection attributes");
@@ -64,13 +71,13 @@ public class SelectTable {
         }
 
 
-        // select
+        // Query is parsed
 
         if (tablePart.isEmpty()) {
             System.err.println("Missing table name");
             return;
         }
-        ArrayList<String> tableNames = new ArrayList<>(List.of(remainder.split(",")));
+        ArrayList<String> tableNames = new ArrayList<>(List.of(tablePart.split(",")));
         ArrayList<String> tempTables = new ArrayList<>();
         String tableName = Cartesian.Product(tableNames);
         if(tableName.startsWith("_")){
@@ -80,85 +87,61 @@ public class SelectTable {
         DataCatalog dataCatalog = DataCatalog.getInstance();
         TableSchema tableSchema = dataCatalog.getTableSchema(tableName);
         if(tableSchema == null) {
-
             System.err.println("Table " + tableName + " not found");
             return;
-
         }
 
-        ArrayList<AttributeSchema> tableAttributes =
-                new ArrayList<>(tableSchema.getAttributeSchemas().sequencedValues());
+
 
         ArrayList<String> attrNames = new ArrayList<>();
         ArrayList<Integer> selectedIndexes = new ArrayList<>();
 
+        LinkedHashMap<String, AttributeSchema> attrSchemas = tableSchema.getAttributeSchemas();
         if (projectionPart.equals("*")) {
-            for (int i = 0; i < tableAttributes.size(); i++) {
-                attrNames.add(tableAttributes.get(i).attributeName);
+            attrSchemas.values()
+                    .forEach(e -> attrNames.add(e.attributeName));
+            for (int i = 0; i < attrSchemas.size(); i++) {
                 selectedIndexes.add(i);
             }
         }
         else {
             String[] requestedAttributes = projectionPart.split(",");
+            List<String> tableAttrNames = new ArrayList<>(attrSchemas.keySet());
+            for (String attr : requestedAttributes) {
 
-            for (String rawAttr : requestedAttributes) {
-                String attr = rawAttr.trim();
-
+                attr = attr.trim();
                 if (attr.isEmpty()) {
                     System.err.println("Invalid projection list");
                     return;
                 }
 
-                int matchedIndex = -1;
-                boolean ambiguous = false;
+                // TODO for alex:
+                // so "select students.id and professors.id"
+                // is NOT ambiguous because of the '.' in between the parser can detect where
+                // each column is coming from.
+                // a attribute is only ambiguous if you do:
+                //
+                // select id from students, professors
 
-                for(int i = 0; i < tableAttributes.size(); i++) {
-
-                    String schemaAttr = tableAttributes.get(i).attributeName;
-                    int dotIndex = schemaAttr.lastIndexOf(".");
-                    if(schemaAttr.equalsIgnoreCase(attr)) {
-
-                        if(matchedIndex != -1) {
-                            ambiguous = true;
-                            break;
-                        }
-
-                        matchedIndex = i;
-
-                    }
-                    else if(dotIndex != -1) {
+                // luckily for us if Om did the cartesian product correctly, the new tableschema
+                // will have all the duplicate columns formatted like "students.id" so
+                // we dont even have to check for ambiguity inside here.
+                // if will just be caught by the column not existing in the schema
 
 
-                        String unqualifiedName =
-                                schemaAttr.substring(dotIndex + 1);
-
-                        if(unqualifiedName.equalsIgnoreCase(attr)) {
-
-                            if(matchedIndex != -1) {
-                                ambiguous = true;
-                                break;
-                            }
-
-                            matchedIndex = i;
-
-                        }
-
-                    }
-
+                int indexOfAttribute = tableAttrNames.indexOf(attr);
+                if (indexOfAttribute != -1) {
+                    attrNames.add(attr);
+                    selectedIndexes.add(indexOfAttribute);
+                } else {
+                    throw new RuntimeException("Invalid column referenced in select statement... (" + attr + ")");
                 }
-
-                if(matchedIndex == -1) {
-
-                    System.err.println("Attribute " + attr + " not found in table " + tableName);
-                    return;
-
-                }
-
-                attrNames.add(tableAttributes.get(matchedIndex).attributeName);
-                selectedIndexes.add(matchedIndex);
-
             }
         }
+
+        //----------------------------------------
+        // END OF SELECT, start of printing results
+        // ---------------------------------------
 
         int pageId = tableSchema.getRootPageID();
 

@@ -17,6 +17,12 @@ public class UpdateTable {
 
     public static void updateTable(String tablename, String query) {
 
+        // createtable(string)
+        //insert some values (optional)
+        // update("update t1 set a = 5")
+        // update and delete: output = "x rows updated/deleted..."
+        // select * from t1, verify results with eyeballs
+
         if (tablename == null || query == null) {
             System.err.println("Invalid UPDATE command");
             return;
