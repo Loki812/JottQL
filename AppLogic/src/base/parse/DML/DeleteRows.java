@@ -6,6 +6,7 @@ import base.models.Page;
 import base.models.Record;
 import base.models.TableSchema;
 import base.models.whereNodes.WhereTreeNode;
+import base.parse.DDL.DropTable;
 
 /**
  * Delete rows from a table.
@@ -62,9 +63,8 @@ public class DeleteRows {
      *
      * @param tableName the name of the table to delete rows from
      * @param whereTreeNode which rows to delete from the table
-     * @return the TableSchema with rows deleted
      */
-    private static TableSchema delete(String tableName, WhereTreeNode whereTreeNode) {
+    private static void delete(String tableName, WhereTreeNode whereTreeNode) throws Exception {
         // Get instances of the DataCatalog and BufferManager
         DataCatalog dc = DataCatalog.getInstance();
         BufferManager bm = BufferManager.getInstance();
@@ -72,9 +72,6 @@ public class DeleteRows {
         // Get the tableSchema and make a copy of it
         TableSchema tableSchema = dc.getTableSchema(tableName);
         TableSchema copy = tableSchema.makeTempCopy();
-
-        // Get the tableSchema's name
-        String name = tableSchema.tableName;
 
         // Go through the table's pages and insert non-deleted rows into the copy
         int pageId = tableSchema.rootPageID;
@@ -91,15 +88,24 @@ public class DeleteRows {
         }
 
         // Drop the original tableSchema
-        dc.removeTableSchema(tableName);
+        DropTable.execute("DROP TABLE " + tableName + ";");
+
+        // Get the root page ID of the copy
+        int copyRootPageId = copy.getRootPageID();
+
+        // Get the page associated with the copy's root page ID
+        Page page = bm.getPage(copyRootPageId);
+
+        // Change all the copy's page's tableNames to the original tableName
+        while (page.pageId != -1) {
+            page.tableName = tableName;
+            page =  bm.getPage(page.pageId);
+        }
 
         // Remove the copy's name from the list of temporary table names so it doesn't get deleted
         dc.tempTableNames.remove(copy.tableName);
 
         // Change the copy's name to the original tableSchema's name
-        copy.tableName = name;
-
-        // Return the copy
-        return copy;
+        copy.tableName = tableName;
     }
 }

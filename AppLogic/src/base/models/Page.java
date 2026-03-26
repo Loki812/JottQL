@@ -5,7 +5,7 @@ import java.util.ArrayList;
 
 public class Page {
 
-    public final String tableName;
+    public String tableName;
     public int pageId;
     public int nextPageId;
     public boolean hasBeenModified;
