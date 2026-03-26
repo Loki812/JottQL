@@ -26,6 +26,9 @@ public class SelectTable {
         // call parse("select a.a, b.a from a, b")
         // ensure select * works
 
+
+
+
         // take whitespace off, convert all to uppercase
         command = command.trim().toUpperCase();
         if(!command.startsWith("SELECT")) {
@@ -169,6 +172,7 @@ public class SelectTable {
                 System.err.println("Error: page " + pageId + " could not be loaded.");
                 return;
             }
+            ArrayList<Record> newRecords = new ArrayList<>();
 
             for (Record originalRecord : p.recordList) {
                 Record projectedRecord = new Record();
@@ -176,10 +180,11 @@ public class SelectTable {
                 for (Integer index : selectedIndexes) {
                     projectedRecord.attributeList.add(originalRecord.attributeList.get(index));
                 }
+                newRecords.add(projectedRecord);
 
             }
 
-            DMLParser.printRecords(widths, p.recordList);
+            DMLParser.printRecords(widths, newRecords);
             if (p.nextPageId == -1) {
                 break;
             }
