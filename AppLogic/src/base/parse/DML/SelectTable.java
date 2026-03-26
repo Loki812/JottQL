@@ -5,9 +5,7 @@ import base.models.*;
 import base.models.Record;
 import base.parse.DDL.DropTable;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
 
 
 public class SelectTable {
@@ -25,8 +23,6 @@ public class SelectTable {
         // insert into 2nd table
         // call parse("select a.a, b.a from a, b")
         // ensure select * works
-
-
 
 
         // take whitespace off, convert all to uppercase
@@ -82,88 +78,52 @@ public class SelectTable {
         }
         ArrayList<String> tableNames = new ArrayList<>(List.of(tablePart.split(",")));
         ArrayList<String> tempTables = new ArrayList<>();
+
+        // -----------------------
+        // From portion
+        // -----------------------
         String tableName = Cartesian.Product(tableNames);
         if(tableName.startsWith("_")){
             tempTables.add(tableName);
         }
 
-        DataCatalog dataCatalog = DataCatalog.getInstance();
-        TableSchema tableSchema = dataCatalog.getTableSchema(tableName);
-        if(tableSchema == null) {
-            System.err.println("Table " + tableName + " not found");
-            return;
-        }
 
 
-
-        ArrayList<String> attrNames = new ArrayList<>();
-        ArrayList<Integer> selectedIndexes = new ArrayList<>();
-
-        LinkedHashMap<String, AttributeSchema> attrSchemas = tableSchema.getAttributeSchemas();
-        if (projectionPart.equals("*")) {
-            attrSchemas.values()
-                    .forEach(e -> attrNames.add(e.attributeName));
-            for (int i = 0; i < attrSchemas.size(); i++) {
-                selectedIndexes.add(i);
-            }
-        }
-        else {
-            String[] requestedAttributes = projectionPart.split(",");
-            List<String> tableAttrNames = new ArrayList<>(attrSchemas.keySet());
-            for (String attr : requestedAttributes) {
-
-                attr = attr.trim();
-                if (attr.isEmpty()) {
-                    System.err.println("Invalid projection list");
-                    return;
-                }
-
-                // TODO for alex:
-                // so "select students.id and professors.id"
-                // is NOT ambiguous because of the '.' in between the parser can detect where
-                // each column is coming from.
-                // a attribute is only ambiguous if you do:
-                //
-                // select id from students, professors
-
-                // luckily for us if Om did the cartesian product correctly, the new tableschema
-                // will have all the duplicate columns formatted like "students.id" so
-                // we dont even have to check for ambiguity inside here.
-                // if will just be caught by the column not existing in the schema
+        // -----------------------
+        // WHERE portion
+        // -----------------------
+        // TODO:
+        // if wherePart.length != 0:
+        //      tableName = parseWhere(whereString, tableName)
 
 
-                // TODO Tommorow: take this out, make parseSelect() function that makes a temp
-                // table, where only the selected columns exist
-
-                // so then we go full query -> cartesianParse -> whereParse -> orderbyParse -> selectParse
-                // in the main parse() command it just has a tableschema = cartesianParse(cartesianString, tableschema)
-                //  if wherePart != null: tableSchema = whereParse(wherePart, tableSchema)
-                // if orderByPart != null: tableSchema = orderByParse(orderBYPart, tableSchema)
-                // if selectPart != null: tableSchema = selectParse(selectPart, tableSchema)
-                // then look up the tableName and use tableSchema to print
-                // this should be the parse() function in this file, all other logic already written in here
-                // should be ported into parseSelect()
-                // if this doesn't make sense in the morning do not implement, just a design solution
-                // - Connor
+        // ------------------------
+        // ORDERBY portion
+        // -----------------------
+        // TODO:
+        // if orderbyPart.length != 0:
+        //      tableName = parseOrderBy(orderByString, tableName)
 
 
-                int indexOfAttribute = tableAttrNames.indexOf(attr);
-                if (indexOfAttribute != -1) {
-                    attrNames.add(attr);
-                    selectedIndexes.add(indexOfAttribute);
-                } else {
-                    throw new RuntimeException("Invalid column referenced in select statement... (" + attr + ")");
-                }
-            }
-        }
+        //-------------------------
+        // SELECT PORTION
+        //-------------------------
+
+        tableName = parseSelect(projectionPart, tableName);
 
         //----------------------------------------
         // END OF SELECT, start of printing results
         // ---------------------------------------
 
-        int pageId = tableSchema.getRootPageID();
+        TableSchema finalTableSchema = DataCatalog.getInstance().getTableSchema(tableName);
 
-        ArrayList<Integer> widths = DMLParser.printTopLine(attrNames);
+        int pageId = finalTableSchema.getRootPageID();
+
+
+
+        ArrayList<Integer> widths = DMLParser.printTopLine(
+                new ArrayList<>(finalTableSchema.getAttributeSchemas().sequencedKeySet())
+        );
 
         while (true) {
             Page p = BufferManager.getInstance().getPage(pageId);
@@ -172,19 +132,8 @@ public class SelectTable {
                 System.err.println("Error: page " + pageId + " could not be loaded.");
                 return;
             }
-            ArrayList<Record> newRecords = new ArrayList<>();
 
-            for (Record originalRecord : p.recordList) {
-                Record projectedRecord = new Record();
-
-                for (Integer index : selectedIndexes) {
-                    projectedRecord.attributeList.add(originalRecord.attributeList.get(index));
-                }
-                newRecords.add(projectedRecord);
-
-            }
-
-            DMLParser.printRecords(widths, newRecords);
+            DMLParser.printRecords(widths, p.recordList);
             if (p.nextPageId == -1) {
                 break;
             }
@@ -203,6 +152,36 @@ public class SelectTable {
 
     }
 
+
+
+    /**
+     * Performs a conditional where on a table, creating a temporary copy to complete the query
+     *
+     * @param wherePart a parsed substring of a sql query
+     *                  beginning after the "FROM" portion until the orderBy or ';' symbol
+     *                  ex. "WHERE name = "Joe""
+     *
+     * @param tableName the table you are applying the operation to
+     * @return the name of the temp table with the WHERE applied
+     */
+    public static String parseWhere(String wherePart, String tableName) throws Exception {
+        return tableName;
+    }
+
+    /**
+     * Performs an orderBy operation on a table, creating a temporary copy to complete the query
+     *
+     * @param orderByPart a parsed substring of a sql query
+     *                    beginning after the "WHERE" portion until the ";" symbol
+     *                    ex. "ORDERBY <insert column here>"
+     *
+     * @param tableName the name of the table you are applying this operation to
+     * @return the name of the temp table with the ordering finished
+     */
+    public static String parseOrderBy(String orderByPart, String tableName) throws Exception {
+        return tableName;
+    }
+
     /**
      * The parse select handles projection.
      * If the selectPart == *: it simply returns the original name, because we select all queries
@@ -215,22 +194,53 @@ public class SelectTable {
      *
      * @return the table name where the results of the operation were stored
      */
-    public static String parseSelect(String selectPart, String tableName) {
+    public static String parseSelect(String selectPart, String tableName) throws Exception {
         if (selectPart.equals("*")) {
             return tableName;
         }
 
+        BufferManager bm = BufferManager.getInstance();
         DataCatalog dataCatalog = DataCatalog.getInstance();
         TableSchema tableSchema = dataCatalog.getTableSchema(tableName);
 
-        String[] requestedAttributes = selectPart.split(",");
-
-        for (String attr : requestedAttributes) {
 
 
+        Set<String> requestedAttributes = new HashSet<>(Arrays.asList(selectPart.split(",")));
+        ArrayList<Integer> selectedIndices = new ArrayList<>();
 
+        ArrayList<AttributeSchema> existingAttributes = new ArrayList<>(tableSchema.getAttributeSchemas().sequencedValues());
 
+        for (int i = 0; i < existingAttributes.size(); i++) {
+            if (requestedAttributes.contains(existingAttributes.get(i).attributeName)) {
+                // add it to the copied table schema
+                selectedIndices.add(i);
+            }
         }
+
+        // with the given selected column indices, make a temp copy table
+
+        TableSchema copy = tableSchema.makeTempCopy(selectedIndices);
+        bm.createNewPage(copy.rootPageID, copy.tableName);
+        // take all records from original table and make copies of the records
+        int pageID = tableSchema.getRootPageID();
+        while (pageID != -1) {
+            Page p = bm.getPage(pageID);
+
+
+            for (Record r : p.recordList) {
+                // create new modified records
+                Record temp = new Record();
+                for (Integer index : selectedIndices) {
+                    temp.attributeList.add(r.attributeList.get(index));
+                }
+                // insert into copied table pages
+                bm.insertRecordIntoTable(copy.tableName, temp);
+            }
+
+            pageID = p.nextPageId;
+        }
+
+            return copy.tableName;
 
 
     }

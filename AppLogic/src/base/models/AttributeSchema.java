@@ -23,7 +23,7 @@ public class AttributeSchema {
         this.defaultVal = null;
     }
 
-    public  AttributeSchema(AttributeSchema attributeSchema, String table){
+    public AttributeSchema(AttributeSchema attributeSchema, String table){
         if(attributeSchema.attributeName.contains(".")){
             this.attributeName = attributeSchema.attributeName;
         }else{
@@ -37,6 +37,18 @@ public class AttributeSchema {
         if(this.ogTable == null){
             this.ogTable = table;
         }
+    }
+
+    public AttributeSchema copy() {
+        AttributeSchema copied = new AttributeSchema();
+        copied.attributeName = this.attributeName;
+        copied.dataType = this.dataType;
+        copied.notNull = this.notNull;
+        copied.unique = this.unique;
+        copied.ogTable = this.ogTable;
+        copied.defaultVal = this.defaultVal;
+        copied.length = this.length;
+        return copied;
     }
 
     public static AttributeSchema createAttributeSchemaFromDisk(DataInputStream in, int offSet) throws IOException {
@@ -194,5 +206,7 @@ public class AttributeSchema {
         };
     }
 
-
+    public void makePrimaryKey() {
+        this.primaryKey = true;
+    }
 }

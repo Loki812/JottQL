@@ -125,12 +125,12 @@ public class TableSchema {
     public void removeAttributeSchema(String name) throws Exception {
         if(primaryKey.equals(name)){
             System.out.println("Cannot remove primary key");
-            throw new Exception();
+            throw new RuntimeException();
         }
 
         if(!attributeSchemas.containsKey(name)){
             System.out.println("Column does not exist");
-            throw new Exception();
+            throw new RuntimeException();
         }
         attributeSchemas.remove(name);
         numOfAttributes -= 1;
@@ -140,12 +140,12 @@ public class TableSchema {
     public void addAttributeSchema(AttributeSchema a) throws Exception {
         if(a.isPrimaryKey()){
             System.out.println("Primary key already exists");
-            throw new Exception();
+            throw new RuntimeException();
         }
         if(a.getNotNull()){
             if(a.getDefaultVal() == null){
                 System.out.println("Not null requires a default value when altering a table");
-                throw new Exception();
+                throw new RuntimeException();
             }
         }
         attributeSchemas.put(a.attributeName, a);
@@ -159,10 +159,14 @@ public class TableSchema {
     /**
      * Create a temporary copy of a TableSchema.
      *
+     * @param selectedIncdices only used during projection, will only copy certain attributeSchemas over to
+     *                         the copy. if a primary key is not selected, the first projected attribute will be
+     *                         the new primary key
+     *
      * @return the copied TableSchema
      * @throws Exception if the given schema shares a name with a database already inside the disk.
      */
-    public TableSchema makeTempCopy() throws Exception {
+    public TableSchema makeTempCopy(ArrayList<Integer> selectedIncdices) throws Exception{
         // Create new copy of the table schema
         TableSchema copy = new TableSchema();
 
@@ -176,12 +180,32 @@ public class TableSchema {
         copy.tableName = name;
         tempTableNames.add(name);
 
-        // Copy the other fields
-        copy.numOfAttributes = this.numOfAttributes;
-        copy.primaryKey = this.primaryKey;
-        copy.attributeSchemas = new LinkedHashMap<>();
-        for (AttributeSchema attributeSchema : attributeSchemas.values()) {
-            copy.attributeSchemas.put(attributeSchema.attributeName, attributeSchema);
+        if (selectedIncdices.isEmpty()) {
+            // Copy the other fields
+            copy.primaryKey = this.primaryKey;
+            copy.attributeSchemas = new LinkedHashMap<>();
+            for (AttributeSchema attributeSchema : attributeSchemas.values()) {
+                copy.addAttributeSchema(attributeSchema);
+            }
+        } else {
+            copy.numOfAttributes = selectedIncdices.size();
+            ArrayList<AttributeSchema> attrSchemas = new ArrayList<>(attributeSchemas.sequencedValues());
+
+            boolean foundPrimaryKey = false;
+            for (Integer index : selectedIncdices) {
+                AttributeSchema schema = attrSchemas.get(index);
+                if (schema.isPrimaryKey()) {
+                    foundPrimaryKey = true;
+                    copy.primaryKey = schema.attributeName;
+                }
+                copy.attributeSchemas.put(schema.attributeName, schema);
+            }
+
+            if (!foundPrimaryKey) {
+                AttributeSchema newPK = copy.attributeSchemas.sequencedValues().getFirst();
+                newPK.makePrimaryKey();
+                copy.primaryKey = newPK.attributeName;
+            }
         }
 
         // Give it a new root page ID and add it to the list of tables in the DataCatalog
