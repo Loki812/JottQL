@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.Random;
 
 
 import static base.models.AttributeSchema.createAttributeSchemaFromQuery;
@@ -14,11 +15,14 @@ import static base.models.AttributeSchema.createAttributeSchemaFromQuery;
 
 public class TableSchema {
 
+    private static final DataCatalog dataCatalog = DataCatalog.getInstance();
+
     public String tableName;
     private int numOfAttributes;
     private LinkedHashMap<String, AttributeSchema> attributeSchemas;
     public String primaryKey;
     public int rootPageID;
+    private ArrayList<String> tempTableNames = new ArrayList<>();
 
     public TableSchema() {
         attributeSchemas = new LinkedHashMap<>();
@@ -150,5 +154,40 @@ public class TableSchema {
 
     public LinkedHashMap<String, AttributeSchema> getAttributeSchemas() {
         return attributeSchemas;
+    }
+
+    /**
+     * Create a temporary copy of a TableSchema.
+     *
+     * @return the copied TableSchema
+     * @throws Exception if the given schema shares a name with a database already inside the disk.
+     */
+    public TableSchema makeTempCopy() throws Exception {
+        // Create new copy of the table schema
+        TableSchema copy = new TableSchema();
+
+        // Give the table a name indicating that it is temporary
+        Random r = new Random();
+        String name = "##temp" + r.nextInt(100000) + this.tableName;
+        // Make sure the name isn't already in use
+        while (tempTableNames.contains(name)) {
+            name = "##temp" + r.nextInt(100000) + this.tableName;
+        }
+        copy.tableName = name;
+        tempTableNames.add(name);
+
+        // Copy the other fields
+        copy.numOfAttributes = this.numOfAttributes;
+        copy.primaryKey = this.primaryKey;
+        copy.attributeSchemas = new LinkedHashMap<>();
+        for (AttributeSchema attributeSchema : attributeSchemas.values()) {
+            copy.attributeSchemas.put(attributeSchema.attributeName, attributeSchema);
+        }
+
+        // Give it a new root page ID and add it to the list of tables in the DataCatalog
+        dataCatalog.addTableSchema(copy);
+
+        // Return the new copy
+        return copy;
     }
 }
