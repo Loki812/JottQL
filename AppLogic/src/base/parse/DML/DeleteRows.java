@@ -13,13 +13,58 @@ import base.models.whereNodes.WhereTreeNode;
 public class DeleteRows {
 
     /**
+     * Parse an SQL DELETE query and call the deleteRows function.
+     *
+     * @param command the command to be parsed
+     * @throws Exception if the command is invalid
+     */
+    public static void execute(String command) throws Exception {
+        // If the command doesn't start with DELETE FROM or end with a semicolon, it's invalid
+        String trimmedCommand = command.trim();
+        if (!trimmedCommand.startsWith("DELETE FROM ")) {
+            System.out.println("Invalid DELETE Command");
+            throw new Exception();
+        }
+        if (!trimmedCommand.endsWith(";")) {
+            System.out.println("Missing ';'");
+            throw new Exception();
+        }
+
+        // Everything in the command after the DELETE FROM clause
+        trimmedCommand = trimmedCommand.substring(0, trimmedCommand.length() - 1).trim();
+        String afterDeleteFrom = trimmedCommand.substring("DELETE FROM".length()).trim();
+        int firstSpace = afterDeleteFrom.indexOf(' ');
+
+        String tableName;
+        WhereTreeNode whereTreeNode = null;
+
+        // If there is no WHERE clause, afterDeleteFrom is just the tableName
+        if (firstSpace == -1) {
+            tableName = afterDeleteFrom;
+        } else {
+            tableName = afterDeleteFrom.substring(0, firstSpace).trim();
+            String afterTableName = afterDeleteFrom.substring(firstSpace + 1).trim();
+
+            if (afterTableName.startsWith("WHERE ")) {
+                String whereClause = afterTableName.substring("WHERE".length()).trim();
+                //TODO: whereTreeNode = ???;
+            } else {
+                System.out.println("Invalid DELETE Command");
+                throw new Exception();
+            }
+        }
+
+        delete(tableName, whereTreeNode);
+    }
+
+    /**
      * Delete rows from a table.
      *
      * @param tableName the name of the table to delete rows from
      * @param whereTreeNode which rows to delete from the table
      * @return the TableSchema with rows deleted
      */
-    public TableSchema delete(String tableName, WhereTreeNode whereTreeNode) {
+    private static TableSchema delete(String tableName, WhereTreeNode whereTreeNode) {
         // Get instances of the DataCatalog and BufferManager
         DataCatalog dc = DataCatalog.getInstance();
         BufferManager bm = BufferManager.getInstance();
