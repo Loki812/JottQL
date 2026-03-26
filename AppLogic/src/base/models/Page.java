@@ -92,11 +92,15 @@ public class Page {
         // check for duplicates while iterating over records,
         // if ORDERED, then insert while iterating
         // if unordered, after iterating over every record, insert at end of page
+        if(!ORDERED){
+            recordList.add(record);
+            return;
+        }
         for (int i = 0; i < recordList.size(); i++) {
             if(record.compareTo(recordList.get(i), schema) == 0 && !DUPLICATES_ALLOWED){
                 throw new RuntimeException("Duplicate primary key found while attempting insertion...");
             }
-            if (record.compareTo(recordList.get(i), schema) < 0 && ORDERED) {
+            if (record.compareTo(recordList.get(i), schema) <= 0) {
                 recordList.add(i, record);
                 return;
             }

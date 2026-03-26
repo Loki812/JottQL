@@ -14,7 +14,7 @@ import java.util.Scanner;
 public class Main {
 
 
-    public static void parseCommand(String command) {
+    public static void parseCommand(String command) throws Exception {
         String firstWord = command.split(" ")[0].toUpperCase();
 
         switch (firstWord) {
