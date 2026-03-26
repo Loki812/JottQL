@@ -60,9 +60,9 @@ public class SelectTable {
 
         String tablePart;
         if (whereIndex == -1) {
-            tablePart = command.substring(fromIndex + "FROM".length());
+            tablePart = command.substring(fromIndex + "FROM".length()).trim();
         } else {
-            tablePart = command.substring(fromIndex + "FROM".length(), whereIndex);
+            tablePart = command.substring(fromIndex + "FROM".length(), whereIndex).trim();
         }
 
         if (projectionPart.isEmpty()) {
