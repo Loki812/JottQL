@@ -129,6 +129,21 @@ public class SelectTable {
                 // if will just be caught by the column not existing in the schema
 
 
+                // TODO Tommorow: take this out, make parseSelect() function that makes a temp
+                // table, where only the selected columns exist
+
+                // so then we go full query -> cartesianParse -> whereParse -> orderbyParse -> selectParse
+                // in the main parse() command it just has a tableschema = cartesianParse(cartesianString, tableschema)
+                //  if wherePart != null: tableSchema = whereParse(wherePart, tableSchema)
+                // if orderByPart != null: tableSchema = orderByParse(orderBYPart, tableSchema)
+                // if selectPart != null: tableSchema = selectParse(selectPart, tableSchema)
+                // then look up the tableName and use tableSchema to print
+                // this should be the parse() function in this file, all other logic already written in here
+                // should be ported into parseSelect()
+                // if this doesn't make sense in the morning do not implement, just a design solution
+                // - Connor
+
+
                 int indexOfAttribute = tableAttrNames.indexOf(attr);
                 if (indexOfAttribute != -1) {
                     attrNames.add(attr);
