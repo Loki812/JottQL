@@ -45,7 +45,8 @@ public class DeleteRows {
             pageId = page.nextPageId;
         }
 
-        // TODO: Drop tableSchema
+        // Drop the original tableSchema
+        dc.removeTableSchema(tableName);
 
         // Remove the copy's name from the list of temporary table names so it doesn't get deleted
         dc.tempTableNames.remove(copy.tableName);
