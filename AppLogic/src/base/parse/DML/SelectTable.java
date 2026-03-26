@@ -203,4 +203,36 @@ public class SelectTable {
 
     }
 
+    /**
+     * The parse select handles projection.
+     * If the selectPart == *: it simply returns the original name, because we select all queries
+     *
+     * If not, it creates a copy of the table, only including the selected columns from the table
+     *
+     * @param selectPart a parsed substring of a sql query
+     *                   beginning after the "SELECT" and ending before the "FROM"
+     *                   ex. "*", "id, name, gpa", "students.id, takes.id"
+     *
+     * @return the table name where the results of the operation were stored
+     */
+    public static String parseSelect(String selectPart, String tableName) {
+        if (selectPart.equals("*")) {
+            return tableName;
+        }
+
+        DataCatalog dataCatalog = DataCatalog.getInstance();
+        TableSchema tableSchema = dataCatalog.getTableSchema(tableName);
+
+        String[] requestedAttributes = selectPart.split(",");
+
+        for (String attr : requestedAttributes) {
+
+
+
+
+        }
+
+
+    }
+
 }
