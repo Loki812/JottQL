@@ -45,6 +45,7 @@ public class DataCatalog {
         File catalogFile = new File(dataDirectory, "catalog.bin");
 
         if (catalogFile.exists()) {
+            catalog.dataDirectory = dataDirectory;
             // Load existing catalog
             try (DataInputStream in  = new DataInputStream(new FileInputStream(catalogFile))) {
                 loadFromDisk(in);

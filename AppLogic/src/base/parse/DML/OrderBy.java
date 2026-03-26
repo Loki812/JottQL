@@ -6,6 +6,7 @@ import base.models.DataCatalog;
 import base.models.Page;
 import base.models.Record;
 import base.models.TableSchema;
+import java.util.ArrayList;
 
 /**
  * Sort results by a single attribute.
@@ -27,7 +28,7 @@ public class OrderBy {
 
         // Duplicate the table schema
         TableSchema tableSchema = dc.getTableSchema(tableName);
-        TableSchema copy = tableSchema.makeTempCopy();
+        TableSchema copy = tableSchema.makeTempCopy(new ArrayList<>());
 
         // If orderByAttr doesn't exist
         AttributeSchema orderBySchema = copy.getAttributeSchemas().get(orderByAttr);
