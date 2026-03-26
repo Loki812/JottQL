@@ -7,6 +7,8 @@ import base.parse.DDL.DropTable;
 
 import java.util.*;
 
+import static base.parse.DML.OrderBy.executeOrderBy;
+
 
 public class SelectTable {
     public static void parse(String command) throws Exception {
@@ -100,9 +102,13 @@ public class SelectTable {
         // ------------------------
         // ORDERBY portion
         // -----------------------
-        // TODO:
-        // if orderbyPart.length != 0:
-        //      tableName = parseOrderBy(orderByString, tableName)
+
+        if (orderIndex != -1) {
+            String orderByPart = command.substring(orderIndex + "ORDERBY".length()).trim();
+            if (!orderByPart.isEmpty()) {
+                tableName = parseOrderBy(orderByPart, tableName);
+            }
+        }
 
 
         //-------------------------
@@ -179,7 +185,8 @@ public class SelectTable {
      * @return the name of the temp table with the ordering finished
      */
     public static String parseOrderBy(String orderByPart, String tableName) throws Exception {
-        return tableName;
+        TableSchema ordered = executeOrderBy(tableName, orderByPart);
+        return ordered.tableName;
     }
 
     /**
@@ -241,7 +248,6 @@ public class SelectTable {
         }
 
             return copy.tableName;
-
 
     }
 

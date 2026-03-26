@@ -21,7 +21,7 @@ public class OrderBy {
      * @return a reordered copy of the table schema
      * @throws Exception if the orderByAttr doesn't exist in the table
      */
-    public static TableSchema execute(String tableName, String orderByAttr) throws Exception {
+    public static TableSchema executeOrderBy(String tableName, String orderByAttr) throws Exception {
         // Get instances of the DataCatalog and BufferManager
         DataCatalog dc = DataCatalog.getInstance();
         BufferManager bm = BufferManager.getInstance();
