@@ -150,5 +150,4 @@ UPDATE <table_name> SET <attribute> WHERE <conditions>;
 
 * **VARCHAR(N)**
   Variable-length string with a maximum of N characters
-  (Stored at actual length, not padded)
 
