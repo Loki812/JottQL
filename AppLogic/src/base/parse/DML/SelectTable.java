@@ -3,7 +3,6 @@ package base.parse.DML;
 import base.buffer.BufferManager;
 import base.models.*;
 import base.models.Record;
-import base.parse.DDL.DropTable;
 
 import java.util.*;
 
@@ -12,6 +11,19 @@ import static base.parse.DML.OrderBy.executeOrderBy;
 
 public class SelectTable {
     public static void parse(String command) throws Exception {
+
+        // TODO: test query with "select a, b, c"
+        // TODO: test query with "select a.b"
+
+        // For testing
+        // boot app, insert junk data via command line
+        // or call CREATETABLE(string query);
+        // insert data(string query)
+        // call parse("select a, b, c")
+        // make 2nd table
+        // insert into 2nd table
+        // call parse("select a.a, b.a from a, b")
+        // ensure select * works
 
 
         // take whitespace off, convert all to uppercase
@@ -48,7 +60,11 @@ public class SelectTable {
 
         String tablePart;
         if (whereIndex == -1) {
-            tablePart = command.substring(fromIndex + "FROM".length()).trim();
+            if (orderIndex == -1) {
+                tablePart = command.substring(fromIndex + "FROM".length()).trim();
+            } else {
+                tablePart = command.substring(fromIndex + "FROM".length(), orderIndex).trim();
+            }
         } else {
             tablePart = command.substring(fromIndex + "FROM".length(), whereIndex).trim();
         }
@@ -61,6 +77,10 @@ public class SelectTable {
 
         // Query is parsed
 
+        // -----------------------
+        // From portion
+        // -----------------------
+
         if (tablePart.isEmpty()) {
             System.err.println("Missing table name");
             return;
@@ -68,9 +88,6 @@ public class SelectTable {
         ArrayList<String> tableNames = new ArrayList<>(List.of(tablePart.split(",")));
         ArrayList<String> tempTables = new ArrayList<>();
 
-        // -----------------------
-        // From portion
-        // -----------------------
         String tableName = Cartesian.Product(tableNames);
         if(tableName.startsWith("_")){
             tempTables.add(tableName);
@@ -138,15 +155,8 @@ public class SelectTable {
 
         }
 
-        ArrayList<String> finalTempTables = DataCatalog.getInstance().tempTables();
-
-        // perfered to move all temp tables to be recorded in DataCatalog for single source of truth
-        for (String table : finalTempTables) {
-            BufferManager.getInstance().deleteTable(table);
-        }
-
         for(String table: tempTables) {
-            BufferManager.getInstance().deleteTable(table.trim().toUpperCase());
+            DropTable.execute("DROP TABLE " + table.trim().toUpperCase()+";");
         }
 
 
@@ -186,7 +196,6 @@ public class SelectTable {
     /**
      * The parse select handles projection.
      * If the selectPart == *: it simply returns the original name, because we select all queries
-     *
      * If not, it creates a copy of the table, only including the selected columns from the table
      *
      * @param selectPart a parsed substring of a sql query
@@ -204,30 +213,48 @@ public class SelectTable {
         DataCatalog dataCatalog = DataCatalog.getInstance();
         TableSchema tableSchema = dataCatalog.getTableSchema(tableName);
 
-
-
         selectPart = selectPart.replace(" ", "");
         Set<String> requestedAttributes = new HashSet<>();
 
         for (String attr : selectPart.split(",")) {
             requestedAttributes.add(attr.trim().toUpperCase());
         }
-        ArrayList<Integer> selectedIndices = new ArrayList<>();
 
+        ArrayList<Integer> selectedIndices = new ArrayList<>();
         ArrayList<AttributeSchema> existingAttributes = new ArrayList<>(tableSchema.getAttributeSchemas().sequencedValues());
 
-        for (int i = 0; i < existingAttributes.size(); i++) {
-
-            String fullName = existingAttributes.get(i).attributeName.trim().toUpperCase();
-            String shortName = fullName;
-
-            int dotIndex = fullName.lastIndexOf(".");
-            if (dotIndex != -1) {
-                shortName = fullName.substring(dotIndex + 1);
+        for (String requested : requestedAttributes) {
+            boolean isQualified = requested.contains(".");
+            String requestedShort = requested;
+            if (!isQualified) {
+                // only compute short name if unqualified
+                int reqDotIndex = requested.lastIndexOf(".");
+                if (reqDotIndex != -1) {
+                    requestedShort = requested.substring(reqDotIndex + 1);
+                }
             }
 
-            if (requestedAttributes.contains(fullName) || requestedAttributes.contains(shortName)) {
-                selectedIndices.add(i);
+            List<Integer> matches = new ArrayList<>();
+            for (int i = 0; i < existingAttributes.size(); i++) {
+                String fullName = existingAttributes.get(i).attributeName.trim().toUpperCase();
+                String shortName = fullName;
+
+                int dotIndex = fullName.lastIndexOf(".");
+                if (dotIndex != -1) {
+                    shortName = fullName.substring(dotIndex + 1);
+                }
+
+                if (requested.equals(fullName) || (!isQualified && requestedShort.equals(shortName))) {
+                    matches.add(i);
+                }
+            }
+
+            if (matches.size() == 1) {
+                selectedIndices.add(matches.getFirst());
+            } else if (matches.size() > 1) {
+                throw new RuntimeException("Ambiguous attribute '" + requested + "' in SELECT clause — qualify with table name");
+            } else {
+                throw new RuntimeException("Attribute '" + requested + "' not found in SELECT clause");
             }
         }
 
