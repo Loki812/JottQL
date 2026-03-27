@@ -30,10 +30,11 @@ public class Page {
      *
      * @param record the record you are attempting to insert
      * @param schema the schema you are using for reference
+     * @param duplicates if the table allows for duplicate primary key
      * @return SUCCESS if record is inserted, NOT_IN_RANGE if record primary key is not in range of page
      * NEEDS_SPLIT if the record is in range, but the page is full.
      */
-    public InsertionResult tryInsert(Record record, TableSchema schema) {
+    public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) {
         // 1. Check if record is in range of page
         if (!recordList.isEmpty() && record.compareTo(recordList.getLast(), schema) > 0) {
             // If we are not on the last page, send signal to buffer manager to iterate to next page
@@ -47,7 +48,7 @@ public class Page {
         }
 
         // 3. Insert into page if both of those pass
-        insertSorted(record, schema);
+        insert(record, schema, true, duplicates);
         this.hasBeenModified = true;
         this.timestamp = java.time.LocalDateTime.now();
         return InsertionResult.SUCCESS;
@@ -55,36 +56,62 @@ public class Page {
     }
 
     /**
-     * insertSorted maintains record order on a page, inserting by linear search and using record.compareTO
+     * attempts to insert a page with no specfied order
+     * NOTE: the insert on this does allow for duplicates
+     * if you have a scenario where you dont want order but you also dont want duplicates,
+     * please pass a DUPLICATES_ALLOWED variable to this function by editing the code
+     *
+     *
+     * @param record the record you are attempting to insert into the page
+     * @param schema the schema corresponding to the page
+     * @return the result of the attempted insert
+     */
+    public InsertionResult tryInsertNoOrder(Record record, TableSchema schema) {
+        int pageSize = DataCatalog.getInstance().getPageSize();
+        if (getTotalRecordsSize() + record.getSize() > pageSize) {
+            if (nextPageId == -1) {
+                return InsertionResult.NEEDS_SPLIT;
+            }
+            // cant fit on page, but we are not on the last page so do not split, iterate to next one
+            return InsertionResult.NOT_IN_RANGE;
+        }
+
+        insert(record, schema, false, true);
+        this.hasBeenModified = true;
+        this.timestamp = java.time.LocalDateTime.now();
+        return InsertionResult.SUCCESS;
+    }
+
+
+    /**
+     * insert maintains record order on a page, inserting by linear search and using record.compareTO
      * @param record the given record you are inserting
      * @param schema the schema you are using as reference
+     * @param ORDERED boolean determining if you are inserting ordered or not
+     * @param DUPLICATES_ALLOWED boolean determining if you are allowing duplicate primary keys
      */
-    public void insertSorted(Record record, TableSchema schema) {
-
+    public void insert(Record record, TableSchema schema, boolean ORDERED, boolean DUPLICATES_ALLOWED) {
+        // check for duplicates while iterating over records,
+        // if ORDERED, then insert while iterating
+        // if unordered, after iterating over every record, insert at end of page
+        if(!ORDERED){
+            recordList.add(record);
+            return;
+        }
         for (int i = 0; i < recordList.size(); i++) {
-            if(record.compareTo(recordList.get(i), schema) == 0){
-                System.out.println("Duplicate Primary key");
+            if(record.compareTo(recordList.get(i), schema) == 0 && !DUPLICATES_ALLOWED){
+                throw new RuntimeException("Duplicate primary key found while attempting insertion...");
             }
-            if (record.compareTo(recordList.get(i), schema) < 0) {
+            if (record.compareTo(recordList.get(i), schema) <= 0) {
                 recordList.add(i, record);
                 return;
             }
         }
 
-        // We iterated over entire record list and this record is greater than all
+        // did not run into exception, either greater than all records on page or is unordered insertion
         recordList.add(record);
-    }
-    public InsertionResult insertNoOrder(Record record) throws Exception {
-        // 1. Check if record fits in page
-        int pageSize = DataCatalog.getInstance().getPageSize();
-        if (getTotalRecordsSize() + record.getSize() > pageSize) {
-            return InsertionResult.NOT_IN_RANGE;
-        }
-        // 2. Insert into
         this.hasBeenModified = true;
         this.timestamp = java.time.LocalDateTime.now();
-        recordList.add(record);
-        return InsertionResult.SUCCESS;
     }
 
 

@@ -32,8 +32,6 @@ public class Cartesian {
         }
         TableSchema newTableSchema = new TableSchema(newTable, newAttributeSchemas);
         catalog.addTableSchema(newTableSchema);
-        buffer.createNewPage(newTableSchema.getRootPageID(), newTable);
-        Page newRoot = buffer.getPage(newTableSchema.getRootPageID());
         Page table1page = buffer.getPage(table1Schema.rootPageID);
         Page table2page = buffer.getPage(table2Schema.rootPageID);
         while(table1page != null) {
