@@ -3,7 +3,9 @@ import base.models.DataCatalog;
 import base.parse.DDL.AtlerTable;
 import base.parse.DDL.CreateTable;
 import base.parse.DDL.DropTable;
+import base.parse.DML.ParserHelpers.UpdateTable;
 import base.parse.DML.SelectTable;
+import base.parse.DML.DeleteRows;
 
 import java.io.File;
 
@@ -33,6 +35,14 @@ public class Main {
 //                    System.err.println("Table Select Failed" + e);
 //                }
             }
+            case "DELETE" -> {
+                try {
+                    DeleteRows.execute(command);
+                    System.out.println("Rows Deleted Successfully");
+                }catch (Exception e){
+                    System.out.println("Rows Failed to Delete");
+                }
+            }
             case "INSERT" -> {
                 try {
                     base.parse.DML.InsertTable.parse(command);
@@ -52,8 +62,16 @@ public class Main {
                 try {
                     AtlerTable.execute(command);
                     System.out.println("Table Alter Successfully");
-                }catch (Exception e){
+                }catch (Exception e) {
                     System.out.println("Table Alter Failed");
+                }
+            }
+            case "UPDATE" -> {
+                try {
+                    UpdateTable.parse(command);
+                    System.out.println("Update Table Successfully");
+                } catch (Exception e) {
+                    System.out.println("Update Table Failed");
                 }
             }
             default -> System.err.println("Unrecognized Query, please try again.");

@@ -31,6 +31,7 @@ public class AttributeSchema {
         this.dataType = attributeSchema.dataType;
         this.length = attributeSchema.length;
         this.notNull = attributeSchema.notNull;
+        this.primaryKey = attributeSchema.primaryKey;
         this.unique = attributeSchema.unique;
     }
 
@@ -39,6 +40,7 @@ public class AttributeSchema {
         copied.attributeName = this.attributeName;
         copied.dataType = this.dataType;
         copied.notNull = this.notNull;
+        copied.primaryKey = this.primaryKey;
         copied.unique = this.unique;
         copied.defaultVal = this.defaultVal;
         copied.length = this.length;

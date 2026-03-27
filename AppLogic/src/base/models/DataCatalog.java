@@ -184,9 +184,14 @@ public class DataCatalog {
         }
     }
 
-    public void deleteTempTables() {
-        // delete all temporary tables
-        // should hold arrayList of strings that is the temp table names
+    public ArrayList<String> tempTables() {
+        ArrayList<String> arr = new ArrayList<>();
+        for (TableSchema t : tables.values()) {
+            if (t.tableName.startsWith("##temp")) {
+                arr.add(t.tableName);
+            }
+        }
+        return arr;
     }
 
 }
