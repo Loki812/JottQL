@@ -209,8 +209,6 @@ public class SelectTable {
         DataCatalog dataCatalog = DataCatalog.getInstance();
         TableSchema tableSchema = dataCatalog.getTableSchema(tableName);
 
-
-
         selectPart = selectPart.replace(" ", "");
         Set<String> requestedAttributes = new HashSet<>();
 
@@ -221,18 +219,38 @@ public class SelectTable {
         ArrayList<Integer> selectedIndices = new ArrayList<>();
         ArrayList<AttributeSchema> existingAttributes = new ArrayList<>(tableSchema.getAttributeSchemas().sequencedValues());
 
-        for (int i = 0; i < existingAttributes.size(); i++) {
-
-            String fullName = existingAttributes.get(i).attributeName.trim().toUpperCase();
-            String shortName = fullName;
-
-            int dotIndex = fullName.lastIndexOf(".");
-            if (dotIndex != -1) {
-                shortName = fullName.substring(dotIndex + 1);
+        for (String requested : requestedAttributes) {
+            boolean isQualified = requested.contains(".");
+            String requestedShort = requested;
+            if (!isQualified) {
+                // only compute short name if unqualified
+                int reqDotIndex = requested.lastIndexOf(".");
+                if (reqDotIndex != -1) {
+                    requestedShort = requested.substring(reqDotIndex + 1);
+                }
             }
 
-            if (requestedAttributes.contains(fullName) || requestedAttributes.contains(shortName)) {
-                selectedIndices.add(i);
+            List<Integer> matches = new ArrayList<>();
+            for (int i = 0; i < existingAttributes.size(); i++) {
+                String fullName = existingAttributes.get(i).attributeName.trim().toUpperCase();
+                String shortName = fullName;
+
+                int dotIndex = fullName.lastIndexOf(".");
+                if (dotIndex != -1) {
+                    shortName = fullName.substring(dotIndex + 1);
+                }
+
+                if (requested.equals(fullName) || (!isQualified && requestedShort.equals(shortName))) {
+                    matches.add(i);
+                }
+            }
+
+            if (matches.size() == 1) {
+                selectedIndices.add(matches.get(0));
+            } else if (matches.size() > 1) {
+                throw new RuntimeException("Ambiguous attribute '" + requested + "' in SELECT clause — qualify with table name");
+            } else {
+                throw new RuntimeException("Attribute '" + requested + "' not found in SELECT clause");
             }
         }
 
