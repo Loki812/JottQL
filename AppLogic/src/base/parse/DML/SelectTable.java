@@ -11,19 +11,6 @@ import java.util.*;
 public class SelectTable {
     public static void parse(String command) throws Exception {
 
-        // TODO: test query with "select a, b, c"
-        // TODO: test query with "select a.b"
-
-        // For testing
-        // boot app, insert junk data via command line
-        // or call CREATETABLE(string query);
-        // insert data(string query)
-        // call parse("select a, b, c")
-        // make 2nd table
-        // insert into 2nd table
-        // call parse("select a.a, b.a from a, b")
-        // ensure select * works
-
 
         // take whitespace off, convert all to uppercase
         command = command.trim().toUpperCase();
@@ -145,8 +132,15 @@ public class SelectTable {
 
         }
 
+        ArrayList<String> finalTempTables = DataCatalog.getInstance().tempTables();
+
+        // perfered to move all temp tables to be recorded in DataCatalog for single source of truth
+        for (String table : finalTempTables) {
+            BufferManager.getInstance().deleteTable(table);
+        }
+
         for(String table: tempTables) {
-            DropTable.execute("DROP TABLE " + table.trim().toUpperCase()+";");
+            BufferManager.getInstance().deleteTable(table.trim().toUpperCase());
         }
 
 
@@ -205,6 +199,7 @@ public class SelectTable {
 
 
 
+        selectPart = selectPart.replace(" ", "");
         Set<String> requestedAttributes = new HashSet<>(Arrays.asList(selectPart.split(",")));
         ArrayList<Integer> selectedIndices = new ArrayList<>();
 
