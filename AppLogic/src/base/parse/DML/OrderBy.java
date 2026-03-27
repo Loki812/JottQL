@@ -44,7 +44,7 @@ public class OrderBy {
         while (pageId != -1) {
             Page page = bm.getPage(pageId);
             for (Record r : page.recordList) {
-                bm.insertRecordIntoTable(copy.tableName, r);
+                bm.insertRecordIntoTableAllowDuplicates(copy.tableName, r);
             }
 
             pageId = page.nextPageId;

@@ -48,7 +48,11 @@ public class SelectTable {
 
         String tablePart;
         if (whereIndex == -1) {
-            tablePart = command.substring(fromIndex + "FROM".length()).trim();
+            if (orderIndex == -1) {
+                tablePart = command.substring(fromIndex + "FROM".length()).trim();
+            } else {
+                tablePart = command.substring(fromIndex + "FROM".length(), orderIndex).trim();
+            }
         } else {
             tablePart = command.substring(fromIndex + "FROM".length(), whereIndex).trim();
         }
@@ -61,6 +65,10 @@ public class SelectTable {
 
         // Query is parsed
 
+        // -----------------------
+        // From portion
+        // -----------------------
+
         if (tablePart.isEmpty()) {
             System.err.println("Missing table name");
             return;
@@ -68,9 +76,6 @@ public class SelectTable {
         ArrayList<String> tableNames = new ArrayList<>(List.of(tablePart.split(",")));
         ArrayList<String> tempTables = new ArrayList<>();
 
-        // -----------------------
-        // From portion
-        // -----------------------
         String tableName = Cartesian.Product(tableNames);
         if(tableName.startsWith("_")){
             tempTables.add(tableName);
