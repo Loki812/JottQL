@@ -7,6 +7,7 @@ import base.models.Page;
 import base.models.Record;
 import base.models.TableSchema;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Sort results by a single attribute.
@@ -30,10 +31,23 @@ public class OrderBy {
         TableSchema tableSchema = dc.getTableSchema(tableName);
         TableSchema copy = tableSchema.makeTempCopy(new ArrayList<>());
 
-        // If orderByAttr doesn't exist
+        // Try exact match first, then try suffix match (e.g. "a" matches "t1.a")
         AttributeSchema orderBySchema = copy.getAttributeSchemas().get(orderByAttr);
         if (orderBySchema == null) {
-            throw new Exception("ORDER BY column '" + orderByAttr + "' does not exist in table '" + tableName + "'");
+            List<String> matches = new ArrayList<>();
+            for (String attr : copy.getAttributeSchemas().keySet()) {
+                if (attr.endsWith(orderByAttr)) {
+                    matches.add(attr);
+                }
+            }
+
+            if (matches.size() == 1) {
+                orderByAttr = matches.getFirst();
+            } else if (matches.size() > 1) {
+                throw new Exception("ORDER BY column '" + orderByAttr + "' is ambiguous: " + matches);
+            } else {
+                throw new Exception("ORDER BY column '" + orderByAttr + "' does not exist in table '" + tableName + "'");
+            }
         }
 
         // Set the new copy's primary key to the order by attribute

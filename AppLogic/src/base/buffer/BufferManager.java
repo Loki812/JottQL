@@ -520,7 +520,7 @@ public class BufferManager {
      */
     private void handlePageSplit(Page page, Record record, TableSchema ts) {
         // Temporarily insert record into page before split to get in order positioning
-        page.insert(record, ts, true, false);
+        page.insert(record, ts, true, true);
 
         // Call the parent handlePageSplit function
         handlePageSplit(page, ts);

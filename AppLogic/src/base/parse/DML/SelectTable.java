@@ -217,8 +217,8 @@ public class SelectTable {
         for (String attr : selectPart.split(",")) {
             requestedAttributes.add(attr.trim().toUpperCase());
         }
-        ArrayList<Integer> selectedIndices = new ArrayList<>();
 
+        ArrayList<Integer> selectedIndices = new ArrayList<>();
         ArrayList<AttributeSchema> existingAttributes = new ArrayList<>(tableSchema.getAttributeSchemas().sequencedValues());
 
         for (int i = 0; i < existingAttributes.size(); i++) {
