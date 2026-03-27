@@ -86,7 +86,7 @@ public class SelectTable {
             System.err.println("Missing table name");
             return;
         }
-        ArrayList<String> tableNames = new ArrayList<>(List.of(tablePart.split(",")));
+        ArrayList<String> tableNames = new ArrayList<>(List.of(tablePart.split("\\s*,\\s*")));
         ArrayList<String> tempTables = new ArrayList<>();
 
         String tableName = Cartesian.Product(tableNames);
@@ -217,7 +217,7 @@ public class SelectTable {
 
 
 
-        Set<String> requestedAttributes = new HashSet<>(Arrays.asList(selectPart.split(",")));
+        Set<String> requestedAttributes = new HashSet<>(Arrays.asList(selectPart.split("\\s*,\\s*")));
         ArrayList<Integer> selectedIndices = new ArrayList<>();
 
         ArrayList<AttributeSchema> existingAttributes = new ArrayList<>(tableSchema.getAttributeSchemas().sequencedValues());
@@ -246,7 +246,7 @@ public class SelectTable {
                     temp.attributeList.add(r.attributeList.get(index));
                 }
                 // insert into copied table pages
-                bm.insertRecordIntoTable(copy.tableName, temp);
+                bm.insertRecordIntoTableNoOrder(copy.tableName, temp);
             }
 
             pageID = p.nextPageId;
