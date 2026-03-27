@@ -2,6 +2,7 @@ package base.parse.DML;
 
 import base.buffer.BufferManager;
 import base.models.*;
+import base.models.Record;
 import base.models.whereNodes.ComparisonNode;
 import base.models.whereNodes.MathewsWhereTreeNode;
 import base.models.whereNodes.WhereTreeNode;
@@ -10,13 +11,12 @@ import base.models.whereNodes.logical.AndNode;
 import base.models.whereNodes.logical.IsNode;
 import base.models.whereNodes.logical.OrNode;
 
-import java.lang.Record;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import static base.parse.DML.Where.buildWhereTree;
-import static base.parse.DML.Where.where;
+import static base.parse.DML.Where.executeWhere;
 
 public class Where {
 
@@ -143,8 +143,33 @@ public class Where {
     }
 
 
-    public static String where(Page page, String tableName, WhereTreeNode whereTree){
-        //todo call buildWhereTree
+    public static String executeWhere(String tableName, WhereTreeNode whereTree) throws Exception {
+
+        // Get instances of the DataCatalog and BufferManager
+        DataCatalog dc = DataCatalog.getInstance();
+        BufferManager bm = BufferManager.getInstance();
+
+        // Duplicate the table schema
+        TableSchema tableSchema = dc.getTableSchema(tableName);
+        TableSchema copy = tableSchema.makeTempCopy(new ArrayList<>());
+
+        //use original table to check if it should be inserted
+
+
+        // Go through the table's pages and insert each record into the table
+        int pageId = tableSchema.rootPageID;
+        while (pageId != -1) {
+            Page page = bm.getPage(pageId);
+            for (Record r : page.recordList) {
+                bm.insertRecordIntoTableAllowDuplicates(copy.tableName, r);
+            }
+
+            pageId = page.nextPageId;
+        }
+
+        System.out.println("Size of copied page: "+ bm.getPage(copy.rootPageID).getTotalRecordsSize());
+
+        return copy.tableName;
 
 
         /*
@@ -163,10 +188,17 @@ public class Where {
         //todo use java compareTo() operators
         //todo if you do someting like bool < false, do whatever java does
 
-        String tempTableName = "tempTable";
-        return tempTableName;
     }
 }
+
+
+
+
+
+
+
+
+
 
 class WhereTest{
 
@@ -193,7 +225,7 @@ class WhereTest{
         //make a test table structure
         AttributeValue attribute1 = new AttributeValue(5, DataTypes.INTEGER);
         AttributeValue attribute2 = new AttributeValue(4, DataTypes.INTEGER);
-        AttributeValue attribute3 = new AttributeValue(3, DataTypes.BOOLEAN);
+        AttributeValue attribute3 = new AttributeValue(3, DataTypes.INTEGER);
         //AttributeValue attribute4 = new AttributeValue("hello", DataTypes.BOOLEAN);
 
 
@@ -277,8 +309,15 @@ class WhereTest{
         for(String node : res){
             System.out.print(node+" ");
         }
+        System.out.println();
 
-        String tempTableName = where(testPage, tableSchema.tableName, root);
+        /*
+        TableSchema tempTableName = where(tableSchema.tableName, root);
+        Page tempPage = bm.getPage(tempTableName.rootPageID);
+        for(Record r : tempPage.recordList){
+            System.out.println(r.toString());
+        }
+         */
 
 
         //where(testPage, "table", WhereTreeNode whereTree);
