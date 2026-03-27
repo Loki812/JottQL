@@ -7,6 +7,10 @@ import base.models.whereNodes.ComparisonNode;
 
 public class LessThanEqualsNode extends ComparisonNode {
 
+    public LessThanEqualsNode(){
+
+    }
+
     public LessThanEqualsNode(String columnName, Object constantValue) {
         super(columnName, constantValue);
     }
@@ -30,6 +34,7 @@ public class LessThanEqualsNode extends ComparisonNode {
 
     @Override
     public String toString() {
-        return (columnName + " < " + constantValue);
+        //return (columnName + " < " + constantValue);
+        return (" < ");
     }
 }

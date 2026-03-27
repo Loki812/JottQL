@@ -30,6 +30,10 @@ public class MathewsWhereTreeNode extends WhereTreeNode{
         return rightChild;
     }
 
+    public String getValue(){
+        return value;
+    }
+
     @Override
     public String toString() {
         return value;
