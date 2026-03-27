@@ -3,7 +3,6 @@ package base.parse.DML;
 import base.buffer.BufferManager;
 import base.models.*;
 import base.models.Record;
-import base.parse.DDL.DropTable;
 
 import java.util.*;
 
@@ -191,7 +190,6 @@ public class SelectTable {
     /**
      * The parse select handles projection.
      * If the selectPart == *: it simply returns the original name, because we select all queries
-     *
      * If not, it creates a copy of the table, only including the selected columns from the table
      *
      * @param selectPart a parsed substring of a sql query
@@ -246,7 +244,7 @@ public class SelectTable {
             }
 
             if (matches.size() == 1) {
-                selectedIndices.add(matches.get(0));
+                selectedIndices.add(matches.getFirst());
             } else if (matches.size() > 1) {
                 throw new RuntimeException("Ambiguous attribute '" + requested + "' in SELECT clause — qualify with table name");
             } else {
