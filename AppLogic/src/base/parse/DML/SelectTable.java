@@ -217,7 +217,6 @@ public class SelectTable {
 
 
 
-        Set<String> requestedAttributes = new HashSet<>(Arrays.asList(selectPart.split("\\s*,\\s*")));
         selectPart = selectPart.replace(" ", "");
         Set<String> requestedAttributes = new HashSet<>();
 
