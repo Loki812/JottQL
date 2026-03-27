@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.Random;
 
 
 import static base.models.AttributeSchema.createAttributeSchemaFromQuery;
@@ -14,11 +15,14 @@ import static base.models.AttributeSchema.createAttributeSchemaFromQuery;
 
 public class TableSchema {
 
+    private static final DataCatalog dataCatalog = DataCatalog.getInstance();
+
     public String tableName;
     private int numOfAttributes;
     private LinkedHashMap<String, AttributeSchema> attributeSchemas;
     public String primaryKey;
     public int rootPageID;
+    private ArrayList<String> tempTableNames = new ArrayList<>();
 
     public TableSchema() {
         attributeSchemas = new LinkedHashMap<>();
@@ -106,14 +110,21 @@ public class TableSchema {
 
 
     public Integer getIndex(String attribute_key) {
+
+        if (attribute_key == null) {
+            return null;
+        }
+
         Integer index = 0;
+
         for (String key : attributeSchemas.sequencedKeySet()) {
             if (attribute_key.equals(key)) {
                 return index;
-            }else{
+            } else {
                 index++;
             }
         }
+
         return null;
     }
 
@@ -121,12 +132,12 @@ public class TableSchema {
     public void removeAttributeSchema(String name) throws Exception {
         if(primaryKey.equals(name)){
             System.out.println("Cannot remove primary key");
-            throw new Exception();
+            throw new RuntimeException();
         }
 
         if(!attributeSchemas.containsKey(name)){
             System.out.println("Column does not exist");
-            throw new Exception();
+            throw new RuntimeException();
         }
         attributeSchemas.remove(name);
         numOfAttributes -= 1;
@@ -136,12 +147,12 @@ public class TableSchema {
     public void addAttributeSchema(AttributeSchema a) throws Exception {
         if(a.isPrimaryKey()){
             System.out.println("Primary key already exists");
-            throw new Exception();
+            throw new RuntimeException();
         }
         if(a.getNotNull()){
             if(a.getDefaultVal() == null){
                 System.out.println("Not null requires a default value when altering a table");
-                throw new Exception();
+                throw new RuntimeException();
             }
         }
         attributeSchemas.put(a.attributeName, a);
@@ -150,5 +161,62 @@ public class TableSchema {
 
     public LinkedHashMap<String, AttributeSchema> getAttributeSchemas() {
         return attributeSchemas;
+    }
+
+    /**
+     * Create a temporary copy of a TableSchema.
+     *
+     * @param selectedIncdices only used during projection, will only copy certain attributeSchemas over to
+     *                         the copy. if a primary key is not selected, the first projected attribute will be
+     *                         the new primary key
+     *
+     * @return the copied TableSchema
+     * @throws Exception if the given schema shares a name with a database already inside the disk.
+     */
+    public TableSchema makeTempCopy(ArrayList<Integer> selectedIncdices) throws Exception{
+        // Create new copy of the table schema
+        TableSchema copy = new TableSchema();
+
+        // Give the table a name indicating that it is temporary
+        Random r = new Random();
+        String name = "##temp" + r.nextInt(100000) + this.tableName;
+        // Make sure the name isn't already in use
+        while (tempTableNames.contains(name)) {
+            name = "##temp" + r.nextInt(100000) + this.tableName;
+        }
+        copy.tableName = name;
+        tempTableNames.add(name);
+
+        if (selectedIncdices.isEmpty()) {
+            // Copy the other fields
+            copy.primaryKey = this.primaryKey;
+            copy.attributeSchemas = new LinkedHashMap<>();
+            for (AttributeSchema attributeSchema : attributeSchemas.values()) {
+                copy.addAttributeSchema(attributeSchema);
+            }
+        } else {
+            copy.numOfAttributes = selectedIncdices.size();
+            ArrayList<AttributeSchema> attrSchemas = new ArrayList<>(attributeSchemas.sequencedValues());
+
+            boolean foundPrimaryKey = false;
+            for (Integer index : selectedIncdices) {
+                AttributeSchema schema = attrSchemas.get(index);
+                if (schema.isPrimaryKey()) {
+                    foundPrimaryKey = true;
+                    copy.primaryKey = schema.attributeName;
+                }
+                copy.attributeSchemas.put(schema.attributeName, schema);
+            }
+
+            if (!foundPrimaryKey) {
+                copy.primaryKey = null;
+            }
+        }
+
+        // Give it a new root page ID and add it to the list of tables in the DataCatalog
+        dataCatalog.addTableSchema(copy);
+
+        // Return the new copy
+        return copy;
     }
 }

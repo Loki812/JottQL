@@ -198,18 +198,26 @@ public class BufferManager {
         while (currentPageId != -1) {
             Page page = getPage(currentPageId);
 
-            InsertionResult result = page.insertNoOrder(record);
+            InsertionResult result = page.tryInsertNoOrder(record, ts);
             switch (result) {
                 case SUCCESS -> {
                     return;
                 }
                 case NOT_IN_RANGE -> {
+                    // cant fit on page, but we are not on the last page so do not split,
+                    // iterate to next one
                     currentPageId = page.nextPageId;
-                    if (currentPageId != -1) {
-                        int newPageId = dataCatalog.getNextAvailablePageID();
-                        page.nextPageId = newPageId;
-                        createNewPage(newPageId, tableName);
-                    }
+                }
+                case NEEDS_SPLIT -> {
+                    // treat NEEDS_SPLIT as a 'cant fit in here and nextPageId is -1'
+                    // make new empty page and insert record at end
+                    int newId = dataCatalog.getNextAvailablePageID();
+                    page.nextPageId = newId;
+                    createNewPage(newId, ts.tableName);
+                    Page newPage = getPage(newId);
+                    // do not need to see results, will always return
+                    // SUCCESS due to page being empty it will always fit
+                    newPage.tryInsertNoOrder(record, ts);
                 }
 
             }
@@ -489,10 +497,14 @@ public class BufferManager {
      */
     private void handlePageSplit(Page page, Record record, TableSchema ts) {
         // Temporarily insert record into page before split to get in order positioning
-        page.insertSorted(record, ts);
+        page.insert(record, ts, true, false);
 
         // Call the parent handlePageSplit function
         handlePageSplit(page, ts);
+    }
+
+    public void deleteTempTables() {
+        // delete all temporary tables
     }
 
 }

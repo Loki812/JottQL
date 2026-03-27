@@ -3,6 +3,7 @@ import base.models.DataCatalog;
 import base.parse.DDL.AtlerTable;
 import base.parse.DDL.CreateTable;
 import base.parse.DDL.DropTable;
+import base.parse.DML.ParserHelpers.UpdateTable;
 import base.parse.DML.SelectTable;
 import base.parse.DML.DeleteRows;
 
@@ -15,7 +16,7 @@ import java.util.Scanner;
 public class Main {
 
 
-    public static void parseCommand(String command) {
+    public static void parseCommand(String command) throws Exception {
         String firstWord = command.split(" ")[0].toUpperCase();
 
         switch (firstWord) {
@@ -61,8 +62,16 @@ public class Main {
                 try {
                     AtlerTable.execute(command);
                     System.out.println("Table Alter Successfully");
-                }catch (Exception e){
+                }catch (Exception e) {
                     System.out.println("Table Alter Failed");
+                }
+            }
+            case "UPDATE" -> {
+                try {
+                    UpdateTable.parse(command);
+                    System.out.println("Update Table Successfully");
+                } catch (Exception e) {
+                    System.out.println("Update Table Failed");
                 }
             }
             default -> System.err.println("Unrecognized Query, please try again.");

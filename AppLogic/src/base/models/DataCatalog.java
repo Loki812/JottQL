@@ -45,6 +45,7 @@ public class DataCatalog {
         File catalogFile = new File(dataDirectory, "catalog.bin");
 
         if (catalogFile.exists()) {
+            catalog.dataDirectory = dataDirectory;
             // Load existing catalog
             try (DataInputStream in  = new DataInputStream(new FileInputStream(catalogFile))) {
                 loadFromDisk(in);
@@ -182,5 +183,14 @@ public class DataCatalog {
         }
     }
 
+    public ArrayList<String> tempTables() {
+        ArrayList<String> arr = new ArrayList<>();
+        for (TableSchema t : tables.values()) {
+            if (t.tableName.startsWith("##temp")) {
+                arr.add(t.tableName);
+            }
+        }
+        return arr;
+    }
 
 }

@@ -20,12 +20,24 @@ public class Record {
      *      0 if they are equal
      */
     public int compareTo(Record rec, TableSchema schema)  {
-        int primaryKeyIndex = schema.getIndex(schema.primaryKey);
+
+        if (schema.primaryKey == null) {
+            return 0;
+        }
+
+        Integer primaryKeyIndex = schema.getIndex(schema.primaryKey);
+
+        if (primaryKeyIndex == null) {
+            return 0;
+        }
+
         AttributeValue<?> primaryKey = attributeList.get(primaryKeyIndex);
-        if(primaryKey.data == null){
+
+        if (primaryKey.data == null) {
             System.out.println("Primary key is null");
             throw new RuntimeException();
         }
+
         return primaryKey.compareTo(rec.attributeList.get(primaryKeyIndex));
     }
 
