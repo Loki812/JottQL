@@ -2,30 +2,148 @@ package base.parse.DML;
 
 import base.buffer.BufferManager;
 import base.models.*;
+import base.models.whereNodes.MathewsWhereTreeNode;
 import base.models.whereNodes.NotNullNode;
 import base.models.whereNodes.WhereTreeNode;
 
 import java.lang.Record;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Stack;
 
 import static base.parse.DML.Where.buildWhereTree;
-import static base.parse.DML.Where.where;
 
 public class Where {
 
+    public static PrioritizedOperator getOperatorPriority(String s){
+        switch (s){
+            case "(":
+                return new PrioritizedOperator(s, 0);
+            case ")":
+                return new PrioritizedOperator(s, 0);
+            /*
+            case "+":
+                return new PrioritizedOperator(s, 1);
+            case "-":
+                return new PrioritizedOperator(s, 1);
+            case "*":
+                return new PrioritizedOperator(s, 2);
+            case "/":
+                return new PrioritizedOperator(s, 2);
 
-    public static WhereTreeNode buildWhereTree(String wherePieces){
+             */
+            case ">":
+                return new PrioritizedOperator(s, 1);
+            case ">=":
+                return new PrioritizedOperator(s, 1);
+            case "<":
+                return new PrioritizedOperator(s, 1);
+            case "<=":
+                return new PrioritizedOperator(s, 1);
+            case "==":
+                return new PrioritizedOperator(s, 1);
+            case "<>":
+                return new PrioritizedOperator(s, 1);
+            case "is":
+                return new PrioritizedOperator(s, 1);
+            case "and":
+                return new PrioritizedOperator(s, 2);
+            case "or":
+                return new PrioritizedOperator(s, 3);
+        }
+        return null;
+    }
 
-        System.out.println(wherePieces);
+    public static MathewsWhereTreeNode buildWhereTree(String wherePieces){
+
+
+        List<String> splitList = Arrays.asList(wherePieces.split("\\s+"));
+
+        //remove the "where string and anything before it"
+        int whereIndex = splitList.indexOf("where");
+
+        System.out.println("where index: "+whereIndex);
+
+        ArrayList<String> pieceList;
+        if(whereIndex>=0){
+            splitList = splitList.subList(whereIndex, splitList.size());
+        }
+        pieceList = new ArrayList<>(splitList);
+        pieceList.removeFirst();
 
 
 
 
+        //Shunting Yard algorithm
+        Stack<MathewsWhereTreeNode> nodeStack = new Stack<MathewsWhereTreeNode>();
+
+        Stack<PrioritizedOperator> operandStack = new Stack<>();
+        MathewsWhereTreeNode t, t1, t2;
+
+        for(String token : pieceList){
+
+            PrioritizedOperator indexedOp = getOperatorPriority(token);
+
+            //if the token is not an operator, make a node for it and put it in the stack
+            if(indexedOp==null){
+                MathewsWhereTreeNode node = new MathewsWhereTreeNode(token);
+                nodeStack.add(node);
+            } else if(indexedOp.priority>0){
+                //If an operator with lower or same associativity appears
+                while(!operandStack.isEmpty() && indexedOp.priority<=operandStack.peek().priority && !(operandStack.peek().operator.equals("("))){
+                    //Get and remove the top element from the opStack
+                    t = new MathewsWhereTreeNode(operandStack.peek().operator);
+                    operandStack.pop();
+
+                    //Get and remove the t1
+                    t1 = (MathewsWhereTreeNode) nodeStack.peek();
+                    nodeStack.pop();
+
+                    //Get and remove the t2
+                    t2 = (MathewsWhereTreeNode) nodeStack.peek();
+                    nodeStack.pop();
+
+                    //set t's children
+                    t.setLeftChild(t2);
+                    t.setRightChild(t1);
+
+                    //push the node to the node stack
+                    nodeStack.push(t);
+
+                }
+
+                operandStack.push(indexedOp);
+
+            } else if (token.equals(")")){
+                while(!operandStack.isEmpty() && !(operandStack.peek().operator.equals("("))){
+                    t = new MathewsWhereTreeNode(operandStack.peek().operator);
+                    operandStack.pop();
+                    t1 = nodeStack.peek();
+                    nodeStack.pop();
+                    t2 = nodeStack.peek();
+                    nodeStack.pop();
+                    t.setLeftChild(t2);
+                    t.setRightChild(t1);
+                    nodeStack.add(t);
+
+                }
+                operandStack.pop();
+            }
+
+        }
+        t = nodeStack.peek();
+        return t;
+
+        //todo use java compareTo() operators
+        //todo if you do someting like bool < false, do whatever java does
+
+        //System.out.println(Arrays.toString(pieceList));
 
 
         //todo return root of where tree
-        WhereTreeNode root = new NotNullNode("columnName");
-        return root;
+        //MathewsWhereTreeNode root = new NotNullNode("columnName");
+
     }
 
 
@@ -51,7 +169,26 @@ public class Where {
 }
 
 class WhereTest{
+
+    static void inOrder(MathewsWhereTreeNode node, ArrayList<String> res) {
+        if (node == null)
+            return;
+
+        // Traverse the left subtree first
+        inOrder(node.getLeftChild(), res);
+
+        // Visit the current node
+        res.add(node.toString());
+
+        // Traverse the right subtree last
+        inOrder(node.getLeftChild(), res);
+    }
+
     public static void main(String[] args) throws Exception {
+
+        DataCatalog.buildCatalog(4096, "C:\\Users\\mprok\\JavaProjects\\Database Impemented Systems\\JottQL\\data");
+        DataCatalog dc = DataCatalog.getInstance();
+        BufferManager bm = BufferManager.buildBufferManager(10,"C:\\Users\\mprok\\JavaProjects\\Database Impemented Systems\\JottQL\\data");
 
         //make a test table structure
         AttributeValue attribute1 = new AttributeValue(1, DataTypes.INTEGER);
@@ -116,7 +253,16 @@ class WhereTest{
         /**
          * call where() function
          */
-        buildWhereTree("where a < or c >= 10 and");
+        MathewsWhereTreeNode root = buildWhereTree("where a < b or c >= 10 and d == true and d <> false");
+
+        ArrayList<String> res = new ArrayList<>();
+        inOrder(root, res);
+        System.out.println();
+        for(String node : res){
+            System.out.print(node+" ");
+        }
+
+
         //where(testPage, "table", WhereTreeNode whereTree);
 
 
