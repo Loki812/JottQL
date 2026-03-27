@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static base.parse.DML.Where.buildWhereTree;
+import static base.parse.DML.Where.where;
 
 public class Where {
 
@@ -136,23 +137,15 @@ public class Where {
         WhereTreeNode root = makeLeafNode(prioritizedWherePieces);
 
 
-
-        //todo use java compareTo() operators
-        //todo if you do someting like bool < false, do whatever java does
-
-        //System.out.println(Arrays.toString(pieceList));
-
-
-        //todo return root of where tree
-        //MathewsWhereTreeNode root = new NotNullNode("columnName");
-
+        //return root of where tree
         return root;
 
     }
 
 
-    public static ArrayList<Record> where(Page page, String tableName, WhereTreeNode whereTree){
+    public static String where(Page page, String tableName, WhereTreeNode whereTree){
         //todo call buildWhereTree
+
 
         /*
         for (i in page's list of record){
@@ -167,8 +160,11 @@ public class Where {
 
         //todo for temporary tables, call TableSchema's copy() function
 
-        ArrayList<Record> finalRecordList = new ArrayList<>();
-        return finalRecordList;
+        //todo use java compareTo() operators
+        //todo if you do someting like bool < false, do whatever java does
+
+        String tempTableName = "tempTable";
+        return tempTableName;
     }
 }
 
@@ -281,6 +277,8 @@ class WhereTest{
         for(String node : res){
             System.out.print(node+" ");
         }
+
+        String tempTableName = where(testPage, tableSchema.tableName, root);
 
 
         //where(testPage, "table", WhereTreeNode whereTree);
