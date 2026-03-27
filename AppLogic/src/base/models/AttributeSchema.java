@@ -32,6 +32,7 @@ public class AttributeSchema {
         this.dataType = attributeSchema.dataType;
         this.length = attributeSchema.length;
         this.notNull = attributeSchema.notNull;
+        this.primaryKey = attributeSchema.primaryKey;
         this.unique = attributeSchema.unique;
         this.ogTable = attributeSchema.ogTable;
         if(this.ogTable == null){
@@ -44,6 +45,7 @@ public class AttributeSchema {
         copied.attributeName = this.attributeName;
         copied.dataType = this.dataType;
         copied.notNull = this.notNull;
+        copied.primaryKey = this.primaryKey;
         copied.unique = this.unique;
         copied.ogTable = this.ogTable;
         copied.defaultVal = this.defaultVal;

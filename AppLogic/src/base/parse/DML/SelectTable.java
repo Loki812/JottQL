@@ -207,16 +207,32 @@ public class SelectTable {
 
 
         selectPart = selectPart.replace(" ", "");
-        Set<String> requestedAttributes = new HashSet<>(Arrays.asList(selectPart.split(",")));
+        Set<String> requestedAttributes = new HashSet<>();
+
+        for (String attr : selectPart.split(",")) {
+            requestedAttributes.add(attr.trim().toUpperCase());
+        }
         ArrayList<Integer> selectedIndices = new ArrayList<>();
 
         ArrayList<AttributeSchema> existingAttributes = new ArrayList<>(tableSchema.getAttributeSchemas().sequencedValues());
 
         for (int i = 0; i < existingAttributes.size(); i++) {
-            if (requestedAttributes.contains(existingAttributes.get(i).attributeName)) {
-                // add it to the copied table schema
+
+            String fullName = existingAttributes.get(i).attributeName.trim().toUpperCase();
+            String shortName = fullName;
+
+            int dotIndex = fullName.lastIndexOf(".");
+            if (dotIndex != -1) {
+                shortName = fullName.substring(dotIndex + 1);
+            }
+
+            if (requestedAttributes.contains(fullName) || requestedAttributes.contains(shortName)) {
                 selectedIndices.add(i);
             }
+        }
+
+        if (selectedIndices.isEmpty()) {
+            throw new RuntimeException("No matching attributes found in SELECT clause");
         }
 
         // with the given selected column indices, make a temp copy table
@@ -236,7 +252,7 @@ public class SelectTable {
                     temp.attributeList.add(r.attributeList.get(index));
                 }
                 // insert into copied table pages
-                bm.insertRecordIntoTable(copy.tableName, temp);
+                bm.insertRecordIntoTableNoOrder(copy.tableName, temp);
             }
 
             pageID = p.nextPageId;

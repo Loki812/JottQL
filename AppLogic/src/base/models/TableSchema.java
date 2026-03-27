@@ -110,14 +110,21 @@ public class TableSchema {
 
 
     public Integer getIndex(String attribute_key) {
+
+        if (attribute_key == null) {
+            return null;
+        }
+
         Integer index = 0;
+
         for (String key : attributeSchemas.sequencedKeySet()) {
             if (attribute_key.equals(key)) {
                 return index;
-            }else{
+            } else {
                 index++;
             }
         }
+
         return null;
     }
 
@@ -202,9 +209,7 @@ public class TableSchema {
             }
 
             if (!foundPrimaryKey) {
-                AttributeSchema newPK = copy.attributeSchemas.sequencedValues().getFirst();
-                newPK.makePrimaryKey();
-                copy.primaryKey = newPK.attributeName;
+                copy.primaryKey = null;
             }
         }
 

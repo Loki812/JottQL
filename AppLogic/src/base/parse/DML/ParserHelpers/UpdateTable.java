@@ -15,6 +15,23 @@ import java.util.ArrayList;
 
 public class UpdateTable {
 
+    public static void parse(String command) {
+
+        String trimmed = command.trim();
+
+        if (!trimmed.toUpperCase().startsWith("UPDATE")) {
+            System.err.println("Invalid UPDATE syntax");
+            return;
+        }
+
+        trimmed = trimmed.substring("UPDATE".length()).trim();
+
+        String tableName = trimmed.split(" ")[0];
+
+        updateTable(tableName, command);
+
+    }
+
     public static void updateTable(String tablename, String query) {
 
         // createtable(string)
@@ -43,9 +60,22 @@ public class UpdateTable {
             trimmedQuery = trimmedQuery.substring(0, trimmedQuery.length() - 1).trim();
         }
 
-        if (trimmedQuery.toUpperCase().startsWith("SET ")) {
-            trimmedQuery = trimmedQuery.substring(4).trim();
+        String upperQuery = trimmedQuery.toUpperCase();
+        String updatePrefix = "UPDATE " + tablename.toUpperCase();
+
+        if (!upperQuery.startsWith(updatePrefix)) {
+            System.err.println("Invalid UPDATE command");
+            return;
         }
+
+        trimmedQuery = trimmedQuery.substring(updatePrefix.length()).trim();
+
+        if (!trimmedQuery.toUpperCase().startsWith("SET ")) {
+            System.err.println("Missing SET clause");
+            return;
+        }
+
+        trimmedQuery = trimmedQuery.substring(4).trim();
 
         int whereIndex = trimmedQuery.toUpperCase().indexOf("WHERE");
         String setPart;

@@ -34,24 +34,33 @@ public class Page {
      * NEEDS_SPLIT if the record is in range, but the page is full.
      */
     public InsertionResult tryInsert(Record record, TableSchema schema) {
+
         // 1. Check if record is in range of page
         if (!recordList.isEmpty() && record.compareTo(recordList.getLast(), schema) > 0) {
-            // If we are not on the last page, send signal to buffer manager to iterate to next page
-            if (nextPageId != -1) return InsertionResult.NOT_IN_RANGE;
+
+            if (nextPageId != -1)
+                return InsertionResult.NOT_IN_RANGE;
+
         }
 
         // 2. Check if record fits in page
         int pageSize = DataCatalog.getInstance().getPageSize();
+
         if (getTotalRecordsSize() + record.getSize() > pageSize) {
+
             return InsertionResult.NEEDS_SPLIT;
+
         }
 
-        // 3. Insert into page if both of those pass
-        insert(record, schema, true, false);
+        // 3. allow duplicates if no primary key exists
+        boolean duplicatesAllowed = (schema.primaryKey == null);
+
+        insert(record, schema, true, duplicatesAllowed);
+
         this.hasBeenModified = true;
         this.timestamp = java.time.LocalDateTime.now();
-        return InsertionResult.SUCCESS;
 
+        return InsertionResult.SUCCESS;
     }
 
     /**
