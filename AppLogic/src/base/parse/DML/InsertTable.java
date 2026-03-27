@@ -47,7 +47,7 @@ public class InsertTable {
 
         }
 
-        if (raw.startsWith("\"") && raw.endsWith("\"") && raw.length() >= 2) {
+        if (((raw.startsWith("\"") && raw.endsWith("\""))||(raw.startsWith("'") && raw.endsWith("'"))) && raw.length() >= 2) {
 
             String s = raw.substring(1, raw.length() - 1);
             if (type == DataTypes.CHAR) {
@@ -111,7 +111,7 @@ public class InsertTable {
 
         }
 
-        System.out.println("Invalid type" + type);
+        System.out.println("Invalid type " + type);
         throw new Exception();
 
     }

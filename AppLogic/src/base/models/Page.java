@@ -30,10 +30,11 @@ public class Page {
      *
      * @param record the record you are attempting to insert
      * @param schema the schema you are using for reference
+     * @param duplicates if the table allows for duplicate primary key
      * @return SUCCESS if record is inserted, NOT_IN_RANGE if record primary key is not in range of page
      * NEEDS_SPLIT if the record is in range, but the page is full.
      */
-    public InsertionResult tryInsert(Record record, TableSchema schema) {
+    public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) {
         // 1. Check if record is in range of page
         if (!recordList.isEmpty() && record.compareTo(recordList.getLast(), schema) > 0) {
             // If we are not on the last page, send signal to buffer manager to iterate to next page
@@ -47,7 +48,7 @@ public class Page {
         }
 
         // 3. Insert into page if both of those pass
-        insert(record, schema, true, false);
+        insert(record, schema, true, duplicates);
         this.hasBeenModified = true;
         this.timestamp = java.time.LocalDateTime.now();
         return InsertionResult.SUCCESS;
@@ -80,6 +81,7 @@ public class Page {
         this.timestamp = java.time.LocalDateTime.now();
         return InsertionResult.SUCCESS;
     }
+
 
     /**
      * insert maintains record order on a page, inserting by linear search and using record.compareTO

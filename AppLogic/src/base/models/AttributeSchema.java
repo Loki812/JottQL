@@ -14,7 +14,6 @@ public class AttributeSchema {
     private boolean primaryKey;
     private boolean unique;
     private Object defaultVal;
-    public String ogTable;
 
     public AttributeSchema() {
         this.notNull = false;
@@ -33,10 +32,6 @@ public class AttributeSchema {
         this.length = attributeSchema.length;
         this.notNull = attributeSchema.notNull;
         this.unique = attributeSchema.unique;
-        this.ogTable = attributeSchema.ogTable;
-        if(this.ogTable == null){
-            this.ogTable = table;
-        }
     }
 
     public AttributeSchema copy() {
@@ -45,7 +40,6 @@ public class AttributeSchema {
         copied.dataType = this.dataType;
         copied.notNull = this.notNull;
         copied.unique = this.unique;
-        copied.ogTable = this.ogTable;
         copied.defaultVal = this.defaultVal;
         copied.length = this.length;
         return copied;

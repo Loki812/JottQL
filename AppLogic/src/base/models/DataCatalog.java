@@ -159,13 +159,14 @@ public class DataCatalog {
      * @throws Exception if the given schema shares a name with a database already inside the disk.
      */
     public void addTableSchema(TableSchema schema) throws Exception {
-
+        BufferManager bufferManager = BufferManager.getInstance();
         if(catalog.tables.containsKey(schema.tableName)){
             System.out.println("Table already exists: " + schema.tableName);
             throw new Exception();
         }
         schema.rootPageID = getNextAvailablePageID();
         catalog.tables.put(schema.tableName, schema);
+        bufferManager.createNewPage(schema.rootPageID, schema.tableName);
         catalog.tableCount += 1;
     }
 

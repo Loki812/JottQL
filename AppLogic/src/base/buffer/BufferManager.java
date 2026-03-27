@@ -175,7 +175,7 @@ public class BufferManager {
         while (currentPageId != -1) {
             Page page = getPage(currentPageId);
 
-            InsertionResult result = page.tryInsert(record, ts);
+            InsertionResult result = page.tryInsert(record, ts, false);
             switch (result) {
                 case SUCCESS -> {
                     return;
@@ -219,6 +219,29 @@ public class BufferManager {
                     // SUCCESS due to page being empty it will always fit
                     newPage.tryInsertNoOrder(record, ts);
                 }
+
+            }
+        }
+    }
+
+    public void insertRecordIntoTableAllowDuplicates(String tableName, Record record) {
+        TableSchema ts = dataCatalog.getTableSchema(tableName);
+
+        int currentPageId = ts.getRootPageID();
+
+        while (currentPageId != -1) {
+            Page page = getPage(currentPageId);
+
+            InsertionResult result = page.tryInsert(record, ts, true);
+            switch (result) {
+                case SUCCESS -> {
+                    return;
+                }
+                case NEEDS_SPLIT -> {
+                    handlePageSplit(page, record, ts);
+                    return;
+                }
+                case NOT_IN_RANGE -> currentPageId = page.nextPageId;
 
             }
         }

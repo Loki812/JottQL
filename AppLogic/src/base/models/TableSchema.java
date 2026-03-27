@@ -152,6 +152,7 @@ public class TableSchema {
         numOfAttributes += 1;
     }
 
+
     public LinkedHashMap<String, AttributeSchema> getAttributeSchemas() {
         return attributeSchemas;
     }
@@ -171,21 +172,20 @@ public class TableSchema {
         TableSchema copy = new TableSchema();
 
         // Give the table a name indicating that it is temporary
-        Random r = new Random();
-        String name = "##temp" + r.nextInt(100000) + this.tableName;
-        // Make sure the name isn't already in use
+        String name = "_temp_" + tableName;
+        //make sure name is unique
         while (tempTableNames.contains(name)) {
-            name = "##temp" + r.nextInt(100000) + this.tableName;
+            name = "_temp_" + name;
         }
         copy.tableName = name;
         tempTableNames.add(name);
 
         if (selectedIncdices.isEmpty()) {
             // Copy the other fields
-            copy.primaryKey = this.primaryKey;
             copy.attributeSchemas = new LinkedHashMap<>();
             for (AttributeSchema attributeSchema : attributeSchemas.values()) {
-                copy.addAttributeSchema(attributeSchema);
+                copy.attributeSchemas.put(attributeSchema.attributeName, attributeSchema);
+                copy.numOfAttributes += 1;
             }
         } else {
             copy.numOfAttributes = selectedIncdices.size();
@@ -199,8 +199,9 @@ public class TableSchema {
                     copy.primaryKey = schema.attributeName;
                 }
                 copy.attributeSchemas.put(schema.attributeName, schema);
+                copy.numOfAttributes += 1;
             }
-
+            //todo figure out why we are doing this
             if (!foundPrimaryKey) {
                 AttributeSchema newPK = copy.attributeSchemas.sequencedValues().getFirst();
                 newPK.makePrimaryKey();
