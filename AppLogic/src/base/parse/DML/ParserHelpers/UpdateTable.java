@@ -148,7 +148,6 @@ public class UpdateTable {
 
             for (Record record : page.recordList) {
 
-
                 Record newRecord = copyRecord(record);
                 boolean matchesWhere = true;
 
@@ -157,7 +156,7 @@ public class UpdateTable {
                 }
 
                 if (!matchesWhere) {
-                    bufferManager.insertRecordIntoTable(tempName, record);
+                    bufferManager.insertRecordIntoTable(tempName, newRecord);
                 }else {
                     ResolvedOperand resolved = evaluateSetExpression(valuePart, record, attrs);
                     if (resolved == null) {
@@ -169,8 +168,9 @@ public class UpdateTable {
                         return;
                     }
 
-                    bufferManager.insertRecordIntoTable(tempName, newRecord);
+                    newRecord.attributeList.set(targetIndex, newValue);
                 }
+                bufferManager.insertRecordIntoTable(tempName, newRecord);
             }
 
             pageId = page.nextPageId;
