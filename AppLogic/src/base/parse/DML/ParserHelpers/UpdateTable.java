@@ -27,7 +27,7 @@ public class UpdateTable {
 
     }
 
-    public static void parse(String command) {
+    public static void parse(String command) throws Exception {
 
         String trimmed = command.trim();
 
@@ -44,7 +44,7 @@ public class UpdateTable {
 
     }
 
-    public static void updateTable(String tablename, String query) {
+    public static void updateTable(String tablename, String query) throws Exception {
 
         // createtable(string)
         //insert some values (optional)
