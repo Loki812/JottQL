@@ -43,6 +43,7 @@ public class Cartesian {
         }
         TableSchema newTableSchema = new TableSchema(newTable, newAttributeSchemas);
         catalog.addTableSchema(newTableSchema);
+        TableSchema.addTemp(newTable);
         //Block loop join them together
         Page table1page = buffer.getPage(table1Schema.rootPageID);
         Page table2page = buffer.getPage(table2Schema.rootPageID);

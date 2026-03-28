@@ -19,7 +19,7 @@ import static base.parse.DML.Where.buildWhereTree;
 
 public class Where {
 
-    public static PrioritizedWherePiece getOperatorPriority(String s){
+    public static PrioritizedWherePiece getOperatorPriority(String s, String tableName) throws Exception {
         switch (s){
             case ">":
                 return new PrioritizedWherePiece(s, 1, new GreaterThanNode());
@@ -39,19 +39,46 @@ public class Where {
                 return new PrioritizedWherePiece(s, 2, new AndNode());
             case "OR":
                 return new PrioritizedWherePiece(s, 3, new OrNode());
+            case "TRUE":
+                return new PrioritizedWherePiece(s, 0, new ValueTreeNode(s));
+            case "FALSE":
+                return new PrioritizedWherePiece(s, 0, new ValueTreeNode(s));
+            case "NULL":
+                return new PrioritizedWherePiece(s, 0, new ValueTreeNode(s));
+            default:
+                System.out.println("token: "+s);
+                //check that it's NOT a String
+                if(s.charAt(0)!='\"' || s.charAt(s.length()-1)!='\"'){
+                    //check that it's NOT an int
+                    try{
+                        //its an int
+                        Integer.parseInt(s);
+                    } catch(NumberFormatException intE) {
+                        //its NOT an int
+                        try{
+                            //its a double
+                            Double.parseDouble(s);
+                        } catch(NumberFormatException dubE) {
+                            //its NOT a double
+                            //check that it's NOT an attribute
+                            DataCatalog dc = DataCatalog.getInstance();
+                            TableSchema tableSchema = dc.getTableSchema(tableName);
+                            AttributeSchema attribute = tableSchema.getAttributeSchemas().get(s);
+                            if(attribute==null){
+                                //throw error
+                                System.out.println("Invalid input in the WHERE clause.");
+                                throw new Exception();
+                            }
+
+                        }
+                    }
+                }
         }
         return new PrioritizedWherePiece(s, 0, new ValueTreeNode(s));
     }
 
 
     public static WhereTreeNode makeLeafNode(List<PrioritizedWherePiece> prioritizedWherePieces){
-
-        /*
-        if(prioritizedWherePieces.size()==1){
-            return new MathewsWhereTreeNode(prioritizedWherePieces.getFirst().value);
-        }
-
-         */
 
         int maxPriorityIndex = 0;
         for(int i=0; i<prioritizedWherePieces.size(); i++){
@@ -109,7 +136,7 @@ public class Where {
         return root;
     }
 
-    public static WhereTreeNode buildWhereTree(String wherePieces){
+    public static WhereTreeNode buildWhereTree(String wherePieces, String tableName) throws Exception {
 
         wherePieces = wherePieces.replace(";","");
         wherePieces = wherePieces.toUpperCase();
@@ -132,7 +159,7 @@ public class Where {
         //Make a list of PrioritizedWherePieces
         ArrayList<PrioritizedWherePiece> prioritizedWherePieces = new ArrayList<>();
         for(String token : pieceList){
-            PrioritizedWherePiece indexedOp = getOperatorPriority(token);
+            PrioritizedWherePiece indexedOp = getOperatorPriority(token, tableName);
             prioritizedWherePieces.add(indexedOp);
         }
 
@@ -156,8 +183,6 @@ public class Where {
         TableSchema tableSchema = dc.getTableSchema(tableName);
         TableSchema copy = tableSchema.makeTempCopy(new ArrayList<>());
 
-        //use original table to check if it should be inserted
-
 
         // Go through the table's pages and insert each record into the table
         int pageId = tableSchema.rootPageID;
@@ -172,26 +197,7 @@ public class Where {
             pageId = page.nextPageId;
         }
 
-        //System.out.println("Size of copied page: "+ bm.getPage(copy.rootPageID).getTotalRecordsSize());
-
         return copy.tableName;
-
-
-        /*
-        for (i in page's list of record){
-            check if it should be in the new table from where-condition
-
-            if( page's nextTableID != -1){
-                do the loop again on the next page
-            }
-
-        }
-         */
-
-        //todo for temporary tables, call TableSchema's copy() function
-
-        //todo use java compareTo() operators
-        //todo if you do someting like bool < false, do whatever java does
 
     }
 }
@@ -304,7 +310,7 @@ class WhereTest{
         /**
          * call where() function
          */
-        WhereTreeNode root = buildWhereTree("where a = 5 or c <= 6");
+        WhereTreeNode root = buildWhereTree("where a = 5 or c <= 6", testPage.tableName);
 
         System.out.println("root: "+root.toString());
 
