@@ -229,11 +229,11 @@ public class TableSchema {
 
     public static void deleteTemps(){
         BufferManager bm = BufferManager.getInstance();
-        while (!tempTableNames.isEmpty()){
+        while (!tempTableNames.isEmpty()) {
             try {
                 String tableName = tempTableNames.removeFirst();
                 bm.deleteTable(tableName);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 //do nothing since table was already removed
             }
         }

@@ -74,13 +74,7 @@ public class SelectTable {
             return;
         }
         ArrayList<String> tableNames = new ArrayList<>(List.of(tablePart.split(",")));
-        ArrayList<String> tempTables = new ArrayList<>();
-
         String tableName = Cartesian.Product(tableNames);
-        if(tableName.startsWith("_TEMP_")){
-            tempTables.add(tableName);
-        }
-
 
 
         // -----------------------

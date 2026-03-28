@@ -28,11 +28,11 @@ public class JottQL {
                 }
             }
             case "SELECT" -> {
-                try {
+//                try {
                     SelectTable.parse(command);
-                }catch (Exception e){
-                    System.err.println("Table Select Failed" + e);
-                }
+//                }catch (Exception e){
+//                    System.err.println("Table Select Failed" + e);
+//                }
             }
             case "DELETE" -> {
                 try {
