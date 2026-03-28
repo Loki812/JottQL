@@ -138,7 +138,9 @@ public class SelectTable {
         tableName = parseSelect(projectionPart, tableName);
 
         if(tableName.startsWith("_")){
-            tempTables.add(tableName);
+            if(!tempTables.contains(tableName)) {
+                tempTables.add(tableName);
+            }
         }
 
         //----------------------------------------
@@ -176,7 +178,7 @@ public class SelectTable {
         }
 
         for(String table: tempTables) {
-            DropTable.execute("DROP TABLE " + table.trim().toUpperCase()+";");
+            BufferManager.getInstance().deleteTable(table);
         }
 
 
