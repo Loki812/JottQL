@@ -18,7 +18,7 @@ public class DataCatalog {
     private int tableCount; // in header of bin file, needed for extracting
     private int nextAvailablePageID; //  if free list is empty, use this offset
     private static ArrayList<Integer> freePageList; // List of free page IDs within the DB
-    public Map<String, TableSchema> tables;
+    private Map<String, TableSchema> tables;
 
 
     private DataCatalog() {}
@@ -219,9 +219,10 @@ public class DataCatalog {
         }
 
         // Put the copy in the tables map
-        tables.put(ogName, copy);
+        catalog.tables.put(ogName, copy);
         //remove the copy
-        tables.remove(copyName);
+        catalog.tables.remove(copyName);
+        catalog.tableCount -= 1;
     }
 
 }

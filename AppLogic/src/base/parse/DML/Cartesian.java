@@ -16,6 +16,11 @@ public class Cartesian {
         //if we only have one table return it
         //recursion base case
         if(tableNames.size() == 1){
+            TableSchema finalTable = catalog.getTableSchema(tableNames.getFirst());
+            if(finalTable == null){
+                System.out.println("Table " + tableNames.getFirst() + " not found");
+                throw new Exception();
+            }
             return tableNames.getFirst();
         }
         //get both table schemas
