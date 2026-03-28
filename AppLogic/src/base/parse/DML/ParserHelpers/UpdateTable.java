@@ -148,32 +148,29 @@ public class UpdateTable {
 
             for (Record record : page.recordList) {
 
-                if (record == null) {
-                    continue;
-                }
+
                 Record newRecord = copyRecord(record);
                 boolean matchesWhere = true;
-
 
                 if (whereTree != null) {
                     matchesWhere = whereTree.eval(record, tableSchema);
                 }
 
                 if (!matchesWhere) {
-                    continue;
-                }
+                    bufferManager.insertRecordIntoTable(tempName, record);
+                }else {
+                    ResolvedOperand resolved = evaluateSetExpression(valuePart, record, attrs);
+                    if (resolved == null) {
+                        return;
+                    }
 
-                ResolvedOperand resolved = evaluateSetExpression(valuePart, record, attrs);
-                if (resolved == null) {
-                    return;
-                }
+                    AttributeValue<?> newValue = buildUpdatedValue(resolved, targetSchema);
+                    if (newValue == null) {
+                        return;
+                    }
 
-                AttributeValue<?> newValue = buildUpdatedValue(resolved, targetSchema);
-                if (newValue == null) {
-                    return;
+                    bufferManager.insertRecordIntoTable(tempName, newRecord);
                 }
-
-                bufferManager.insertRecordIntoTable(tempName, newRecord);
             }
 
             pageId = page.nextPageId;
