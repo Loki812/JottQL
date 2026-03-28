@@ -208,7 +208,6 @@ public class TableSchema {
                 copy.attributeSchemas.put(schema.attributeName, schema);
                 copy.numOfAttributes += 1;
             }
-            //todo figure out why we are doing this
             if (!foundPrimaryKey) {
                 copy.primaryKey = null;
             }
