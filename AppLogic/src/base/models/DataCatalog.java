@@ -194,4 +194,34 @@ public class DataCatalog {
         return arr;
     }
 
+    /**
+     * used to change a temporary table into the original table
+     * @param ogName the original table name
+     * @param copyName the copied table name
+     * @throws IOException if the ogtTable does not exist
+     */
+    public void changeTableName(String ogName, String copyName) throws IOException {
+        BufferManager bm = BufferManager.getInstance();
+        // Drop the original tableSchema
+        bm.deleteTable(ogName);
+
+        // Get the root page ID of the copy
+        TableSchema copy = getTableSchema(copyName);
+        int copyRootPageId = copy.getRootPageID();
+
+        // Get the page associated with the copy's root page ID
+        Page page = bm.getPage(copyRootPageId);
+
+        // Change all the copy's page's tableNames to the original tableName
+        while (page.nextPageId != -1) {
+            page.tableName = ogName;
+            page = bm.getPage(page.pageId);
+        }
+
+        // Put the copy in the tables map
+        tables.put(ogName, copy);
+        //remove the copy
+        tables.remove(copyName);
+    }
+
 }

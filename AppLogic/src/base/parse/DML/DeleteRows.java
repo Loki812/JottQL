@@ -89,22 +89,7 @@ public class DeleteRows {
             pageId = page.nextPageId;
         }
 
-        // Drop the original tableSchema
-        bm.deleteTable(tableName);
+        dc.changeTableName(tableName, copy.tableName);
 
-        // Get the root page ID of the copy
-        int copyRootPageId = copy.getRootPageID();
-
-        // Get the page associated with the copy's root page ID
-        Page page = bm.getPage(copyRootPageId);
-
-        // Change all the copy's page's tableNames to the original tableName
-        while (page.nextPageId != -1) {
-            page.tableName = tableName;
-            page = bm.getPage(page.pageId);
-        }
-
-        // Put the copy in the tables map
-        dc.tables.put(tableName, copy);
     }
 }
