@@ -50,15 +50,15 @@ public class Where {
                 if(s.charAt(0)!='\"' || s.charAt(s.length()-1)!='\"'){
                     //check that it's NOT an int
                     try{
-                        //its an int
+                        //it's an int
                         Integer.parseInt(s);
                     } catch(NumberFormatException intE) {
-                        //its NOT an int
+                        //it's NOT an int
                         try{
-                            //its a double
+                            //it's a double
                             Double.parseDouble(s);
                         } catch(NumberFormatException dubE) {
-                            //its NOT a double
+                            //it's NOT a double
                             //check that it's NOT an attribute
                             DataCatalog dc = DataCatalog.getInstance();
                             TableSchema tableSchema = dc.getTableSchema(tableName);
@@ -95,21 +95,6 @@ public class Where {
         if(maxPriorityIndex<(prioritizedWherePieces.size()-1)){
             rightList = prioritizedWherePieces.subList(maxPriorityIndex+1,prioritizedWherePieces.size());
         }
-
-        /*
-        System.out.println("max value: "+prioritizedWherePieces.get(maxPriorityIndex).value);
-        System.out.println("left list: ");
-        for (PrioritizedWherePiece i : leftList){
-            System.out.print(i.value+", ");
-        }
-        System.out.println();
-        System.out.println("right list: ");
-        for (PrioritizedWherePiece i : rightList){
-            System.out.print(i.value+", ");
-        }
-        System.out.println("\n");
-         */
-
 
         if(!leftList.isEmpty()){
             root.setLeft(makeLeafNode(leftList));
@@ -197,143 +182,6 @@ public class Where {
         }
 
         return copy.tableName;
-
-    }
-}
-
-
-
-
-
-
-
-
-
-
-class WhereTest{
-
-    static void inOrder(WhereTreeNode node, ArrayList<String> res) {
-        if (node == null)
-            return;
-
-        // Traverse the left subtree first
-        inOrder(node.getLeft(), res);
-
-        // Visit the current node
-        res.add(node.toString());
-
-        // Traverse the right subtree last
-        inOrder(node.getRight(), res);
-    }
-
-    public static void main(String[] args) throws Exception {
-
-        DataCatalog.buildCatalog(4096, "C:\\Users\\mprok\\JavaProjects\\Database Impemented Systems\\JottQL\\data");
-        DataCatalog dc = DataCatalog.getInstance();
-        BufferManager bm = BufferManager.buildBufferManager(10,"C:\\Users\\mprok\\JavaProjects\\Database Impemented Systems\\JottQL\\data");
-
-        //make a test table structure
-        AttributeValue attribute1 = new AttributeValue(5, DataTypes.INTEGER);
-        AttributeValue attribute2 = new AttributeValue(4, DataTypes.INTEGER);
-        AttributeValue attribute3 = new AttributeValue(3, DataTypes.INTEGER);
-        //AttributeValue attribute4 = new AttributeValue("hello", DataTypes.BOOLEAN);
-
-
-        base.models.Record record1 = new base.models.Record();
-
-        record1.attributeList.add(attribute1);
-        record1.attributeList.add(attribute2);
-        record1.attributeList.add(attribute3);
-        //record1.attributeList.add(attribute4);
-
-        AttributeValue attribute5 = new AttributeValue(5, DataTypes.INTEGER);
-        AttributeValue attribute6 = new AttributeValue(6, DataTypes.INTEGER);
-        AttributeValue attribute7 = new AttributeValue(7, DataTypes.INTEGER);
-        //AttributeValue attribute8 = new AttributeValue(true, DataTypes.BOOLEAN);
-        base.models.Record record2 = new base.models.Record();
-
-
-        record2.attributeList.add(attribute5);
-        record2.attributeList.add(attribute6);
-        record2.attributeList.add(attribute7);
-        //record2.attributeList.add(attribute8);
-        //record2.attributeList.add(attribute9);
-        //record2.attributeList.add(attribute10);
-
-
-        Page testPage = new Page(1,"table");
-        testPage.recordList.add(record1);
-        testPage.recordList.add(record2);
-
-        //make a test table schema
-        TableSchema tableSchema = new TableSchema();
-        tableSchema.tableName = testPage.tableName;
-        DataCatalog.getInstance().addTableSchema(tableSchema);
-
-
-        AttributeSchema int1 = AttributeSchema.createAttributeSchemaFromQuery("a INTEGER");
-        tableSchema.addAttributeSchema(int1);
-
-        AttributeSchema int2 = AttributeSchema.createAttributeSchemaFromQuery("b DOUBLE");
-        tableSchema.addAttributeSchema(int2);
-
-        AttributeSchema int3 = AttributeSchema.createAttributeSchemaFromQuery("c BOOLEAN");
-        tableSchema.addAttributeSchema(int3);
-
-
-        /*
-        AttributeSchema integer = AttributeSchema.createAttributeSchemaFromQuery("a INTEGER");
-        tableSchema.addAttributeSchema(integer);
-
-        AttributeSchema dub = AttributeSchema.createAttributeSchemaFromQuery("b DOUBLE");
-        tableSchema.addAttributeSchema(dub);
-
-        AttributeSchema bool = AttributeSchema.createAttributeSchemaFromQuery("c BOOLEAN");
-        tableSchema.addAttributeSchema(bool);
-
-        AttributeSchema car = AttributeSchema.createAttributeSchemaFromQuery("d CHAR(5)");
-        tableSchema.addAttributeSchema(car);
-
-        AttributeSchema var = AttributeSchema.createAttributeSchemaFromQuery("e VARCHAR(10)");
-        tableSchema.addAttributeSchema(var);
-         */
-
-        //todo use the following print for testing
-        /*
-        for(AttributeSchema a : DataCatalog.getInstance().getTableSchema(testPage.tableName).getAttributeSchemas().sequencedValues()){
-            System.out.println("datatype: "+a.getDataType());
-        }
-         */
-
-
-        /**
-         * call where() function
-         */
-        WhereTreeNode root = buildWhereTree("where a = 5 or c <= 6", testPage.tableName);
-
-        System.out.println("root: "+root.toString());
-
-        ArrayList<String> res = new ArrayList<>();
-        inOrder(root, res);
-        System.out.println();
-        for(String node : res){
-            System.out.print(node+" ");
-        }
-        System.out.println();
-
-        /*
-        TableSchema tempTableName = where(tableSchema.tableName, root);
-        Page tempPage = bm.getPage(tempTableName.rootPageID);
-        for(Record r : tempPage.recordList){
-            System.out.println(r.toString());
-        }
-         */
-
-
-        //where(testPage, "table", WhereTreeNode whereTree);
-
-
-
 
     }
 }

@@ -39,7 +39,7 @@ public class EqualsNode extends ComparisonNode {
         if(recordData==null || constData==null){
             return false;
         }
-        return constData.equals(recordData);
+        return constData.equalsIgnoreCase(recordData);
 
     }
 
