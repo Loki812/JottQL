@@ -343,14 +343,14 @@ public class UpdateTable {
         return resolveSingleValue(expr, record, attrs);
     }
 
-    private static AttributeValue<?> buildUpdatedValue(ResolvedOperand resolved, AttributeSchema targetSchema) {
+    private static AttributeValue<?> buildUpdatedValue(ResolvedOperand resolved, AttributeSchema targetSchema) throws Exception {
 
         // same logic as before
         Object resolvedValue = resolved == null ? null : resolved.value;
 
         if (resolvedValue == null && targetSchema.getNotNull()) {
             System.err.println("Cannot assign NULL to NOT NULL attribute");
-            return null;
+            throw new Exception();
         }
 
         switch (targetSchema.getDataType()) {
