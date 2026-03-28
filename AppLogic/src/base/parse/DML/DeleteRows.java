@@ -33,8 +33,9 @@ public class DeleteRows {
             throw new Exception();
         }
 
-        // Everything in the command after the DELETE FROM clause
+        //
         trimmedCommand = trimmedCommand.substring(0, trimmedCommand.length() - 1).trim();
+        // Everything in the command after the DELETE FROM clause
         String afterDeleteFrom = trimmedCommand.substring("DELETE FROM".length()).trim();
         int firstSpace = afterDeleteFrom.indexOf(' ');
 
@@ -50,7 +51,7 @@ public class DeleteRows {
 
             if (afterTableName.startsWith("WHERE ")) {
                 String whereClause = afterTableName.substring("WHERE".length()).trim();
-                //TODO: whereTreeNode = ???;
+                whereTreeNode = Where.buildWhereTree(whereClause);
             } else {
                 System.out.println("Invalid DELETE Command");
                 throw new Exception();
@@ -90,7 +91,7 @@ public class DeleteRows {
         }
 
         // Drop the original tableSchema
-        DropTable.execute("DROP TABLE " + tableName + ";");
+        bm.deleteTable(tableName);
 
         // Get the root page ID of the copy
         int copyRootPageId = copy.getRootPageID();
@@ -99,15 +100,13 @@ public class DeleteRows {
         Page page = bm.getPage(copyRootPageId);
 
         // Change all the copy's page's tableNames to the original tableName
-        while (page.pageId != -1) {
-            //page.tableName = tableName;
-            page =  bm.getPage(page.pageId);
+        while (page.nextPageId != -1) {
+            page.tableName = tableName;
+            page = bm.getPage(page.pageId);
         }
 
-        // Remove the copy's name from the list of temporary table names so it doesn't get deleted
-        //dc.tempTableNames.remove(copy.tableName);
-
         // Change the copy's name to the original tableSchema's name
+        dc.tables.put(tableName, copy);
         copy.tableName = tableName;
     }
 }

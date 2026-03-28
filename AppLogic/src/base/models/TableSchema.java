@@ -186,6 +186,7 @@ public class TableSchema {
         }
         copy.tableName = name;
         tempTableNames.add(name);
+        copy.primaryKey = primaryKey;
 
         if (selectedIncdices.isEmpty()) {
             // Copy the other fields
