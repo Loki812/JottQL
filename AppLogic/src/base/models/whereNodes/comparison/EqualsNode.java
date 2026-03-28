@@ -26,7 +26,6 @@ public class EqualsNode extends ComparisonNode {
         String recordData = record.attributeList.get(index).data.toString();
         String constData = constantValue.toString();
         if(record.attributeList.get(index).type== DataTypes.VARCHAR || record.attributeList.get(index).type== DataTypes.CHAR){
-            System.out.println(constData);
             if((constData.charAt(0)=='\"' && constData.charAt(constData.length()-1)=='\"') || constData.equals("null")){
                 constData=constData.replace("\"","");
             } else {
