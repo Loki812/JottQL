@@ -23,6 +23,9 @@ public class EqualsNode extends ComparisonNode {
         AttributeSchema aSchema = schema.getAttributeSchemas().get(columnName);
         int index = schema.getIndex(columnName);
 
+        if(record.attributeList.get(index).data==null){
+            return false;
+        }
         String recordData = record.attributeList.get(index).data.toString();
         String constData = constantValue.toString();
         if(record.attributeList.get(index).type== DataTypes.VARCHAR || record.attributeList.get(index).type== DataTypes.CHAR){
