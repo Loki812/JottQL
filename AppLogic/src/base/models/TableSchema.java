@@ -179,10 +179,10 @@ public class TableSchema {
         TableSchema copy = new TableSchema();
 
         // Give the table a name indicating that it is temporary
-        String name = "_temp_" + tableName;
+        String name = "_TEMP_" + tableName;
         //make sure name is unique
         while (tempTableNames.contains(name)) {
-            name = "_temp_" + name;
+            name = "_TEMP_" + name;
         }
         copy.tableName = name;
         tempTableNames.add(name);
