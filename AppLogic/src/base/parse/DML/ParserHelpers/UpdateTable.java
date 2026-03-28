@@ -159,18 +159,12 @@ public class UpdateTable {
                     bufferManager.insertRecordIntoTable(tempName, newRecord);
                 }else {
                     ResolvedOperand resolved = evaluateSetExpression(valuePart, record, attrs);
-                    if (resolved == null) {
-                        return;
-                    }
-
                     AttributeValue<?> newValue = buildUpdatedValue(resolved, targetSchema);
-                    if (newValue == null) {
-                        return;
-                    }
 
                     newRecord.attributeList.set(targetIndex, newValue);
+
+                    bufferManager.insertRecordIntoTable(tempName, newRecord);
                 }
-                bufferManager.insertRecordIntoTable(tempName, newRecord);
             }
 
             pageId = page.nextPageId;
