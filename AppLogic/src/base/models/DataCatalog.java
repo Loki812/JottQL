@@ -194,4 +194,17 @@ public class DataCatalog {
         return arr;
     }
 
+    public void changeTableName(String oldName, String newName) {
+
+        TableSchema schema = tables.remove(oldName);
+
+        if (schema == null) {
+            System.err.println("Table " + oldName + " not found");
+            return;
+        }
+
+        schema.tableName = newName;
+        tables.put(newName, schema);
+    }
+
 }

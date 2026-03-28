@@ -9,9 +9,8 @@ import base.models.Page;
 import base.models.Record;
 import base.models.TableSchema;
 import base.models.whereNodes.WhereTreeNode;
+import base.parse.DDL.DropTable;
 import static base.parse.DML.Where.buildWhereTree;
-
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 public class UpdateTable {
@@ -27,7 +26,7 @@ public class UpdateTable {
 
     }
 
-    public static void parse(String command) {
+    public static void parse(String command) throws Exception {
 
         String trimmed = command.trim();
 
@@ -44,7 +43,7 @@ public class UpdateTable {
 
     }
 
-    public static void updateTable(String tablename, String query) {
+    public static void updateTable(String tablename, String query) throws Exception {
 
         // createtable(string)
         //insert some values (optional)
@@ -138,6 +137,10 @@ public class UpdateTable {
             }
         }
 
+        TableSchema tempSchema = tableSchema.makeTempCopy(new ArrayList<>());
+
+        String tempName = tempSchema.tableName;
+
         int pageId = tableSchema.getRootPageID();
 
         while (pageId != -1) {
@@ -148,7 +151,7 @@ public class UpdateTable {
                 if (record == null) {
                     continue;
                 }
-
+                Record newRecord = copyRecord(record);
                 boolean matchesWhere = true;
 
 
@@ -170,17 +173,40 @@ public class UpdateTable {
                     return;
                 }
 
-                record.attributeList.set(targetIndex, newValue);
-                page.hasBeenModified = true;
-                page.timestamp = LocalDateTime.now();
-
-                record.attributeList.set(targetIndex, newValue);
-                page.hasBeenModified = true;
-                page.timestamp = LocalDateTime.now();
+                bufferManager.insertRecordIntoTable(tempName, newRecord);
             }
 
             pageId = page.nextPageId;
         }
+
+        DropTable.execute("DROP TABLE " + tablename + ";");
+        dataCatalog.changeTableName(tempName, tablename);
+        DataCatalog.saveToDisk();
+        System.out.println("Update Successful");
+    }
+
+    private static Record copyRecord(Record original) {
+
+        Record r = new Record();
+
+        for (AttributeValue<?> v : original.attributeList) {
+
+            if (v == null) {
+
+                r.attributeList.add(null);
+
+            } else {
+
+                r.attributeList.add(
+                        new AttributeValue<>(v.data, v.type)
+                );
+
+            }
+
+        }
+
+        return r;
+
     }
 
     private static ResolvedOperand resolveSingleValue(String token, Record record, ArrayList<AttributeSchema> attrs) {
