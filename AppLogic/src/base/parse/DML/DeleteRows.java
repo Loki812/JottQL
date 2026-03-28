@@ -50,7 +50,7 @@ public class DeleteRows {
 
             if (afterTableName.startsWith("WHERE ")) {
                 String whereClause = afterTableName.substring("WHERE".length()).trim();
-                whereTreeNode = Where.buildWhereTree(whereClause);
+                whereTreeNode = Where.buildWhereTree(whereClause, tableName);
             } else {
                 System.out.println("Invalid DELETE Command");
                 throw new Exception();
