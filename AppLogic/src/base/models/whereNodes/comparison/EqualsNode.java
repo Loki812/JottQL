@@ -38,6 +38,7 @@ public class EqualsNode extends ComparisonNode {
 
         if(recordData==null || constData==null){
             System.out.println("Cannot perform relational operations on null-values.");
+            throw new Exception();
         }
         return constData.equals(recordData);
 

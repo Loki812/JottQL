@@ -16,7 +16,7 @@ public class LessThanNode extends ComparisonNode {
     }
 
     @Override
-    public boolean eval(Record record, TableSchema schema) {
+    public boolean eval(Record record, TableSchema schema) throws Exception {
 
          AttributeSchema aSchema = schema.getAttributeSchemas().get(columnName);
          int index = schema.getIndex(columnName);
@@ -47,6 +47,7 @@ public class LessThanNode extends ComparisonNode {
                  }
                  if(recordData==null || constData==null){
                      System.out.println("Cannot perform relational operations on null-values.");
+                     throw new Exception();
                  }
                  return recordData < constData;
              }
@@ -66,6 +67,7 @@ public class LessThanNode extends ComparisonNode {
                  }
                  if(recordData==null || constData==null){
                      System.out.println("Cannot perform relational operations on null-values.");
+                     throw new Exception();
                  }
                  return recordData < constData;
              }
