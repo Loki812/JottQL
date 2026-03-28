@@ -33,9 +33,8 @@ public class DeleteRows {
             throw new Exception();
         }
 
-        //
-        trimmedCommand = trimmedCommand.substring(0, trimmedCommand.length() - 1).trim();
         // Everything in the command after the DELETE FROM clause
+        trimmedCommand = trimmedCommand.substring(0, trimmedCommand.length() - 1).trim();
         String afterDeleteFrom = trimmedCommand.substring("DELETE FROM".length()).trim();
         int firstSpace = afterDeleteFrom.indexOf(' ');
 
@@ -105,8 +104,7 @@ public class DeleteRows {
             page = bm.getPage(page.pageId);
         }
 
-        // Change the copy's name to the original tableSchema's name
+        // Put the copy in the tables map
         dc.tables.put(tableName, copy);
-        copy.tableName = tableName;
     }
 }
