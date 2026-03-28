@@ -101,9 +101,16 @@ public class SelectTable {
         // WHERE portion
         // -----------------------
         // TODO:
-         if (whereIndex != -1){
-             String whereParts = "where a = 5 or c <= 6";
-             tableName = parseWhere(whereParts, tableName);
+        String wherePart;
+        if (whereIndex != -1){
+            if (orderIndex == -1) {
+                wherePart = command.substring(whereIndex + "WHERE".length()).trim();
+            } else {
+                wherePart = command.substring(whereIndex + "WHERE".length(), orderIndex).trim();
+            }
+             //String whereParts = command.substring(whereIndex + "FROM".length(), orderIndex).trim();
+             tableName = parseWhere(wherePart, tableName);
+
          }
 
 

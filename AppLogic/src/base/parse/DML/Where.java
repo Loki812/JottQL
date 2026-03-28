@@ -124,7 +124,10 @@ public class Where {
             splitList = splitList.subList(whereIndex, splitList.size());
         }
         pieceList = new ArrayList<>(splitList);
-        pieceList.removeFirst();
+        if(whereIndex>=0){
+            pieceList.removeFirst();
+        }
+
 
 
         //Make a list of PrioritizedWherePieces
