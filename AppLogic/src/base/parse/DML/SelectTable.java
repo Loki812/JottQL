@@ -168,7 +168,7 @@ public class SelectTable {
      * @return the name of the temp table with the WHERE applied
      */
     public static String parseWhere(String whereParts, String tableName) throws Exception {
-        WhereTreeNode whereRoot = Where.buildWhereTree(whereParts);
+        WhereTreeNode whereRoot = Where.buildWhereTree(whereParts, tableName);
         return Where.executeWhere(tableName, whereRoot);
     }
 

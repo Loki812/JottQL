@@ -131,7 +131,7 @@ public class UpdateTable {
         WhereTreeNode whereTree = null;
         if (wherePart != null && !wherePart.isBlank()) {
             try {
-                whereTree = buildWhereTree("WHERE " + wherePart);
+                whereTree = buildWhereTree("WHERE " + wherePart, tablename);
             } catch (Exception e) {
                 System.err.println("Invalid WHERE clause");
                 return;
