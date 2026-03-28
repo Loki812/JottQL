@@ -9,9 +9,8 @@ import base.models.Page;
 import base.models.Record;
 import base.models.TableSchema;
 import base.models.whereNodes.WhereTreeNode;
+import base.parse.DDL.DropTable;
 import static base.parse.DML.Where.buildWhereTree;
-
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 public class UpdateTable {
@@ -138,6 +137,10 @@ public class UpdateTable {
             }
         }
 
+        TableSchema tempSchema = tableSchema.makeTempCopy(new ArrayList<>());
+
+        String tempName = tempSchema.tableName;
+
         int pageId = tableSchema.getRootPageID();
 
         while (pageId != -1) {
@@ -145,42 +148,54 @@ public class UpdateTable {
 
             for (Record record : page.recordList) {
 
-                if (record == null) {
-                    continue;
-                }
-
+                Record newRecord = copyRecord(record);
                 boolean matchesWhere = true;
-
 
                 if (whereTree != null) {
                     matchesWhere = whereTree.eval(record, tableSchema);
                 }
 
                 if (!matchesWhere) {
-                    continue;
+                    bufferManager.insertRecordIntoTable(tempName, newRecord);
+                }else {
+                    ResolvedOperand resolved = evaluateSetExpression(valuePart, record, attrs);
+                    AttributeValue<?> newValue = buildUpdatedValue(resolved, targetSchema);
+
+                    newRecord.attributeList.set(targetIndex, newValue);
+
+                    bufferManager.insertRecordIntoTable(tempName, newRecord);
                 }
-
-                ResolvedOperand resolved = evaluateSetExpression(valuePart, record, attrs);
-                if (resolved == null) {
-                    return;
-                }
-
-                AttributeValue<?> newValue = buildUpdatedValue(resolved, targetSchema);
-                if (newValue == null) {
-                    return;
-                }
-
-                record.attributeList.set(targetIndex, newValue);
-                page.hasBeenModified = true;
-                page.timestamp = LocalDateTime.now();
-
-                record.attributeList.set(targetIndex, newValue);
-                page.hasBeenModified = true;
-                page.timestamp = LocalDateTime.now();
             }
 
             pageId = page.nextPageId;
         }
+
+        dataCatalog.changeTableName(tablename, tempName);
+        System.out.println("Update Successful");
+    }
+
+    private static Record copyRecord(Record original) {
+
+        Record r = new Record();
+
+        for (AttributeValue<?> v : original.attributeList) {
+
+            if (v == null) {
+
+                r.attributeList.add(null);
+
+            } else {
+
+                r.attributeList.add(
+                        new AttributeValue<>(v.data, v.type)
+                );
+
+            }
+
+        }
+
+        return r;
+
     }
 
     private static ResolvedOperand resolveSingleValue(String token, Record record, ArrayList<AttributeSchema> attrs) {
@@ -322,14 +337,14 @@ public class UpdateTable {
         return resolveSingleValue(expr, record, attrs);
     }
 
-    private static AttributeValue<?> buildUpdatedValue(ResolvedOperand resolved, AttributeSchema targetSchema) {
+    private static AttributeValue<?> buildUpdatedValue(ResolvedOperand resolved, AttributeSchema targetSchema) throws Exception {
 
         // same logic as before
         Object resolvedValue = resolved == null ? null : resolved.value;
 
         if (resolvedValue == null && targetSchema.getNotNull()) {
             System.err.println("Cannot assign NULL to NOT NULL attribute");
-            return null;
+            throw new Exception();
         }
 
         switch (targetSchema.getDataType()) {

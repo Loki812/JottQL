@@ -215,7 +215,7 @@ public class DataCatalog {
         // Change all the copy's page's tableNames to the original tableName
         while (page.nextPageId != -1) {
             page.tableName = ogName;
-            page = bm.getPage(page.pageId);
+            page = bm.getPage(page.nextPageId);
         }
 
         // Put the copy in the tables map
