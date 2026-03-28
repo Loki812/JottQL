@@ -3,6 +3,8 @@ package base.parse.DML;
 import base.buffer.BufferManager;
 import base.models.*;
 import base.models.Record;
+import base.models.whereNodes.WhereTreeNode;
+import base.parse.DDL.DropTable;
 
 import java.util.*;
 
@@ -99,8 +101,19 @@ public class SelectTable {
         // WHERE portion
         // -----------------------
         // TODO:
-        // if wherePart.length != 0:
-        //      tableName = parseWhere(whereString, tableName)
+        String wherePart;
+        if (whereIndex != -1){
+            if (orderIndex == -1) {
+                wherePart = command.substring(whereIndex + "WHERE".length()).trim();
+            } else {
+                wherePart = command.substring(whereIndex + "WHERE".length(), orderIndex).trim();
+            }
+            tableName = parseWhere(wherePart, tableName);
+            if(tableName.startsWith("_")){
+                tempTables.add(tableName);
+            }
+         }
+
 
 
         // ------------------------
@@ -112,6 +125,9 @@ public class SelectTable {
             if (!orderByPart.isEmpty()) {
                 tableName = parseOrderBy(orderByPart, tableName);
             }
+            if(tableName.startsWith("_")){
+                tempTables.add(tableName);
+            }
         }
 
 
@@ -120,6 +136,12 @@ public class SelectTable {
         //-------------------------
 
         tableName = parseSelect(projectionPart, tableName);
+
+        if(tableName.startsWith("_")){
+            if(!tempTables.contains(tableName)) {
+                tempTables.add(tableName);
+            }
+        }
 
         //----------------------------------------
         // END OF SELECT, start of printing results
@@ -156,7 +178,7 @@ public class SelectTable {
         }
 
         for(String table: tempTables) {
-            DropTable.execute("DROP TABLE " + table.trim().toUpperCase()+";");
+            BufferManager.getInstance().deleteTable(table);
         }
 
 
@@ -167,15 +189,16 @@ public class SelectTable {
     /**
      * Performs a conditional where on a table, creating a temporary copy to complete the query
      *
-     * @param wherePart a parsed substring of a sql query
+     * @param whereParts a parsed substring of a sql query
      *                  beginning after the "FROM" portion until the orderBy or ';' symbol
      *                  ex. "WHERE name = "Joe""
      *
      * @param tableName the table you are applying the operation to
      * @return the name of the temp table with the WHERE applied
      */
-    public static String parseWhere(String wherePart, String tableName) throws Exception {
-        return tableName;
+    public static String parseWhere(String whereParts, String tableName) throws Exception {
+        WhereTreeNode whereRoot = Where.buildWhereTree(whereParts);
+        return Where.executeWhere(tableName, whereRoot);
     }
 
     /**
