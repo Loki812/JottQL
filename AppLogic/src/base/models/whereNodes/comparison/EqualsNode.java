@@ -1,6 +1,7 @@
 package base.models.whereNodes.comparison;
 
 import base.models.AttributeSchema;
+import base.models.DataTypes;
 import base.models.Record;
 import base.models.TableSchema;
 import base.models.whereNodes.ComparisonNode;
@@ -18,14 +19,27 @@ public class EqualsNode extends ComparisonNode {
     }
 
     @Override
-    public boolean eval(Record record, TableSchema schema) {
+    public boolean eval(Record record, TableSchema schema) throws Exception {
         AttributeSchema aSchema = schema.getAttributeSchemas().get(columnName);
         int index = schema.getIndex(columnName);
 
         String recordData = record.attributeList.get(index).data.toString();
+        String constData = constantValue.toString();
+        if(record.attributeList.get(index).type== DataTypes.VARCHAR || record.attributeList.get(index).type== DataTypes.CHAR){
+            System.out.println(constData);
+            if((constData.charAt(0)=='\"' && constData.charAt(constData.length()-1)=='\"') || constData.equals("null")){
+                constData=constData.replace("\"","");
+            } else {
+                System.out.println("Only Strings can be compared with String type.");
+                throw new Exception();
+            }
+            System.out.println(constData);
+            System.out.println(constData.equals(recordData));
+        }
+
         // Object.equals is indiscriminate towards types, would always return false
         // TODO add type checking between attribute schema datatype and constant value?
-        return recordData.equals(constantValue.toString());
+        return constData.equals(recordData);
         //return Objects.equals(record.attributeList.get(index).data, constantValue);
     }
 
