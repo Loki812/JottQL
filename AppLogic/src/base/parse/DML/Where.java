@@ -4,7 +4,7 @@ import base.buffer.BufferManager;
 import base.models.*;
 import base.models.Record;
 import base.models.whereNodes.ComparisonNode;
-import base.models.whereNodes.MathewsWhereTreeNode;
+import base.models.whereNodes.ValueTreeNode;
 import base.models.whereNodes.WhereTreeNode;
 import base.models.whereNodes.comparison.*;
 import base.models.whereNodes.logical.AndNode;
@@ -16,7 +16,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static base.parse.DML.Where.buildWhereTree;
-import static base.parse.DML.Where.executeWhere;
 
 public class Where {
 
@@ -41,7 +40,7 @@ public class Where {
             case "OR":
                 return new PrioritizedWherePiece(s, 3, new OrNode());
         }
-        return new PrioritizedWherePiece(s, 0, new MathewsWhereTreeNode(s));
+        return new PrioritizedWherePiece(s, 0, new ValueTreeNode(s));
     }
 
 
@@ -97,11 +96,11 @@ public class Where {
 
         //set col name and const val for ComparisonNodes
         if(root instanceof ComparisonNode){
-            if(root.left instanceof MathewsWhereTreeNode){
-                ((ComparisonNode) root).setColumnName(((MathewsWhereTreeNode)root.left).getValue());
+            if(root.left instanceof ValueTreeNode){
+                ((ComparisonNode) root).setColumnName(((ValueTreeNode)root.left).getValue());
             }
-            if(root.right instanceof MathewsWhereTreeNode){
-                ((ComparisonNode) root).setConstantValue(((MathewsWhereTreeNode)root.right).getValue());
+            if(root.right instanceof ValueTreeNode){
+                ((ComparisonNode) root).setConstantValue(((ValueTreeNode)root.right).getValue());
             }
         }
 

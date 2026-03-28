@@ -3,30 +3,30 @@ package base.models.whereNodes;
 import base.models.Record;
 import base.models.TableSchema;
 
-public class MathewsWhereTreeNode extends WhereTreeNode{
+public class ValueTreeNode extends WhereTreeNode{
 
     String value;
 
-    MathewsWhereTreeNode leftChild;
-    MathewsWhereTreeNode rightChild;
+    ValueTreeNode leftChild;
+    ValueTreeNode rightChild;
 
-    public MathewsWhereTreeNode(String value){
+    public ValueTreeNode(String value){
         this.value = value;
     }
 
-    public void setRightChild(MathewsWhereTreeNode r){
+    public void setRightChild(ValueTreeNode r){
         this.rightChild = r;
     }
 
-    public void setLeftChild(MathewsWhereTreeNode l){
+    public void setLeftChild(ValueTreeNode l){
         this.leftChild = l;
     }
 
-    public MathewsWhereTreeNode getLeftChild() {
+    public ValueTreeNode getLeftChild() {
         return leftChild;
     }
 
-    public MathewsWhereTreeNode getRightChild() {
+    public ValueTreeNode getRightChild() {
         return rightChild;
     }
 
