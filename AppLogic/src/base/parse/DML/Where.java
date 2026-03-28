@@ -173,7 +173,7 @@ public class Where {
             pageId = page.nextPageId;
         }
 
-        System.out.println("Size of copied page: "+ bm.getPage(copy.rootPageID).getTotalRecordsSize());
+        //System.out.println("Size of copied page: "+ bm.getPage(copy.rootPageID).getTotalRecordsSize());
 
         return copy.tableName;
 
