@@ -130,6 +130,7 @@ public class SelectTable {
         // END OF SELECT, start of printing results
         // ---------------------------------------
         System.out.println(tableName);
+        System.out.println("whereIndex: "+whereIndex);
 
         TableSchema finalTableSchema = DataCatalog.getInstance().getTableSchema(tableName);
 

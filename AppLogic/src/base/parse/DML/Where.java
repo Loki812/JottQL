@@ -34,11 +34,11 @@ public class Where {
                 return new PrioritizedWherePiece(s, 1, new EqualsNode());
             case "<>":
                 return new PrioritizedWherePiece(s, 1, new NotEqualsNode());
-            case "is":
+            case "IS":
                 return new PrioritizedWherePiece(s, 1, new IsNode());
-            case "and":
+            case "AND":
                 return new PrioritizedWherePiece(s, 2, new AndNode());
-            case "or":
+            case "OR":
                 return new PrioritizedWherePiece(s, 3, new OrNode());
         }
         return new PrioritizedWherePiece(s, 0, new MathewsWhereTreeNode(s));
@@ -113,10 +113,11 @@ public class Where {
     public static WhereTreeNode buildWhereTree(String wherePieces){
 
         wherePieces = wherePieces.replace(";","");
+        wherePieces = wherePieces.toUpperCase();
         List<String> splitList = Arrays.asList(wherePieces.split("\\s+"));
 
         //remove the "where string and anything before it"
-        int whereIndex = splitList.indexOf("where");
+        int whereIndex = splitList.indexOf("WHERE");
 
         ArrayList<String> pieceList;
         if(whereIndex>=0){
@@ -161,7 +162,9 @@ public class Where {
         while (pageId != -1) {
             Page page = bm.getPage(pageId);
             for (Record r : page.recordList) {
-                bm.insertRecordIntoTableAllowDuplicates(copy.tableName, r);
+                if(whereTree.eval(r, tableSchema)){
+                    bm.insertRecordIntoTableAllowDuplicates(copy.tableName, r);
+                }
             }
 
             pageId = page.nextPageId;
