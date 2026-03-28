@@ -33,14 +33,14 @@ public class EqualsNode extends ComparisonNode {
                 System.out.println("Only Strings can be compared with String type.");
                 throw new Exception();
             }
-            System.out.println(constData);
-            System.out.println(constData.equals(recordData));
+
         }
 
-        // Object.equals is indiscriminate towards types, would always return false
-        // TODO add type checking between attribute schema datatype and constant value?
+        if(recordData==null || constData==null){
+            System.out.println("Cannot perform relational operations on null-values.");
+        }
         return constData.equals(recordData);
-        //return Objects.equals(record.attributeList.get(index).data, constantValue);
+
     }
 
     @Override
