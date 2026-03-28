@@ -198,7 +198,7 @@ public class UpdateTable {
 
     }
 
-    private static ResolvedOperand resolveSingleValue(String token, Record record, ArrayList<AttributeSchema> attrs) {
+    private static ResolvedOperand resolveSingleValue(String token, Record record, ArrayList<AttributeSchema> attrs) throws Exception {
 
         if (token == null) {
             return null;
@@ -238,12 +238,12 @@ public class UpdateTable {
             }
             catch (NumberFormatException e2) {
                 System.err.println("Unsupported SET value");
-                return null;
+                throw new Exception();
             }
         }
     }
 
-    private static ResolvedOperand evaluateSetExpression(String valuePart, Record record, ArrayList<AttributeSchema> attrs) {
+    private static ResolvedOperand evaluateSetExpression(String valuePart, Record record, ArrayList<AttributeSchema> attrs) throws Exception {
 
         String expr = valuePart.trim();
         String[] operators = {"+", "-", "*", "/"};
@@ -263,7 +263,7 @@ public class UpdateTable {
 
         if (operatorCount > 1) {
             System.err.println("Compound expressions are not supported");
-            return null;
+            throw new Exception();
         }
 
         if (operatorCount == 1) {
@@ -276,23 +276,23 @@ public class UpdateTable {
             ResolvedOperand right = resolveSingleValue(rightToken, record, attrs);
 
             if (left == null || right == null) {
-                return null;
+                throw new Exception();
             }
 
             if (left.value == null || right.value == null) {
                 System.err.println("Cannot use NULL in mathematical expression");
-                return null;
+                throw new Exception();
             }
 
             if (!((left.type == DataTypes.INTEGER || left.type == DataTypes.DOUBLE)
                     && (right.type == DataTypes.INTEGER || right.type == DataTypes.DOUBLE))) {
                 System.err.println("Mathematical expressions require INTEGER or DOUBLE operands");
-                return null;
+                throw new Exception();
             }
 
             if (left.type != right.type) {
                 System.err.println("Operand types in mathematical expression must match");
-                return null;
+                throw new Exception();
             }
 
             if (left.type == DataTypes.INTEGER) {
@@ -355,7 +355,7 @@ public class UpdateTable {
                     return new AttributeValue<>(((Number) resolvedValue).intValue(), DataTypes.INTEGER);
                 } else {
                     System.err.println("Type mismatch in UPDATE");
-                    return null;
+                    throw new Exception();
                 }
             }
 
@@ -366,7 +366,7 @@ public class UpdateTable {
                     return new AttributeValue<>(((Number) resolvedValue).doubleValue(), DataTypes.DOUBLE);
                 } else {
                     System.err.println("Type mismatch in UPDATE");
-                    return null;
+                    throw new Exception();
                 }
             }
 
@@ -377,7 +377,7 @@ public class UpdateTable {
                     return new AttributeValue<>((Boolean) resolvedValue, DataTypes.BOOLEAN);
                 } else {
                     System.err.println("Type mismatch in UPDATE");
-                    return null;
+                    throw new Exception();
                 }
             }
 
@@ -385,10 +385,14 @@ public class UpdateTable {
                 if (resolvedValue == null) {
                     return new AttributeValue<>(null, DataTypes.CHAR);
                 } else {
+                    if((resolvedValue.toString().charAt(0)!='\"' || resolvedValue.toString().charAt(resolvedValue.toString().length()-1)!='\"')){
+                        System.err.println("Type mismatch in UPDATE");
+                        throw new Exception();
+                    }
                     String strVal = String.valueOf(resolvedValue);
                     if (strVal.length() != targetSchema.getLength()) {
                         System.err.println("CHAR length mismatch in UPDATE");
-                        return null;
+                        throw new Exception();
                     }
                     return new AttributeValue<>(strVal, DataTypes.CHAR);
                 }
@@ -401,7 +405,7 @@ public class UpdateTable {
                     String strVal = String.valueOf(resolvedValue);
                     if (strVal.length() > targetSchema.getLength()) {
                         System.err.println("VARCHAR length too large in UPDATE");
-                        return null;
+                        throw new Exception();
                     }
                     return new AttributeValue<>(strVal, DataTypes.VARCHAR);
                 }
@@ -409,7 +413,7 @@ public class UpdateTable {
 
             default -> {
                 System.err.println("Unsupported attribute type");
-                return null;
+                throw new Exception();
             }
         }
     }
