@@ -25,5 +25,5 @@ public abstract class WhereTreeNode {
         return right;
     }
 
-    public abstract boolean eval(Record record, TableSchema schema);
+    public abstract boolean eval(Record record, TableSchema schema) throws Exception;
 }

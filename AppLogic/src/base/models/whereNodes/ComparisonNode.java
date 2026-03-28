@@ -26,5 +26,5 @@ public abstract class ComparisonNode extends WhereTreeNode {
         this.constantValue = constantValue;
     }
 
-    public abstract boolean eval(Record record, TableSchema schema);
+    public abstract boolean eval(Record record, TableSchema schema) throws Exception;
 }

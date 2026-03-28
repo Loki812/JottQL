@@ -11,7 +11,6 @@ public class DropTable {
     public static void execute(String command) throws Exception {
 
         BufferManager bm = BufferManager.getInstance();
-        DataCatalog dc = DataCatalog.getInstance();
 
         String trimmedCommand = command.trim();
         if(!trimmedCommand.startsWith("DROP TABLE ")) {

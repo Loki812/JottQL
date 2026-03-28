@@ -87,9 +87,17 @@ public class SelectTable {
         // WHERE portion
         // -----------------------
         // TODO:
-         if (whereIndex != -1){
-             String whereParts = "where a = 5 or c <= 6";
-             tableName = parseWhere(whereParts, tableName);
+        String wherePart;
+        if (whereIndex != -1){
+            if (orderIndex == -1) {
+                wherePart = command.substring(whereIndex + "WHERE".length()).trim();
+            } else {
+                wherePart = command.substring(whereIndex + "WHERE".length(), orderIndex).trim();
+            }
+            tableName = parseWhere(wherePart, tableName);
+            if(tableName.startsWith("_")){
+                tempTables.add(tableName);
+            }
          }
 
 
@@ -103,6 +111,9 @@ public class SelectTable {
             if (!orderByPart.isEmpty()) {
                 tableName = parseOrderBy(orderByPart, tableName);
             }
+            if(tableName.startsWith("_")){
+                tempTables.add(tableName);
+            }
         }
 
 
@@ -112,11 +123,15 @@ public class SelectTable {
 
         tableName = parseSelect(projectionPart, tableName);
 
+        if(tableName.startsWith("_")){
+            if(!tempTables.contains(tableName)) {
+                tempTables.add(tableName);
+            }
+        }
+
         //----------------------------------------
         // END OF SELECT, start of printing results
         // ---------------------------------------
-        System.out.println(tableName);
-        System.out.println("whereIndex: "+whereIndex);
 
         TableSchema finalTableSchema = DataCatalog.getInstance().getTableSchema(tableName);
 
@@ -149,7 +164,7 @@ public class SelectTable {
         }
 
         for(String table: tempTables) {
-            DropTable.execute("DROP TABLE " + table.trim().toUpperCase()+";");
+            BufferManager.getInstance().deleteTable(table);
         }
 
 
