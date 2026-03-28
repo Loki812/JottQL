@@ -46,7 +46,6 @@ public class Where {
             case "NULL":
                 return new PrioritizedWherePiece(s, 0, new ValueTreeNode(s));
             default:
-                System.out.println("token: "+s);
                 //check that it's NOT a String
                 if(s.charAt(0)!='\"' || s.charAt(s.length()-1)!='\"'){
                     //check that it's NOT an int
