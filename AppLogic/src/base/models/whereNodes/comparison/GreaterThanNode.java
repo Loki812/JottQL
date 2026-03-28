@@ -44,8 +44,7 @@ public class GreaterThanNode extends ComparisonNode {
                     constData = (Double) constantValue;
                 }
                 if(recordData==null || constData==null){
-                    System.out.println("Cannot perform relational operations on null-values.");
-                    throw new Exception();
+                    return false;
                 }
                 return recordData > constData;
             }
@@ -64,8 +63,7 @@ public class GreaterThanNode extends ComparisonNode {
                     constData = (Integer) constantValue;
                 }
                 if(recordData==null || constData==null){
-                    System.out.println("Cannot perform relational operations on null-values.");
-                    throw new Exception();
+                    return false;
                 }
                 return recordData > constData;
             }

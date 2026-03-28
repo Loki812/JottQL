@@ -8,7 +8,7 @@ import base.models.whereNodes.ValueTreeNode;
 import base.models.whereNodes.WhereTreeNode;
 import base.models.whereNodes.comparison.*;
 import base.models.whereNodes.logical.AndNode;
-import base.models.whereNodes.logical.IsNode;
+import base.models.whereNodes.comparison.IsNode;
 import base.models.whereNodes.logical.OrNode;
 
 import java.util.ArrayList;

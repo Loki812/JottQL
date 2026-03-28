@@ -23,8 +23,7 @@ public class NotEqualsNode extends ComparisonNode {
         int index = schema.getIndex(columnName);
 
         if(record.attributeList.get(index).data==null || constantValue==null){
-            System.out.println("Cannot perform relational operations on null-values.");
-            throw new Exception();
+            return false;
         }
         return !(Objects.equals(record.attributeList.get(index).data, constantValue));
     }
