@@ -16,7 +16,7 @@ public class LessThanNode extends ComparisonNode {
     }
 
     @Override
-    public boolean eval(Record record, TableSchema schema) {
+    public boolean eval(Record record, TableSchema schema) throws Exception {
 
          AttributeSchema aSchema = schema.getAttributeSchemas().get(columnName);
          int index = schema.getIndex(columnName);
@@ -45,6 +45,9 @@ public class LessThanNode extends ComparisonNode {
                  } else {
                      constData = (Double) constantValue;
                  }
+                 if(recordData==null || constData==null){
+                     return false;
+                 }
                  return recordData < constData;
              }
              case INTEGER -> {
@@ -60,6 +63,9 @@ public class LessThanNode extends ComparisonNode {
                      constData = Integer.parseInt((String) constantValue);
                  } else {
                      constData = (Integer) constantValue;
+                 }
+                 if(recordData==null || constData==null){
+                     return false;
                  }
                  return recordData < constData;
              }

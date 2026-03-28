@@ -26,18 +26,21 @@ public class EqualsNode extends ComparisonNode {
         String recordData = record.attributeList.get(index).data.toString();
         String constData = constantValue.toString();
         if(record.attributeList.get(index).type== DataTypes.VARCHAR || record.attributeList.get(index).type== DataTypes.CHAR){
+            System.out.println(constData);
             if((constData.charAt(0)=='\"' && constData.charAt(constData.length()-1)=='\"') || constData.equals("null")){
                 constData=constData.replace("\"","");
             } else {
                 System.out.println("Only Strings can be compared with String type.");
                 throw new Exception();
             }
+
         }
 
-        // Object.equals is indiscriminate towards types, would always return false
-        // TODO add type checking between attribute schema datatype and constant value?
-        return constData.equals(recordData);
-        //return Objects.equals(record.attributeList.get(index).data, constantValue);
+        if(recordData==null || constData==null){
+            return false;
+        }
+        return constData.equalsIgnoreCase(recordData);
+
     }
 
     @Override

@@ -18,12 +18,13 @@ public class NotEqualsNode extends ComparisonNode {
     }
 
     @Override
-    public boolean eval(Record record, TableSchema schema) {
+    public boolean eval(Record record, TableSchema schema) throws Exception {
         AttributeSchema aSchema = schema.getAttributeSchemas().get(columnName);
         int index = schema.getIndex(columnName);
 
-        // Object.equals is indiscriminate towards types, would always return false
-        // TODO add type checking between attribute schema datatype and constant value?
+        if(record.attributeList.get(index).data==null || constantValue==null){
+            return false;
+        }
         return !(Objects.equals(record.attributeList.get(index).data, constantValue));
     }
 
