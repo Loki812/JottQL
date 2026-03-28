@@ -1,6 +1,8 @@
 package base.models;
 
 
+import base.buffer.BufferManager;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -22,7 +24,7 @@ public class TableSchema {
     private LinkedHashMap<String, AttributeSchema> attributeSchemas;
     public String primaryKey;
     public int rootPageID;
-    private ArrayList<String> tempTableNames = new ArrayList<>();
+    private static ArrayList<String> tempTableNames = new ArrayList<>();
 
     public TableSchema() {
         attributeSchemas = new LinkedHashMap<>();
@@ -186,6 +188,7 @@ public class TableSchema {
         }
         copy.tableName = name;
         tempTableNames.add(name);
+        copy.primaryKey = primaryKey;
 
         if (selectedIncdices.isEmpty()) {
             // Copy the other fields
@@ -218,5 +221,21 @@ public class TableSchema {
 
         // Return the new copy
         return copy;
+    }
+
+    public static void addTemp(String tableName){
+        tempTableNames.add(tableName);
+    }
+
+    public static void deleteTemps(){
+        BufferManager bm = BufferManager.getInstance();
+        while (!tempTableNames.isEmpty()) {
+            try {
+                String tableName = tempTableNames.removeFirst();
+                bm.deleteTable(tableName);
+            } catch (Exception e) {
+                //do nothing since table was already removed
+            }
+        }
     }
 }

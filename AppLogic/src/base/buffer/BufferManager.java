@@ -258,6 +258,10 @@ public class BufferManager {
         TableSchema tableSchema = DataCatalog.getInstance().getTableSchema(tableName);
         int pageId = tableSchema.rootPageID;
 
+        //remove tableSchema from DataCatalog
+        DataCatalog.getInstance().removeTableSchema(tableName);
+
+        //Remove pages of table
         while (pageId != -1) {
             Page p = getPage(pageId);
             int nextPageId = p.nextPageId;
@@ -267,8 +271,6 @@ public class BufferManager {
             pageId = nextPageId;
         }
 
-        // Once all pages are deleted, remove tableschema from DataCatalog
-        DataCatalog.getInstance().removeTableSchema(tableName);
     }
 
     /**

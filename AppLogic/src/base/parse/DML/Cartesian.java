@@ -8,12 +8,22 @@ import base.parse.DDL.DropTable;
 import java.util.ArrayList;
 
 public class Cartesian {
+
     private static final DataCatalog catalog = DataCatalog.getInstance();
     private static final BufferManager buffer = BufferManager.getInstance();
+
     public static String Product(ArrayList<String> tableNames) throws Exception {
+        //if we only have one table return it
+        //recursion base case
         if(tableNames.size() == 1){
+            TableSchema finalTable = catalog.getTableSchema(tableNames.getFirst());
+            if(finalTable == null){
+                System.out.println("Table " + tableNames.getFirst() + " not found");
+                throw new Exception();
+            }
             return tableNames.getFirst();
         }
+        //get both table schemas
         String table1 = tableNames.removeFirst().trim().toUpperCase();
         String table2 = tableNames.removeFirst().trim().toUpperCase();
         TableSchema table1Schema = catalog.getTableSchema(table1);
@@ -22,7 +32,8 @@ public class Cartesian {
             System.out.println("Could not find table");
             throw new Exception();
         }
-        String newTable = "_"+table1+'X'+table2;
+        //make new table and add both tables attribute schemas to it
+        String newTable = "_TEMP_"+table1+'X'+table2;
         ArrayList<AttributeSchema> newAttributeSchemas = new ArrayList<>();
         for(AttributeSchema schema: new ArrayList<>(table1Schema.getAttributeSchemas().sequencedValues())){
             newAttributeSchemas.add(new AttributeSchema(schema, table1));
@@ -32,6 +43,7 @@ public class Cartesian {
         }
         TableSchema newTableSchema = new TableSchema(newTable, newAttributeSchemas);
         catalog.addTableSchema(newTableSchema);
+        //Block loop join them together
         Page table1page = buffer.getPage(table1Schema.rootPageID);
         Page table2page = buffer.getPage(table2Schema.rootPageID);
         while(table1page != null) {
@@ -51,9 +63,11 @@ public class Cartesian {
             }
             table1page = buffer.getPage(table1page.nextPageId);
         }
-        if(table1.startsWith("_")){
-            DropTable.execute("DROP TABLE "+table1+";");
+        //if doing multiple joins clean up extra tables
+        if(table1.startsWith("_TEMP_")){
+            TableSchema.addTemp(table1);
         }
+        //recurse
         tableNames.addFirst(newTable);
         return Product(tableNames);
     }

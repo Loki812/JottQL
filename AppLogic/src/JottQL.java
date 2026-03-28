@@ -1,5 +1,6 @@
 import base.buffer.BufferManager;
 import base.models.DataCatalog;
+import base.models.TableSchema;
 import base.parse.DDL.AtlerTable;
 import base.parse.DDL.CreateTable;
 import base.parse.DDL.DropTable;
@@ -9,11 +10,9 @@ import base.parse.DML.DeleteRows;
 
 import java.io.File;
 
-import java.nio.file.*;
-
 import java.util.Scanner;
 
-public class Main {
+public class JottQL {
 
 
     public static void parseCommand(String command) throws Exception {
@@ -116,6 +115,7 @@ public class Main {
             String input = scanner.nextLine();
 
             if (input.equalsIgnoreCase("<QUIT>")) {
+                TableSchema.deleteTemps();
                 DataCatalog.saveToDisk();
                 BufferManager.getInstance().flushBuffer();
                 System.out.println("Exiting Application");

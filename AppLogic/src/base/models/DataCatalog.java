@@ -194,17 +194,35 @@ public class DataCatalog {
         return arr;
     }
 
-    public void changeTableName(String oldName, String newName) {
+    /**
+     * used to change a temporary table into the original table
+     * @param ogName the original table name
+     * @param copyName the copied table name
+     * @throws IOException if the ogtTable does not exist
+     */
+    public void changeTableName(String ogName, String copyName) throws IOException {
+        BufferManager bm = BufferManager.getInstance();
+        // Drop the original tableSchema
+        bm.deleteTable(ogName);
 
-        TableSchema schema = tables.remove(oldName);
+        // Get the root page ID of the copy
+        TableSchema copy = getTableSchema(copyName);
+        int copyRootPageId = copy.getRootPageID();
 
-        if (schema == null) {
-            System.err.println("Table " + oldName + " not found");
-            return;
+        // Get the page associated with the copy's root page ID
+        Page page = bm.getPage(copyRootPageId);
+
+        // Change all the copy's page's tableNames to the original tableName
+        while (page.nextPageId != -1) {
+            page.tableName = ogName;
+            page = bm.getPage(page.pageId);
         }
 
-        schema.tableName = newName;
-        tables.put(newName, schema);
+        // Put the copy in the tables map
+        catalog.tables.put(ogName, copy);
+        //remove the copy
+        catalog.tables.remove(copyName);
+        catalog.tableCount -= 1;
     }
 
 }

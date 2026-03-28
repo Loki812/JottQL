@@ -74,13 +74,7 @@ public class SelectTable {
             return;
         }
         ArrayList<String> tableNames = new ArrayList<>(List.of(tablePart.split(",")));
-        ArrayList<String> tempTables = new ArrayList<>();
-
         String tableName = Cartesian.Product(tableNames);
-        if(tableName.startsWith("_")){
-            tempTables.add(tableName);
-        }
-
 
 
         // -----------------------
@@ -95,9 +89,6 @@ public class SelectTable {
                 wherePart = command.substring(whereIndex + "WHERE".length(), orderIndex).trim();
             }
             tableName = parseWhere(wherePart, tableName);
-            if(tableName.startsWith("_")){
-                tempTables.add(tableName);
-            }
          }
 
 
@@ -111,9 +102,6 @@ public class SelectTable {
             if (!orderByPart.isEmpty()) {
                 tableName = parseOrderBy(orderByPart, tableName);
             }
-            if(tableName.startsWith("_")){
-                tempTables.add(tableName);
-            }
         }
 
 
@@ -122,12 +110,6 @@ public class SelectTable {
         //-------------------------
 
         tableName = parseSelect(projectionPart, tableName);
-
-        if(tableName.startsWith("_")){
-            if(!tempTables.contains(tableName)) {
-                tempTables.add(tableName);
-            }
-        }
 
         //----------------------------------------
         // END OF SELECT, start of printing results
@@ -163,10 +145,7 @@ public class SelectTable {
 
         }
 
-        for(String table: tempTables) {
-            BufferManager.getInstance().deleteTable(table);
-        }
-
+        TableSchema.deleteTemps();
 
     }
 

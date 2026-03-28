@@ -142,8 +142,7 @@ UPDATE <table_name> SET <attribute> WHERE <conditions>;
   Non-negative double-precision floating-point values
 
 * **BOOLEAN**
-  Accepts `True` or `False`
-  (Stored as a boolean, not a string)
+`True` or `False`
 
 * **CHAR(N)**
   Fixed-length string of exactly N characters
