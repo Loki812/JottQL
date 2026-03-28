@@ -28,11 +28,11 @@ public class JottQL {
                 }
             }
             case "SELECT" -> {
-//                try {
+                try {
                     SelectTable.parse(command);
-//                }catch (Exception e){
-//                    System.err.println("Table Select Failed" + e);
-//                }
+                }catch (Exception e){
+                    System.err.println("Table Select Failed" + e);
+                }
             }
             case "DELETE" -> {
                 try {
@@ -66,12 +66,12 @@ public class JottQL {
                 }
             }
             case "UPDATE" -> {
-                try {
+//                try {
                     UpdateTable.parse(command);
-                    System.out.println("Update Table Successfully");
-                } catch (Exception e) {
-                    System.out.println("Update Table Failed");
-                }
+//                    System.out.println("Update Table Successfully");
+//                } catch (Exception e) {
+//                    System.out.println("Update Table Failed");
+//                }
             }
             default -> System.err.println("Unrecognized Query, please try again.");
         }

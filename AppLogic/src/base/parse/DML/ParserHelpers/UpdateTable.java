@@ -179,9 +179,7 @@ public class UpdateTable {
             pageId = page.nextPageId;
         }
 
-        DropTable.execute("DROP TABLE " + tablename + ";");
-        dataCatalog.changeTableName(tempName, tablename);
-        DataCatalog.saveToDisk();
+        dataCatalog.changeTableName(tablename, tempName);
         System.out.println("Update Successful");
     }
 

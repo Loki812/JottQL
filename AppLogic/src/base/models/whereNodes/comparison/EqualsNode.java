@@ -26,15 +26,12 @@ public class EqualsNode extends ComparisonNode {
         String recordData = record.attributeList.get(index).data.toString();
         String constData = constantValue.toString();
         if(record.attributeList.get(index).type== DataTypes.VARCHAR || record.attributeList.get(index).type== DataTypes.CHAR){
-            System.out.println(constData);
             if((constData.charAt(0)=='\"' && constData.charAt(constData.length()-1)=='\"') || constData.equals("null")){
                 constData=constData.replace("\"","");
             } else {
                 System.out.println("Only Strings can be compared with String type.");
                 throw new Exception();
             }
-            System.out.println(constData);
-            System.out.println(constData.equals(recordData));
         }
 
         // Object.equals is indiscriminate towards types, would always return false
