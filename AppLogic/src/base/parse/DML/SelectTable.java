@@ -108,9 +108,10 @@ public class SelectTable {
             } else {
                 wherePart = command.substring(whereIndex + "WHERE".length(), orderIndex).trim();
             }
-             //String whereParts = command.substring(whereIndex + "FROM".length(), orderIndex).trim();
-             tableName = parseWhere(wherePart, tableName);
-
+            tableName = parseWhere(wherePart, tableName);
+            if(tableName.startsWith("_")){
+                tempTables.add(tableName);
+            }
          }
 
 
@@ -124,6 +125,9 @@ public class SelectTable {
             if (!orderByPart.isEmpty()) {
                 tableName = parseOrderBy(orderByPart, tableName);
             }
+            if(tableName.startsWith("_")){
+                tempTables.add(tableName);
+            }
         }
 
 
@@ -133,11 +137,13 @@ public class SelectTable {
 
         tableName = parseSelect(projectionPart, tableName);
 
+        if(tableName.startsWith("_")){
+            tempTables.add(tableName);
+        }
+
         //----------------------------------------
         // END OF SELECT, start of printing results
         // ---------------------------------------
-        System.out.println(tableName);
-        System.out.println("whereIndex: "+whereIndex);
 
         TableSchema finalTableSchema = DataCatalog.getInstance().getTableSchema(tableName);
 
