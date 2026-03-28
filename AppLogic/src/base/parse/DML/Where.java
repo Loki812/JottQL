@@ -124,7 +124,10 @@ public class Where {
             splitList = splitList.subList(whereIndex, splitList.size());
         }
         pieceList = new ArrayList<>(splitList);
-        pieceList.removeFirst();
+        if(whereIndex>=0){
+            pieceList.removeFirst();
+        }
+
 
 
         //Make a list of PrioritizedWherePieces
@@ -170,7 +173,7 @@ public class Where {
             pageId = page.nextPageId;
         }
 
-        System.out.println("Size of copied page: "+ bm.getPage(copy.rootPageID).getTotalRecordsSize());
+        //System.out.println("Size of copied page: "+ bm.getPage(copy.rootPageID).getTotalRecordsSize());
 
         return copy.tableName;
 
