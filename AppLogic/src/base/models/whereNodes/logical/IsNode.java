@@ -5,24 +5,24 @@ import base.models.TableSchema;
 import base.models.whereNodes.LogicNode;
 import base.models.whereNodes.WhereTreeNode;
 
-public class AndNode extends LogicNode {
+public class IsNode extends LogicNode {
 
-    public AndNode(){
+    private String columnName;
 
-    }
+    public IsNode(){}
 
-    public AndNode (WhereTreeNode left, WhereTreeNode right) {
+    public IsNode(WhereTreeNode left, WhereTreeNode right) {
         super(left, right);
     }
 
     @Override
     public boolean eval(Record record, TableSchema schema) {
-        return left.eval(record, schema) && right.eval(record, schema);
+        return (left).equals(right);
     }
 
     @Override
     public String toString() {
-        //return left + " AND " + right;
-        return " AND ";
+        //return left + " IS " + right;
+        return " IS ";
     }
 }

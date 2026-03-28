@@ -7,13 +7,13 @@ import base.models.whereNodes.ComparisonNode;
 
 import java.util.Objects;
 
-public class EqualsNode extends ComparisonNode {
+public class NotEqualsNode extends ComparisonNode {
 
-    public EqualsNode(){
+    public NotEqualsNode(){
 
     }
 
-    public EqualsNode(String columnName, Object constantValue) {
+    public NotEqualsNode(String columnName, Object constantValue) {
         super(columnName, constantValue);
     }
 
@@ -24,12 +24,12 @@ public class EqualsNode extends ComparisonNode {
 
         // Object.equals is indiscriminate towards types, would always return false
         // TODO add type checking between attribute schema datatype and constant value?
-        return Objects.equals(record.attributeList.get(index).data, constantValue);
+        return !(Objects.equals(record.attributeList.get(index).data, constantValue));
     }
 
     @Override
     public String toString() {
-        //return (columnName + " = " + constantValue);
-        return (" = ");
+        //return (columnName + " <> " + constantValue);
+        return (" <> ");
     }
 }

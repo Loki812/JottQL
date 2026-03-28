@@ -5,6 +5,7 @@ import base.parse.DDL.CreateTable;
 import base.parse.DDL.DropTable;
 import base.parse.DML.ParserHelpers.UpdateTable;
 import base.parse.DML.SelectTable;
+import base.parse.DML.DeleteRows;
 
 import java.io.File;
 
@@ -28,10 +29,18 @@ public class Main {
                 }
             }
             case "SELECT" -> {
-                try {
+//                try {
                     SelectTable.parse(command);
+//                }catch (Exception e){
+//                    System.err.println("Table Select Failed" + e);
+//                }
+            }
+            case "DELETE" -> {
+                try {
+                    DeleteRows.execute(command);
+                    System.out.println("Rows Deleted Successfully");
                 }catch (Exception e){
-                    System.err.println("Table Select Failed" + e);
+                    System.out.println("Rows Failed to Delete");
                 }
             }
             case "INSERT" -> {

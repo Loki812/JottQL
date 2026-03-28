@@ -33,7 +33,6 @@ public class CreateTable {
             DataCatalog dc = DataCatalog.getInstance();
             BufferManager bm = BufferManager.getInstance();
             dc.addTableSchema(ts);
-            bm.createNewPage(ts.rootPageID, ts.tableName);
 
         }else {
             System.out.println("Missing closing parentheses");
