@@ -43,7 +43,7 @@ public class GreaterThanEqualsNode extends ComparisonNode {
                 } else {
                     constData = (Double) constantValue;
                 }
-                return recordData <= constData;
+                return recordData >= constData;
             }
             case INTEGER -> {
                 Integer recordData;
