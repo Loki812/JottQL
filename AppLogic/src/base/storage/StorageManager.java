@@ -26,7 +26,7 @@ public class StorageManager {
      */
     private StorageManager(String directory) {
         try {
-            file = new RandomAccessFile(directory+"/storage.bin/", "rw");
+            file = new RandomAccessFile(directory+"/storage.bin", "rw");
             freePages = new ArrayList<>();
         } catch (FileNotFoundException e) {
             System.err.println("Database File could not be created or found:" + e);

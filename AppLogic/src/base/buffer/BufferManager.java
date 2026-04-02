@@ -288,7 +288,7 @@ public class BufferManager {
 
             page.addColumn(defaultValue);
 
-            if (page.getTotalRecordsSize() > pageSize) {
+            if (page.getPageSize() > pageSize) {
                 int originalNextPageId = page.nextPageId; // Save old id so we don't repeat the split pages
                 handlePageSplit(page, ts);
 

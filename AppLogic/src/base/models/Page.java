@@ -43,7 +43,7 @@ public class Page {
 
         // 2. Check if record fits in page
         int pageSize = DataCatalog.getInstance().getPageSize();
-        if (getTotalRecordsSize() + record.getSize() > pageSize) {
+        if (getPageSize() + record.getSize() > pageSize) {
             return InsertionResult.NEEDS_SPLIT;
         }
 
@@ -68,7 +68,7 @@ public class Page {
      */
     public InsertionResult tryInsertNoOrder(Record record, TableSchema schema) {
         int pageSize = DataCatalog.getInstance().getPageSize();
-        if (getTotalRecordsSize() + record.getSize() > pageSize) {
+        if (getPageSize() + record.getSize() > pageSize) {
             if (nextPageId == -1) {
                 return InsertionResult.NEEDS_SPLIT;
             }
@@ -145,8 +145,10 @@ public class Page {
      * calculates the pages size on the fly by accumulating the size of each record.
      * @return the total size of the page
      */
-    public int getTotalRecordsSize() {
+    public int getPageSize() {
         int accum = 0;
+        accum += Integer.BYTES * 3; // pageId nextPageID length of tableName
+        accum += tableName.length();
         for (Record r : recordList) {
             accum += r.getSize();
         }
