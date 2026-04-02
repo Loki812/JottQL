@@ -46,9 +46,9 @@ public class Cartesian {
         TableSchema.addTemp(newTable);
         //Block loop join them together
         Page table1page = buffer.getPage(table1Schema.rootPageID);
-        Page table2page = buffer.getPage(table2Schema.rootPageID);
         while(table1page != null) {
             ArrayList<Record> table1Records = new ArrayList<>(table1page.recordList);
+            Page table2page = buffer.getPage(table2Schema.rootPageID);
             while (table2page != null) {
                 ArrayList<Record> table2Records = new ArrayList<>(table2page.recordList);
                 for (Record record1 : table1Records) {
