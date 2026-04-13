@@ -335,75 +335,11 @@ public class BufferManager {
      * @throws IOException thrown from storage manager, since this is a private function we pass it up.
      */
     private Page readPageFromHardwareV2(int pageId) throws IOException {
-
-
         // get byte array from hardware
         byte[] encodedByteArray = storageManager.readPageV2(pageId);
-        ByteBuffer buffer = ByteBuffer.wrap(encodedByteArray);
 
-        // instantiate page with first few fields
-        int nextPageId = buffer.getInt();
-        int tableNameLength = buffer.getInt();
-        byte[] tableNameBytes = new byte[tableNameLength];
-        buffer.get(tableNameBytes);
-        int numOfRecords = buffer.getInt();
-
-        String tableName = new String(tableNameBytes, StandardCharsets.UTF_8);
-        Page p = new Page(pageId, tableName);
-        p.nextPageId = nextPageId;
-
-        ArrayList<AttributeSchema> attributes = new ArrayList<>(dataCatalog.getTableSchema(tableName)
-                .getAttributeSchemas().sequencedValues());
-
-        // process records until buffer is empty
-        for (int i = 0; i < numOfRecords; i++) {
-            Record record = convertBytesToRecordV2(buffer, attributes);
-            p.recordList.add(record);
-        }
-
-        return p;
+        return new Page(pageId, encodedByteArray);
     }
-
-    /**
-     * An Updated Version of convertBytesToRecord that takes in a ByteBuffer instead of a
-     * byte array. Greater performance and readability gains.
-     *
-     *
-     * @param buffer A bytebuffer assumed to be at the start of the record. passed only by convertBytesToPage
-     * @param attributes the list of attributes for the tableSchema
-     * @return a record object
-     */
-    private static Record convertBytesToRecordV2(ByteBuffer buffer, ArrayList<AttributeSchema> attributes) {
-
-        Record record = new Record();
-
-        byte[] nullByteArray = new byte[attributes.size()];
-        buffer.get(nullByteArray); // advances pointer and loads values into nullByte array
-
-        for (int i = 0; i < nullByteArray.length; i++) {
-            DataTypes d = attributes.get(i).getDataType();
-
-            if (nullByteArray[i] == 1) {
-                // if null set data field to null
-                record.attributeList.add(new AttributeValue<>(null, d));
-            } else {
-                Object value = switch(d) {
-                    case INTEGER -> buffer.getInt();
-                    case DOUBLE -> buffer.getDouble();
-                    case BOOLEAN -> buffer.get() == 1;
-                    case CHAR, VARCHAR -> {
-                        int len = buffer.getInt();
-                        byte[] sBytes = new byte[len];
-                        buffer.get(sBytes);
-                        yield new String(sBytes, StandardCharsets.UTF_8);
-                    }
-                };
-                record.attributeList.add(new AttributeValue<>(value, d));
-            }
-        }
-        return record;
-    }
-
 
     /**
      * Writes a page to disk, features readability and performance improvements from V1.
@@ -417,29 +353,9 @@ public class BufferManager {
         if(!page.hasBeenModified && secondsActive > 5){
             return;
         }
-        ByteBuffer byteBuffer = ByteBuffer.allocate(dataCatalog.getPageSize());
-
-
         try {
-            byteBuffer.putInt(page.nextPageId);
-            byte[] tableNameBytes = page.tableName.getBytes(StandardCharsets.UTF_8);
-            byteBuffer.putInt(tableNameBytes.length);
-            byteBuffer.put(tableNameBytes);
-
-            // put in number of records, used for reading from hardware for loop counter
-            byteBuffer.putInt(page.recordList.size());
-
-            ArrayList<AttributeSchema> attributes = new ArrayList<>(dataCatalog.getTableSchema(page.tableName)
-                    .getAttributeSchemas().sequencedValues());
-
-            for (Record r : page.recordList) {
-                convertRecordToBytesV2(r, attributes, byteBuffer);
-            }
-
-            byteBuffer.flip(); // resets position, clips length. prepares for it to be sent to storage manager
+            ByteBuffer byteBuffer = page.toBytes();
             storageManager.writePage(page.pageId, byteBuffer);
-
-
         } catch (IOException e) {
             System.err.println("Error occurred while attempting to write page " + page.pageId + " to disk...");
             throw new RuntimeException(e);
@@ -447,45 +363,6 @@ public class BufferManager {
 
     }
 
-    /**
-     * Converts a Record object to bytes, to later be written to disk.
-     *
-     * @param r the record we wish to convert to bytes
-     * @param attributes the list of attributes, and their corresponding DataTypes
-     * @param buffer the bytebuffer, at a position ready for the record data to be written
-     */
-    private static void convertRecordToBytesV2(Record r, ArrayList<AttributeSchema> attributes, ByteBuffer buffer) {
-        // write null bit array into buffer
-        for (AttributeValue<?> a : r.attributeList) {
-            if (a.data == null) {
-                buffer.put((byte) 1);
-            } else {
-                buffer.put((byte) 0);
-            }
-        }
-
-        for (int i = 0; i < attributes.size(); i++) {
-            Object value = r.attributeList.get(i).data;
-            if (value != null) {
-                DataTypes dataType = attributes.get(i).getDataType();
-                switch (dataType) {
-                    case INTEGER -> buffer.putInt((int) value);
-                    case DOUBLE -> buffer.putDouble((double) value);
-                    // in-case value is Boolean and not boolean, haven't checked full codebase
-                    case BOOLEAN -> buffer.put((byte) ((boolean) value ? 1 : 0));
-                    case CHAR, VARCHAR -> {
-                        String s = (String) value;
-
-                        byte[] strBytes = s.getBytes(StandardCharsets.UTF_8);
-                        // write the length of value
-                        buffer.putInt(strBytes.length);
-
-                        buffer.put(strBytes);
-                    }
-                }
-            }
-        }
-    }
 
 
     /**

@@ -1,8 +1,10 @@
 package base.models.concrete;
 
+import base.models.schemas.AttributeSchema;
 import base.models.schemas.DataTypes;
 import base.models.schemas.TableSchema;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
@@ -11,6 +13,79 @@ public class Record {
 
     public Record(){
         this.attributeList = new ArrayList<>();
+    }
+
+    /**
+     * Constructor used when converting to and from byte arrays.
+     * Takes a ByteBuffer, is not expected to utilize the whole thing.
+     *
+     * @param buffer the bytebuffer containing binary information on the record
+     * @param attributes the attributes of the corresponding table
+     */
+    public Record(ByteBuffer buffer, ArrayList<AttributeSchema> attributes) {
+        byte[] nullByteArray = new byte[attributes.size()];
+        buffer.get(nullByteArray); // advances pointer and loads values into nullByte array
+
+        this.attributeList = new ArrayList<>();
+
+        for (int i = 0; i < nullByteArray.length; i++) {
+            DataTypes d = attributes.get(i).getDataType();
+
+            if (nullByteArray[i] == 1) {
+                // if null set data field to null
+                this.attributeList.add(new AttributeValue<>(null, d));
+            } else {
+                Object value = switch(d) {
+                    case INTEGER -> buffer.getInt();
+                    case DOUBLE -> buffer.getDouble();
+                    case BOOLEAN -> buffer.get() == 1;
+                    case CHAR, VARCHAR -> {
+                        int len = buffer.getInt();
+                        byte[] sBytes = new byte[len];
+                        buffer.get(sBytes);
+                        yield new String(sBytes, StandardCharsets.UTF_8);
+                    }
+                };
+                this.attributeList.add(new AttributeValue<>(value, d));
+            }
+        }
+    }
+
+    /**
+     * Writes the record to the byte buffer in binary
+     * @param byteBuffer the given byteBuffer
+     * @param attributeSchemas the given attributes
+     */
+    public void toBytes(ByteBuffer byteBuffer, ArrayList<AttributeSchema> attributeSchemas) {
+        for (AttributeValue<?> a : this.attributeList) {
+            if (a.data == null) {
+                byteBuffer.put((byte) 1);
+            } else {
+                byteBuffer.put((byte) 0);
+            }
+        }
+
+        for (int i = 0; i < attributeSchemas.size(); i++) {
+            Object value = this.attributeList.get(i).data;
+            if (value != null) {
+                DataTypes dataType = attributeSchemas.get(i).getDataType();
+                switch (dataType) {
+                    case INTEGER -> byteBuffer.putInt((int) value);
+                    case DOUBLE -> byteBuffer.putDouble((double) value);
+                    // in-case value is Boolean and not boolean, haven't checked full codebase
+                    case BOOLEAN -> byteBuffer.put((byte) ((boolean) value ? 1 : 0));
+                    case CHAR, VARCHAR -> {
+                        String s = (String) value;
+
+                        byte[] strBytes = s.getBytes(StandardCharsets.UTF_8);
+                        // write the length of value
+                        byteBuffer.putInt(strBytes.length);
+                        byteBuffer.put(strBytes);
+
+                    }
+                }
+            }
+        }
     }
 
     /**
