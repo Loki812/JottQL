@@ -2,7 +2,10 @@ package base.parse.DML;
 
 import base.buffer.BufferManager;
 import base.models.*;
-import base.models.Record;
+import base.models.concrete.Record;
+import base.models.concrete.Page;
+import base.models.schemas.AttributeSchema;
+import base.models.schemas.TableSchema;
 import base.models.whereNodes.ComparisonNode;
 import base.models.whereNodes.ValueTreeNode;
 import base.models.whereNodes.WhereTreeNode;
@@ -14,8 +17,6 @@ import base.models.whereNodes.logical.OrNode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import static base.parse.DML.Where.buildWhereTree;
 
 public class Where {
 

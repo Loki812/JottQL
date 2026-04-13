@@ -1,6 +1,6 @@
 import base.buffer.BufferManager;
 import base.models.DataCatalog;
-import base.models.TableSchema;
+import base.models.schemas.TableSchema;
 import base.parse.DDL.AtlerTable;
 import base.parse.DDL.CreateTable;
 import base.parse.DDL.DropTable;

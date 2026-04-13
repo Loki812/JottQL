@@ -1,7 +1,8 @@
-package base.models;
+package base.models.schemas;
 
 
 import base.buffer.BufferManager;
+import base.models.DataCatalog;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -9,10 +10,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.Random;
 
 
-import static base.models.AttributeSchema.createAttributeSchemaFromQuery;
+import static base.models.schemas.AttributeSchema.createAttributeSchemaFromQuery;
 
 
 public class TableSchema {

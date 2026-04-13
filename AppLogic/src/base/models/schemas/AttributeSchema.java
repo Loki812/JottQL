@@ -1,4 +1,4 @@
-package base.models;
+package base.models.schemas;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;

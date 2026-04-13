@@ -1,11 +1,5 @@
 package base.parse.DDL;
 import base.buffer.BufferManager;
-import base.models.DataCatalog;
-import base.models.Page;
-import base.models.TableSchema;
-
-import java.util.ArrayList;
-import java.util.Arrays;
 
 public class DropTable {
     public static void execute(String command) throws Exception {

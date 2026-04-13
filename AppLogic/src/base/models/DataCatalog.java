@@ -1,9 +1,10 @@
 package base.models;
 import base.buffer.BufferManager;
+import base.models.concrete.Page;
+import base.models.schemas.TableSchema;
 
 import java.io.*;
 import java.util.*;
-import java.nio.file.*;
 
 public class DataCatalog {
 

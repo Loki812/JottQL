@@ -1,4 +1,7 @@
-package base.models;
+package base.models.concrete;
+
+import base.models.schemas.DataTypes;
+import base.models.schemas.TableSchema;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;

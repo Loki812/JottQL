@@ -1,4 +1,8 @@
-package base.models;
+package base.models.concrete;
+
+import base.models.DataCatalog;
+import base.models.schemas.InsertionResult;
+import base.models.schemas.TableSchema;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;

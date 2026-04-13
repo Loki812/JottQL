@@ -1,13 +1,10 @@
 package base.parse.DDL;
 
 import base.buffer.BufferManager;
-import base.models.AttributeSchema;
-import base.models.AttributeValue;
+import base.models.schemas.AttributeSchema;
+import base.models.concrete.AttributeValue;
 import base.models.DataCatalog;
-import base.models.TableSchema;
-
-import java.util.ArrayList;
-import java.util.Arrays;
+import base.models.schemas.TableSchema;
 
 public class AtlerTable {
     public static void execute(String command) throws Exception {

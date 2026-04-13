@@ -1,7 +1,7 @@
 package base.parse.DDL;
 import base.buffer.BufferManager;
 import base.models.DataCatalog;
-import base.models.TableSchema;
+import base.models.schemas.TableSchema;
 
 import java.util.ArrayList;
 import java.util.Arrays;

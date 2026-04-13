@@ -1,4 +1,6 @@
-package base.models;
+package base.models.concrete;
+
+import base.models.schemas.DataTypes;
 
 public class AttributeValue<T> {
     public T data;

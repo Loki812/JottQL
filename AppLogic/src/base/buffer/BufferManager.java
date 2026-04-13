@@ -8,7 +8,13 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 
-import base.models.Record;
+import base.models.concrete.Record;
+import base.models.concrete.AttributeValue;
+import base.models.concrete.Page;
+import base.models.schemas.AttributeSchema;
+import base.models.schemas.DataTypes;
+import base.models.schemas.InsertionResult;
+import base.models.schemas.TableSchema;
 import base.storage.StorageManager;
 
 public class BufferManager {
@@ -17,7 +23,7 @@ public class BufferManager {
 
     // singleton variables
     private final int maxPageCount;
-    private final HashMap<Integer,Page> buffer;
+    private final HashMap<Integer, Page> buffer;
     private final StorageManager storageManager;
 
 

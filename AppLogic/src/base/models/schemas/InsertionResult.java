@@ -1,4 +1,4 @@
-package base.models;
+package base.models.schemas;
 
 public enum InsertionResult {
     SUCCESS,
