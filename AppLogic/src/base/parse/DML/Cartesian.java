@@ -47,10 +47,10 @@ public class Cartesian {
         catalog.addTableSchema(newTableSchema);
         TableSchema.addTemp(newTable);
         //Block loop join them together
-        Page table1page = buffer.getPage(table1Schema.rootPageID);
+        Page table1page = (Page) buffer.getPageV2(table1Schema.rootPageID);
         while(table1page != null) {
             ArrayList<Record> table1Records = new ArrayList<>(table1page.recordList);
-            Page table2page = buffer.getPage(table2Schema.rootPageID);
+            Page table2page = (Page) buffer.getPageV2(table2Schema.rootPageID);
             while (table2page != null) {
                 ArrayList<Record> table2Records = new ArrayList<>(table2page.recordList);
                 for (Record record1 : table1Records) {
@@ -62,9 +62,9 @@ public class Cartesian {
                         buffer.insertRecordIntoTableNoOrder(newTable, newRecord);
                     }
                 }
-                table2page = buffer.getPage(table2page.nextPageId);
+                table2page = (Page) buffer.getPageV2(table2page.nextPageId);
             }
-            table1page = buffer.getPage(table1page.nextPageId);
+            table1page = (Page) buffer.getPageV2(table1page.nextPageId);
         }
         //if doing multiple joins clean up extra tables
         if(table1.startsWith("_TEMP_")){

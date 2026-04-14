@@ -305,7 +305,7 @@ public class InsertTable {
 
             try {
 
-                Page p = bm.getPage(tableSchema.getRootPageID());
+                Page p = (Page) bm.getPageV2(tableSchema.getRootPageID());
                 if (p == null) {
                     System.out.println("Inconsistent Database Cannot recover");
                     System.exit(0);

@@ -144,7 +144,7 @@ public class UpdateTable {
         int pageId = tableSchema.getRootPageID();
 
         while (pageId != -1) {
-            Page page = bufferManager.getPage(pageId);
+            Page page = (Page) bufferManager.getPageV2(pageId);
 
             for (Record record : page.recordList) {
 

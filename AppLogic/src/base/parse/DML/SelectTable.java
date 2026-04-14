@@ -128,7 +128,7 @@ public class SelectTable {
         );
 
         while (true) {
-            Page p = BufferManager.getInstance().getPage(pageId);
+            Page p = (Page) BufferManager.getInstance().getPageV2(pageId);
 
             if (p == null) {
                 System.err.println("Error: page " + pageId + " could not be loaded.");
@@ -255,11 +255,11 @@ public class SelectTable {
         // with the given selected column indices, make a temp copy table
 
         TableSchema copy = tableSchema.makeTempCopy(selectedIndices);
-        bm.createNewPage(copy.rootPageID, copy.tableName);
+        bm.createNewDataPage(copy.rootPageID, copy.tableName);
         // take all records from original table and make copies of the records
         int pageID = tableSchema.getRootPageID();
         while (pageID != -1) {
-            Page p = bm.getPage(pageID);
+            Page p = (Page) bm.getPageV2(pageID);
 
 
             for (Record r : p.recordList) {
