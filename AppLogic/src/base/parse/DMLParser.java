@@ -1,12 +1,9 @@
 package base.parse;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import base.models.AttributeValue;
-import base.models.DataTypes;
-import base.models.Record;
+import base.models.concrete.Record;
 
 public class DMLParser {
 

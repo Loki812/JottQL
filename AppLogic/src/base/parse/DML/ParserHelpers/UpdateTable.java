@@ -1,15 +1,15 @@
 package base.parse.DML.ParserHelpers;
 
 import base.buffer.BufferManager;
-import base.models.AttributeSchema;
-import base.models.AttributeValue;
+import base.models.schemas.AttributeSchema;
+import base.models.concrete.AttributeValue;
 import base.models.DataCatalog;
-import base.models.DataTypes;
-import base.models.Page;
-import base.models.Record;
-import base.models.TableSchema;
+import base.models.schemas.DataTypes;
+import base.models.concrete.Page;
+import base.models.concrete.Record;
+import base.models.schemas.TableSchema;
 import base.models.whereNodes.WhereTreeNode;
-import base.parse.DDL.DropTable;
+
 import static base.parse.DML.Where.buildWhereTree;
 import java.util.ArrayList;
 

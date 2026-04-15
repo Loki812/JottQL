@@ -1,7 +1,7 @@
 package base.models.whereNodes.logical;
 
-import base.models.Record;
-import base.models.TableSchema;
+import base.models.concrete.Record;
+import base.models.schemas.TableSchema;
 import base.models.whereNodes.LogicNode;
 import base.models.whereNodes.WhereTreeNode;
 

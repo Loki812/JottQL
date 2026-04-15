@@ -1,8 +1,8 @@
 package base.models.whereNodes.comparison;
 
-import base.models.AttributeSchema;
-import base.models.Record;
-import base.models.TableSchema;
+import base.models.schemas.AttributeSchema;
+import base.models.concrete.Record;
+import base.models.schemas.TableSchema;
 import base.models.whereNodes.ComparisonNode;
 
 public class GreaterThanNode extends ComparisonNode {

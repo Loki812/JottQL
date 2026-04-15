@@ -1,9 +1,16 @@
-package base.models;
+package base.models.concrete;
 
+import base.models.DataCatalog;
+import base.models.schemas.AttributeSchema;
+import base.models.schemas.InsertionResult;
+import base.models.schemas.TableSchema;
+
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
-public class Page {
+public class Page implements Ipage {
 
     public String tableName;
     public int pageId;
@@ -12,6 +19,11 @@ public class Page {
     public LocalDateTime timestamp;
     public ArrayList<Record> recordList;
 
+    /**
+     * Basic constructor for when creating a new page, no records added
+     * @param pageId the id of the page
+     * @param tableName the name of the table it is associated with
+     */
     public Page(int pageId, String tableName){
         this.pageId = pageId;
         this.tableName = tableName;
@@ -21,6 +33,74 @@ public class Page {
         recordList = new ArrayList<>();
     }
 
+    /**
+     * Given a byte array, converts the byte array into an instantiated java object.
+     * NOTE: Assumes the byte array received is a DataPage. If it is an index page,
+     * will result in junk data without an error being thrown
+     *
+     * @param pageId the id of the page you are grabbing
+     * @param bytes the byte array containing binary information on the page
+     */
+    public Page(int pageId, byte[] bytes) {
+
+        DataCatalog dc = DataCatalog.getInstance();
+        ByteBuffer buffer = ByteBuffer.wrap(bytes);
+
+        // need to pass the DATA_PAGE_IND in header, we don't need it
+        // already inside of Data Page Constructor
+        buffer.getInt();
+
+        // initialize main fields
+        this.pageId = pageId;
+        this.nextPageId = buffer.getInt();
+        this.hasBeenModified = false;
+        this.timestamp = LocalDateTime.now();
+        this.recordList = new ArrayList<>();
+
+        int tableNameLength = buffer.getInt();
+        byte[] tableNameBytes = new byte[tableNameLength];
+        buffer.get(tableNameBytes);
+        int numOfRecords = buffer.getInt();
+
+        this.tableName = new String(tableNameBytes, StandardCharsets.UTF_8);
+
+        ArrayList<AttributeSchema> attributes = new ArrayList<>(dc.getTableSchema(tableName)
+                .getAttributeSchemas().sequencedValues());
+
+        // add the records to the page object
+        for (int i = 0; i < numOfRecords; i++) {
+            Record record = new Record(buffer, attributes);
+            this.recordList.add(record);
+        }
+    }
+
+
+    public ByteBuffer toBytes() {
+
+        DataCatalog dc = DataCatalog.getInstance();
+
+        ByteBuffer byteBuffer = ByteBuffer.allocate(dc.getPageSize());
+
+        byteBuffer.putInt(DATA_PAGE_IND); // LETS US KNOW WHEN READING PAGE THAT IT IS A DATA PAGE
+
+        byteBuffer.putInt(this.nextPageId);
+        byte[] tableNameBytes = this.tableName.getBytes(StandardCharsets.UTF_8);
+        byteBuffer.putInt(tableNameBytes.length);
+        byteBuffer.put(tableNameBytes);
+
+        // put in number of records, used for reading from hardware for loop counter
+        byteBuffer.putInt(this.recordList.size());
+
+        ArrayList<AttributeSchema> attributes = new ArrayList<>(dc.getTableSchema(this.tableName)
+                .getAttributeSchemas().sequencedValues());
+
+        for (Record r : this.recordList) {
+            r.toBytes(byteBuffer, attributes);
+        }
+
+        byteBuffer.flip(); // resets position, clips length. prepares for it to be sent to storage manager
+        return byteBuffer;
+    }
 
     /**
      * tryInsert attempts to insert the record into the given page.
@@ -147,7 +227,7 @@ public class Page {
      */
     public int getPageSize() {
         int accum = 0;
-        accum += Integer.BYTES * 3; // pageId nextPageID length of tableName
+        accum += Integer.BYTES * 4; // pageTypeIndicator, pageId, nextPageID, length of tableName
         accum += tableName.length();
         for (Record r : recordList) {
             accum += r.getSize();

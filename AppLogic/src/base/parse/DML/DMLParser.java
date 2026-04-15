@@ -1,7 +1,6 @@
 package base.parse.DML;
 
-import base.models.AttributeValue;
-import base.models.Record;
+import base.models.concrete.Record;
 
 import java.util.ArrayList;
 import java.util.List;

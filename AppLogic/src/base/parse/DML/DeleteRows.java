@@ -2,11 +2,10 @@ package base.parse.DML;
 
 import base.buffer.BufferManager;
 import base.models.DataCatalog;
-import base.models.Page;
-import base.models.Record;
-import base.models.TableSchema;
+import base.models.concrete.Page;
+import base.models.concrete.Record;
+import base.models.schemas.TableSchema;
 import base.models.whereNodes.WhereTreeNode;
-import base.parse.DDL.DropTable;
 
 import java.util.ArrayList;
 

@@ -2,8 +2,10 @@ package base.parse.DML;
 
 import base.buffer.BufferManager;
 import base.models.*;
-import base.models.Record;
-import base.parse.DDL.DropTable;
+import base.models.concrete.Record;
+import base.models.concrete.Page;
+import base.models.schemas.AttributeSchema;
+import base.models.schemas.TableSchema;
 
 import java.util.ArrayList;
 
