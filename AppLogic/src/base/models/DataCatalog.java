@@ -19,6 +19,8 @@ public class DataCatalog {
     private int nextAvailablePageID; //  if free list is empty, use this offset
     private static ArrayList<Integer> freePageList; // List of free page IDs within the DB
     private Map<String, TableSchema> tables;
+    private int indexCount;
+    private Map<String, IndexSchema> indexes;
 
 
     private DataCatalog() {}
@@ -66,6 +68,8 @@ public class DataCatalog {
             catalog.nextAvailablePageID = 0;
             catalog.freePageList = new ArrayList<>();
             catalog.tables = new HashMap<String, TableSchema>();
+            catalog.indexCount = 0;
+            catalog.indexes = new HashMap<String, IndexSchema>();
             saveToDisk();
 
 
@@ -87,6 +91,7 @@ public class DataCatalog {
         }
         catalog.pageSize = in.readInt();
         catalog.tableCount = in.readInt();
+        catalog.indexCount = in.readInt();
         catalog.nextAvailablePageID = in.readInt();
 
         freePageList = new ArrayList<>();
@@ -99,6 +104,13 @@ public class DataCatalog {
         for (int i = 0; i < catalog.tableCount; i++) {
             TableSchema ts = TableSchema.createTableSchemaFromDisk(in);
             catalog.tables.put(ts.tableName, ts);
+        }
+
+        catalog.indexes = new HashMap<String, IndexSchema>();
+        for (int i = 0; i < catalog.indexCount; i++) {
+            IndexSchema idx = IndexSchema.createIndexSchemaFromDisk(in);
+            String key = idx.tableName + "." + idx.columnName;
+            catalog.indexes.put(key, idx);
         }
 
     }
@@ -116,6 +128,7 @@ public class DataCatalog {
             out.writeInt(catalog.MAGIC_NUMBER);
             out.writeInt(catalog.pageSize);
             out.writeInt(catalog.tableCount);
+            out.writeInt(catalog.indexCount);
             out.writeInt(catalog.nextAvailablePageID);
             out.writeInt(freePageList.size());
 
@@ -125,6 +138,10 @@ public class DataCatalog {
 
             for (TableSchema t : catalog.tables.values()) {
                 t.saveTableSchemaToDisk(out);
+            }
+
+            for (IndexSchema i : catalog.indexes.values()) {
+                i.saveIndexSchemaToDisk(out);
             }
 
 
@@ -142,6 +159,10 @@ public class DataCatalog {
     public TableSchema getTableSchema(String tableName) {
         return catalog.tables.get(tableName);
     }
+    public IndexSchema getIndexSchema(String tableName, String columnName) {
+        String key = tableName + "." + columnName;
+        return catalog.indexes.get(key);
+    }
 
     /**
      * removes a tableschema from the database
@@ -151,6 +172,13 @@ public class DataCatalog {
     public void removeTableSchema(String tableName) {
         catalog.tableCount -= 1;
         catalog.tables.remove(tableName);
+    }
+
+    public void removeIndexSchema(String tableName, String columnName) {
+        String key = tableName + "." + columnName;
+        if (catalog.indexes.remove(key) != null) {
+            catalog.indexCount -= 1;
+        }
     }
 
     /**
@@ -168,6 +196,32 @@ public class DataCatalog {
         catalog.tables.put(schema.tableName, schema);
         bufferManager.createNewPage(schema.rootPageID, schema.tableName);
         catalog.tableCount += 1;
+    }
+
+    public void addIndexSchema(IndexSchema schema) throws Exception {
+
+        BufferManager bufferManager = BufferManager.getInstance();
+
+        String key = schema.tableName + "." + schema.columnName;
+
+        if (catalog.indexes.containsKey(key)) {
+            System.out.println("Index already exists: " + key);
+            throw new Exception();
+        }
+
+        schema.rootPageID = getNextAvailablePageID();
+
+        catalog.indexes.put(key, schema);
+
+        String indexTableName =
+                schema.tableName + "_idx_" + schema.columnName;
+
+        bufferManager.createNewPage(
+                schema.rootPageID,
+                indexTableName
+        );
+
+        catalog.indexCount += 1;
     }
 
     /**
