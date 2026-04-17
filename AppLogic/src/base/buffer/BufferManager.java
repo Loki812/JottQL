@@ -3,16 +3,12 @@ import base.models.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import base.models.concrete.*;
 import base.models.concrete.Record;
-import base.models.concrete.AttributeValue;
-import base.models.concrete.Page;
-import base.models.schemas.AttributeSchema;
-import base.models.schemas.DataTypes;
 import base.models.schemas.InsertionResult;
 import base.models.schemas.TableSchema;
 import base.storage.StorageManager;
@@ -23,7 +19,7 @@ public class BufferManager {
 
     // singleton variables
     private final int maxPageCount;
-    private final HashMap<Integer, Page> buffer;
+    private final HashMap<Integer, Ipage> buffer;
     private final StorageManager storageManager;
 
 
@@ -72,8 +68,10 @@ public class BufferManager {
         return instance;
     }
 
-
     /**
+     * Updates in V2: Returns a Ipage instead of a normal page, requires casting
+     * via (DataPage) or (IndexPage) after call.
+     *
      * getPage first checks if the id is valid, -1 indicating that it is invalid.
      * after it checks if the page is in the buffer.
      * if it is not in the buffer, it ejects a page from the buffer, before reading
@@ -82,30 +80,49 @@ public class BufferManager {
      * @param pageId the ID of the page
      * @return A Page Object with the given id, or null dependent on ID
      */
-    public Page getPage(int pageId){
-        if(pageId==-1){
+    public Ipage getPageV2(int pageId) {
+        if(pageId == -1) {
             return null;
         }
 
-        if(buffer.containsKey(pageId)){
-            Page page = buffer.get(pageId);
-            page.timestamp = LocalDateTime.now();
+        if(buffer.containsKey(pageId)) {
+            Ipage page = buffer.get(pageId);
+            page.setTimeStamp(LocalDateTime.now());
             return page;
         }
 
-        // Page not in buffer, fetch from disk.
+        // Page not in buffer, fetch from disk
         try{
             flushOldestIfNeeded();
-            Page decodedPage = readPageFromHardwareV2(pageId);
-            buffer.put(decodedPage.pageId, decodedPage);
-            decodedPage.timestamp = LocalDateTime.now();
+            Ipage decodedPage = readPageFromHardwareV3(pageId);
+            buffer.put(pageId, decodedPage);
+            decodedPage.setTimeStamp(LocalDateTime.now());
             return decodedPage;
-        } catch (IOException e){
-            System.err.println("Inconsistent Database");
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
     }
+
+    /**
+     * Creates a new index page, calls flushOldestFromBuffer to check if space is needed
+     *
+     * @param pageId the id of the new page
+     * @param tableName the name of the related table
+     * @param parentPageId the id of the parent to the page in the B+ tree
+     */
+    public void createNewIndexPage(int pageId, String tableName, int parentPageId) {
+        try {
+            flushOldestIfNeeded();
+            IndexPage indexPage = new IndexPage(pageId, tableName, parentPageId);
+            buffer.put(pageId, indexPage);
+
+            writePageToHardwareV2(indexPage);
+        } catch (Exception e) {
+            System.err.println("Failed to create new page");
+            throw new RuntimeException(e);
+        }
+    }
+
 
     /**
      * createNewPage first checks if there is space in the buffer.
@@ -113,15 +130,13 @@ public class BufferManager {
      *
      * @param id the id of the new table
      * @param tableName the name of table this page belongs to
-     * @return the newly created page object
+     * @return the newly created data page object
      */
-    public  void createNewPage(int id, String tableName)  {
+    public  void createNewDataPage(int id, String tableName)  {
         try {
             flushOldestIfNeeded();
             Page page = new Page(id, tableName);
             buffer.put(page.pageId, page);
-
-            // immediately write a blank page for edge case.
             writePageToHardwareV2(page);
         } catch (Exception e) {
             System.err.println("Failed to create page");
@@ -137,10 +152,10 @@ public class BufferManager {
      */
     public void flushOldestIfNeeded() {
         if (buffer.size()>= maxPageCount){
-            Page oldestPage = Collections.min(buffer.values(), Comparator.comparing(p -> p.timestamp));
+            Ipage oldestPage = Collections.min(buffer.values(), Comparator.comparing(Ipage::getTimeStamp));
             try {
                 writePageToHardwareV2(oldestPage);
-                buffer.remove(oldestPage.pageId);
+                buffer.remove(oldestPage.getPageId());
             } catch (Exception e) {
                 System.err.println("Failed to flush page from Buffer");
                 throw new RuntimeException(e);
@@ -154,11 +169,11 @@ public class BufferManager {
      * pages in the dataBase back to the disk.
      */
     public void flushBuffer() {
-        for(Page p : buffer.values()){
+        for(Ipage p : buffer.values()){
             try {
                 writePageToHardwareV2(p);
             } catch (Exception e) {
-                System.err.println("Failed to flush page id=" + p.pageId + " from Buffer");
+                System.err.println("Failed to flush page id=" + p.getPageId() + " from Buffer");
                 throw new RuntimeException(e);
             }
 
@@ -174,12 +189,13 @@ public class BufferManager {
      * @param record the given record you are inserting
      */
     public void insertRecordIntoTable(String tableName, Record record) {
+        // TODO work will need to be done here to handle indexs
         TableSchema ts = dataCatalog.getTableSchema(tableName);
 
         int currentPageId = ts.getRootPageID();
 
         while (currentPageId != -1) {
-            Page page = getPage(currentPageId);
+            Page page = (Page) getPageV2(currentPageId);
 
             InsertionResult result = page.tryInsert(record, ts, false);
             switch (result) {
@@ -202,7 +218,7 @@ public class BufferManager {
         int currentPageId = ts.getRootPageID();
 
         while (currentPageId != -1) {
-            Page page = getPage(currentPageId);
+            Page page = (Page) getPageV2(currentPageId);
 
             InsertionResult result = page.tryInsertNoOrder(record, ts);
             switch (result) {
@@ -219,8 +235,8 @@ public class BufferManager {
                     // make new empty page and insert record at end
                     int newId = dataCatalog.getNextAvailablePageID();
                     page.nextPageId = newId;
-                    createNewPage(newId, ts.tableName);
-                    Page newPage = getPage(newId);
+                    createNewDataPage(newId, ts.tableName);
+                    Page newPage = (Page) getPageV2(newId);
                     // do not need to see results, will always return
                     // SUCCESS due to page being empty it will always fit
                     newPage.tryInsertNoOrder(record, ts);
@@ -236,7 +252,7 @@ public class BufferManager {
         int currentPageId = ts.getRootPageID();
 
         while (currentPageId != -1) {
-            Page page = getPage(currentPageId);
+            Page page = (Page) getPageV2(currentPageId);
 
             InsertionResult result = page.tryInsert(record, ts, true);
             switch (result) {
@@ -266,7 +282,7 @@ public class BufferManager {
 
         //Remove pages of table
         while (pageId != -1) {
-            Page p = getPage(pageId);
+            Page p = (Page) getPageV2(pageId);
             int nextPageId = p.nextPageId;
 
             buffer.remove(pageId);
@@ -275,6 +291,10 @@ public class BufferManager {
         }
         //remove tableSchema from DataCatalog
         DataCatalog.getInstance().removeTableSchema(tableName);
+    }
+
+    public void deleteIndex(String tableName) throws IOException {
+        // TODO
     }
 
     /**
@@ -290,7 +310,7 @@ public class BufferManager {
 
         int pageId = ts.getRootPageID();
         while (pageId != -1) {
-            Page page = getPage(pageId);
+            Page page = (Page) getPageV2(pageId);
 
             page.addColumn(defaultValue);
 
@@ -318,13 +338,15 @@ public class BufferManager {
 
         int pageId = ts.rootPageID;
         while (pageId != -1) {
-            Page page = getPage(pageId);
+            Page page = (Page) getPageV2(pageId);
             page.deleteColumn(attributeIndex);
             pageId = page.nextPageId;
         }
     }
 
     /**
+     * Updates in V3: utilizes Ipage instead of Page, to create common code for
+     * reading index pages and data pages
      * An updated version of readPageFromHardWare utilizing ByteBuffer functionality and cutting
      * out unnecessary calls to Array.CopyOfRange()
      * Better performance and readability.
@@ -334,35 +356,34 @@ public class BufferManager {
      * @return a page object read from disk
      * @throws IOException thrown from storage manager, since this is a private function we pass it up.
      */
-    private Page readPageFromHardwareV2(int pageId) throws IOException {
-        // get byte array from hardware
+    private Ipage readPageFromHardwareV3(int pageId) throws IOException {
         byte[] encodedByteArray = storageManager.readPageV2(pageId);
 
-        return new Page(pageId, encodedByteArray);
+        return PageFactory.fromBytes(pageId, encodedByteArray);
     }
 
     /**
+     * Updated to take Ipage
      * Writes a page to disk, features readability and performance improvements from V1.
      *
      * @param page The page object we wish to write to disk
      */
-    private void writePageToHardwareV2(Page page) {
+    private void writePageToHardwareV2(Ipage page) {
         //prevent a page from writing if it has not been modified
         // need to add if table was recently touched as well with timestamp. for initial disk allocation.
-        long secondsActive = Duration.between(page.timestamp, java.time.LocalDateTime.now()).getSeconds();
-        if(!page.hasBeenModified && secondsActive > 5){
+        long secondsActive = Duration.between(page.getTimeStamp(), java.time.LocalDateTime.now()).getSeconds();
+        if(!page.getHasBeenModified() && secondsActive > 5){
             return;
         }
         try {
             ByteBuffer byteBuffer = page.toBytes();
-            storageManager.writePage(page.pageId, byteBuffer);
+            storageManager.writePage(page.getPageId(), byteBuffer);
         } catch (IOException e) {
-            System.err.println("Error occurred while attempting to write page " + page.pageId + " to disk...");
+            System.err.println("Error occurred while attempting to write page " + page.getPageId() + " to disk...");
             throw new RuntimeException(e);
         }
 
     }
-
 
 
     /**

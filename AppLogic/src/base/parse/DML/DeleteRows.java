@@ -77,7 +77,7 @@ public class DeleteRows {
         // Go through the table's pages and insert non-deleted rows into the copy
         int pageId = tableSchema.rootPageID;
         while (pageId != -1) {
-            Page page = bm.getPage(pageId);
+            Page page = (Page) bm.getPageV2(pageId);
             for (Record r : page.recordList) {
                 // If the where tree node isn't evaluating this record, insert it into the copy
                 if (whereTreeNode != null && !whereTreeNode.eval(r, tableSchema)) {

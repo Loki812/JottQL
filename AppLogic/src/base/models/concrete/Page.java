@@ -234,4 +234,21 @@ public class Page implements Ipage {
         }
         return accum;
     }
+
+    //-----------
+    // Getters, setters, here
+    //-----------
+    public void setTimeStamp(LocalDateTime timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public LocalDateTime getTimeStamp() {return this.timestamp;}
+
+    public int getPageId() {
+        return pageId;
+    }
+
+    public boolean getHasBeenModified() {
+        return hasBeenModified;
+    }
 }

@@ -172,7 +172,7 @@ public class Where {
         // Go through the table's pages and insert each record into the table
         int pageId = tableSchema.rootPageID;
         while (pageId != -1) {
-            Page page = bm.getPage(pageId);
+            Page page = (Page) bm.getPageV2(pageId);
             for (Record r : page.recordList) {
                 if(whereTree.eval(r, tableSchema)){
                     bm.insertRecordIntoTableAllowDuplicates(copy.tableName, r);

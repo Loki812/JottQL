@@ -171,4 +171,32 @@ public class IndexPage implements Ipage {
 
         return accum;
     }
+
+    /**
+     *
+     * @param record grab primary key from here to insert into B+ tree
+     * @param ts the corresponding table schema
+     * @param ORDERED ignored, used to match function signature on data page
+     * @param DUPLICATES_ALLOWED ignored, duplicates are allowed on leaf nodes, not on internals
+     */
+    public void insert(Record record, TableSchema ts, boolean ORDERED, boolean DUPLICATES_ALLOWED) {
+
+    }
+
+    //----------
+    // Getters, setters here
+    //----------
+    public void setTimeStamp(LocalDateTime timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public LocalDateTime getTimeStamp() {return this.timestamp;}
+
+    public int getPageId() {
+        return pageId;
+    }
+
+    public boolean getHasBeenModified() {
+        return hasBeenModified;
+    }
 }

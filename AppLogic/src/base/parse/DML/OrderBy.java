@@ -56,7 +56,7 @@ public class OrderBy {
         // Go through the table's pages and insert each record into the table
         int pageId = tableSchema.rootPageID;
         while (pageId != -1) {
-            Page page = bm.getPage(pageId);
+            Page page = (Page) bm.getPageV2(pageId);
             for (Record r : page.recordList) {
                 bm.insertRecordIntoTableAllowDuplicates(copy.tableName, r);
             }

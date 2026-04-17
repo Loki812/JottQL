@@ -167,7 +167,7 @@ public class DataCatalog {
         }
         schema.rootPageID = getNextAvailablePageID();
         catalog.tables.put(schema.tableName, schema);
-        bufferManager.createNewPage(schema.rootPageID, schema.tableName);
+        bufferManager.createNewDataPage(schema.rootPageID, schema.tableName);
         catalog.tableCount += 1;
     }
 
@@ -211,12 +211,12 @@ public class DataCatalog {
         int copyRootPageId = copy.getRootPageID();
 
         // Get the page associated with the copy's root page ID
-        Page page = bm.getPage(copyRootPageId);
+        Page page = (Page) bm.getPageV2(copyRootPageId);
 
         // Change all the copy's page's tableNames to the original tableName
         while (page.nextPageId != -1) {
             page.tableName = ogName;
-            page = bm.getPage(page.nextPageId);
+            page = (Page) bm.getPageV2(page.nextPageId);
         }
 
         // Put the copy in the tables map
