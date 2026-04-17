@@ -3,6 +3,7 @@ package base.models.concrete;
 import base.models.DataCatalog;
 import base.models.schemas.AttributeSchema;
 import base.models.schemas.DataTypes;
+import base.models.schemas.InsertionResult;
 import base.models.schemas.TableSchema;
 
 import java.nio.ByteBuffer;
@@ -198,5 +199,11 @@ public class IndexPage implements Ipage {
 
     public boolean getHasBeenModified() {
         return hasBeenModified;
+    }
+
+    @Override
+    public InsertionResult tryInsert(Record record, TableSchema ts, boolean ORDERED, boolean DUPLICATES_ALLOWED) {
+        //todo make this do something
+        return null;
     }
 }

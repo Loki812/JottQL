@@ -1,5 +1,6 @@
 package base.models.concrete;
 
+import base.models.schemas.InsertionResult;
 import base.models.schemas.TableSchema;
 
 import java.nio.ByteBuffer;
@@ -23,7 +24,5 @@ public interface Ipage {
 
     public boolean getHasBeenModified();
 
-    public void insert(Record record, TableSchema ts, boolean ORDERED, boolean DUPLICATES_ALLOWED);
-
-    public Ipage split();
+    public InsertionResult tryInsert(Record record, TableSchema ts, boolean ORDERED, boolean DUPLICATES_ALLOWED);
 }
