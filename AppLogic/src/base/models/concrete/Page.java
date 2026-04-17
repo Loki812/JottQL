@@ -19,6 +19,7 @@ public class Page implements Ipage {
     public LocalDateTime timestamp;
     public ArrayList<Record> recordList;
 
+
     /**
      * Basic constructor for when creating a new page, no records added
      * @param pageId the id of the page
@@ -116,10 +117,18 @@ public class Page implements Ipage {
      */
     public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) {
         // 1. Check if record is in range of page
-        if (!recordList.isEmpty() && record.compareTo(recordList.getLast(), schema) > 0) {
-            // If we are not on the last page, send signal to buffer manager to iterate to next page
-            if (nextPageId != -1) return InsertionResult.NOT_IN_RANGE;
+
+        //todo find the primary key and call compareTo on that
+        if(schema.primaryKey != null){
+            Integer primaryKeyIndex = schema.getIndex(schema.primaryKey);
+            if(primaryKeyIndex!=null){
+                if (!recordList.isEmpty() && record.compareTo(recordList.getLast(), primaryKeyIndex) > 0) {
+                    // If we are not on the last page, send signal to buffer manager to iterate to next page
+                    if (nextPageId != -1) return InsertionResult.NOT_IN_RANGE;
+                }
+            }
         }
+
 
         // 2. Check if record fits in page
         int pageSize = DataCatalog.getInstance().getPageSize();
@@ -179,13 +188,24 @@ public class Page implements Ipage {
             return;
         }
         for (int i = 0; i < recordList.size(); i++) {
-            if(record.compareTo(recordList.get(i), schema) == 0 && !DUPLICATES_ALLOWED){
-                throw new RuntimeException("Duplicate primary key found while attempting insertion...");
+
+
+            if(schema.primaryKey != null){
+                Integer primaryKeyIndex = schema.getIndex(schema.primaryKey);
+                if(primaryKeyIndex != null){
+                    //todo find the primary key and call compareTo on that
+                    if(record.compareTo(recordList.get(i), primaryKeyIndex) == 0 && !DUPLICATES_ALLOWED){
+                        throw new RuntimeException("Duplicate primary key found while attempting insertion...");
+                    }
+                    //todo find the primary key and call compareTo on that
+                    if (record.compareTo(recordList.get(i), primaryKeyIndex) <= 0) {
+                        recordList.add(i, record);
+                        return;
+                    }
+                }
             }
-            if (record.compareTo(recordList.get(i), schema) <= 0) {
-                recordList.add(i, record);
-                return;
-            }
+
+
         }
 
         // did not run into exception, either greater than all records on page or is unordered insertion
@@ -250,5 +270,11 @@ public class Page implements Ipage {
 
     public boolean getHasBeenModified() {
         return hasBeenModified;
+    }
+
+    @Override
+    public InsertionResult tryInsert(Record record, TableSchema ts, boolean ORDERED, boolean DUPLICATES_ALLOWED) {
+        //todo make this do something
+        return null;
     }
 }
