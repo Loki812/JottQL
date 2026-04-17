@@ -25,4 +25,10 @@ public interface Ipage {
     public boolean getHasBeenModified();
 
     public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates);
+
+    public int split();
+
+    public int nextPageId();
+
+    public AttributeValue<?> getFirst(int i);
 }

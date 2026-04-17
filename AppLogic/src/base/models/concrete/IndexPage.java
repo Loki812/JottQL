@@ -1,5 +1,6 @@
 package base.models.concrete;
 
+import base.buffer.BufferManager;
 import base.models.DataCatalog;
 import base.models.schemas.AttributeSchema;
 import base.models.schemas.DataTypes;
@@ -16,6 +17,8 @@ public class IndexPage implements Ipage {
     public String tableName;
     public int pageId;
     public int parentPageId;
+    public boolean root;
+    public boolean leaf;
     public boolean hasBeenModified;
     public LocalDateTime timestamp;
     public AttributeSchema searchKey;
@@ -38,6 +41,8 @@ public class IndexPage implements Ipage {
 
         this.tableName = tableName;
         this.pageId = pageId;
+        this.root = false;
+        this.leaf = false;
         this.parentPageId = parentPageId;
         this.hasBeenModified = true;
         this.timestamp = LocalDateTime.now();
@@ -173,15 +178,68 @@ public class IndexPage implements Ipage {
         return accum;
     }
 
-    /**
-     *
-     * @param record grab primary key from here to insert into B+ tree
-     * @param ts the corresponding table schema
-     * @param ORDERED ignored, used to match function signature on data page
-     * @param DUPLICATES_ALLOWED ignored, duplicates are allowed on leaf nodes, not on internals
-     */
-    public void insert(Record record, TableSchema ts, boolean ORDERED, boolean DUPLICATES_ALLOWED) {
+    public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) {
+        duplicates = false;
+        int attributeIndex = schema.getIndex(this.searchKey.attributeName);
+        if(this.leaf){
+            return tryInsertLeaf(record, schema);
+        }else {
+            int i = 0;
+            while (i < childPointers.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
+                i++;
+            }
+            Ipage child = BufferManager.getInstance().getPageV2(childPointers.get(i));
+            InsertionResult result = child.tryInsert(record, schema, duplicates);
+            switch (result){
+                case SUCCESS:
+                    return InsertionResult.SUCCESS;
+                case NEEDS_SPLIT:
+                    int newID = child.split();
+                    childPointers.add(i+1, newID);
+                    searchKeys.add(i, child.getFirst(attributeIndex));
+            }
+        }
+        if(searchKeys.size() > n){
+            return InsertionResult.NEEDS_SPLIT;
+        }else{
+            return InsertionResult.SUCCESS;
+        }
+    }
 
+    public InsertionResult tryInsertLeaf(Record record, TableSchema schema) {
+        if(this.searchKey.attributeName.equals(schema.primaryKey)){
+            int attributeIndex = schema.getIndex(this.searchKey.attributeName);
+            int i = 0;
+            while (i < childPointers.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
+                i++;
+            }
+            Ipage child = BufferManager.getInstance().getPageV2(childPointers.get(i));
+            InsertionResult result = child.tryInsert(record, schema, false);
+            switch (result){
+                case SUCCESS:
+                    return InsertionResult.SUCCESS;
+                case NEEDS_SPLIT:
+                    int newID = child.split();
+                    childPointers.add(i+1, newID);
+                    searchKeys.add(i, child.getFirst(attributeIndex));
+            }
+        }else{
+            int attributeIndex = schema.getIndex(this.searchKey.attributeName);
+            int i = 0;
+            while (i < childPointers.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
+                i++;
+            }
+            searchKeys.add(i, record.attributeList.get(attributeIndex));
+        }
+        if(searchKeys.size() > n){
+            return InsertionResult.NEEDS_SPLIT;
+        }else{
+            return InsertionResult.SUCCESS;
+        }
+    }
+
+    public int split(){
+        return -1;
     }
 
     //----------
@@ -202,8 +260,12 @@ public class IndexPage implements Ipage {
     }
 
     @Override
-    public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) {
-        //todo make this do something
-        return null;
+    public AttributeValue<?> getFirst(int i) {
+        return this.searchKeys.getFirst();
+    }
+
+    // DO NOT CALL ON INDEX PAGE
+    public int nextPageId(){
+        return -1;
     }
 }

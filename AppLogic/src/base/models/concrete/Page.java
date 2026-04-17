@@ -274,7 +274,7 @@ public class Page implements Ipage {
     }
 
 
-    public Ipage split(){
+    public int split(){
         BufferManager bm = BufferManager.getInstance();
         int page2ID = DataCatalog.getInstance().getNextAvailablePageID();
         bm.createNewDataPage(page2ID, tableName);
@@ -295,6 +295,15 @@ public class Page implements Ipage {
         timestamp = java.time.LocalDateTime.now();
         page2.timestamp = java.time.LocalDateTime.now();
 
-        return page2;
+        return page2ID;
+    }
+
+    public int nextPageId() {
+        return nextPageId;
+    }
+
+    @Override
+    public AttributeValue<?> getFirst(int i) {
+        return this.recordList.getFirst().attributeList.get(i);
     }
 }

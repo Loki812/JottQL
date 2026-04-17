@@ -192,7 +192,7 @@ public class BufferManager {
         int currentPageId = ts.getRootPageID();
 
         while (currentPageId != -1) {
-            Page page = (Page) getPageV2(currentPageId);
+            Ipage page = getPageV2(currentPageId);
 
             InsertionResult result = page.tryInsert(record, ts, duplicates);
             switch (result) {
@@ -200,11 +200,10 @@ public class BufferManager {
                     return;
                 }
                 case NEEDS_SPLIT -> {
-                    page.insert(record, ts, true, duplicates);
                     page.split();
-                    return;
+                    insertRecordIntoTable(tableName, record, duplicates);
                 }
-                case NOT_IN_RANGE -> currentPageId = page.nextPageId;
+                case NOT_IN_RANGE -> currentPageId = page.nextPageId();
 
             }
         }
