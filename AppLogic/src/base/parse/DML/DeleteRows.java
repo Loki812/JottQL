@@ -81,7 +81,7 @@ public class DeleteRows {
             for (Record r : page.recordList) {
                 // If the where tree node isn't evaluating this record, insert it into the copy
                 if (whereTreeNode != null && !whereTreeNode.eval(r, tableSchema)) {
-                    bm.insertRecordIntoTable(copy.tableName, r);
+                    bm.insertRecordIntoTable(copy.tableName, r, false);
                 }
             }
 

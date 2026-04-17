@@ -156,14 +156,14 @@ public class UpdateTable {
                 }
 
                 if (!matchesWhere) {
-                    bufferManager.insertRecordIntoTable(tempName, newRecord);
+                    bufferManager.insertRecordIntoTable(tempName, newRecord, false);
                 }else {
                     ResolvedOperand resolved = evaluateSetExpression(valuePart, record, attrs);
                     AttributeValue<?> newValue = buildUpdatedValue(resolved, targetSchema);
 
                     newRecord.attributeList.set(targetIndex, newValue);
 
-                    bufferManager.insertRecordIntoTable(tempName, newRecord);
+                    bufferManager.insertRecordIntoTable(tempName, newRecord, false);
                 }
             }
 

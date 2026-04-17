@@ -1,5 +1,6 @@
 package base.models.concrete;
 
+import base.buffer.BufferManager;
 import base.models.DataCatalog;
 import base.models.schemas.AttributeSchema;
 import base.models.schemas.InsertionResult;

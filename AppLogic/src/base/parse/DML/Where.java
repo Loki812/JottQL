@@ -175,7 +175,7 @@ public class Where {
             Page page = (Page) bm.getPageV2(pageId);
             for (Record r : page.recordList) {
                 if(whereTree.eval(r, tableSchema)){
-                    bm.insertRecordIntoTableAllowDuplicates(copy.tableName, r);
+                    bm.insertRecordIntoTable(copy.tableName, r, true);
                 }
             }
 
