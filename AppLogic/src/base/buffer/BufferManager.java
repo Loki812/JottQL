@@ -115,8 +115,6 @@ public class BufferManager {
             flushOldestIfNeeded();
             IndexPage indexPage = new IndexPage(pageId, tableName, parentPageId);
             buffer.put(pageId, indexPage);
-
-            writePageToHardwareV2(indexPage);
         } catch (Exception e) {
             System.err.println("Failed to create new page");
             throw new RuntimeException(e);
@@ -137,7 +135,6 @@ public class BufferManager {
             flushOldestIfNeeded();
             Page page = new Page(id, tableName);
             buffer.put(page.pageId, page);
-            writePageToHardwareV2(page);
         } catch (Exception e) {
             System.err.println("Failed to create page");
             throw new RuntimeException(e);
@@ -188,7 +185,7 @@ public class BufferManager {
      * @param tableName the name of the table you are inserting into
      * @param record the given record you are inserting
      */
-    public void insertRecordIntoTable(String tableName, Record record) {
+    public void insertRecordIntoTable(String tableName, Record record, boolean duplicates) {
         // TODO work will need to be done here to handle indexs
         TableSchema ts = dataCatalog.getTableSchema(tableName);
 
@@ -197,13 +194,14 @@ public class BufferManager {
         while (currentPageId != -1) {
             Page page = (Page) getPageV2(currentPageId);
 
-            InsertionResult result = page.tryInsert(record, ts, false);
+            InsertionResult result = page.tryInsert(record, ts, duplicates);
             switch (result) {
                 case SUCCESS -> {
                     return;
                 }
                 case NEEDS_SPLIT -> {
-                    handlePageSplit(page, record, ts);
+                    page.insert(record, ts, true, duplicates);
+                    page.split();
                     return;
                 }
                 case NOT_IN_RANGE -> currentPageId = page.nextPageId;
@@ -246,28 +244,6 @@ public class BufferManager {
         }
     }
 
-    public void insertRecordIntoTableAllowDuplicates(String tableName, Record record) {
-        TableSchema ts = dataCatalog.getTableSchema(tableName);
-
-        int currentPageId = ts.getRootPageID();
-
-        while (currentPageId != -1) {
-            Page page = (Page) getPageV2(currentPageId);
-
-            InsertionResult result = page.tryInsert(record, ts, true);
-            switch (result) {
-                case SUCCESS -> {
-                    return;
-                }
-                case NEEDS_SPLIT -> {
-                    handlePageSplit(page, record, ts);
-                    return;
-                }
-                case NOT_IN_RANGE -> currentPageId = page.nextPageId;
-
-            }
-        }
-    }
 
     /**
      * Deletes a table by iterate going through the list of linked pages, deleting each one
@@ -316,8 +292,7 @@ public class BufferManager {
 
             if (page.getPageSize() > pageSize) {
                 int originalNextPageId = page.nextPageId; // Save old id so we don't repeat the split pages
-                handlePageSplit(page, ts);
-
+                page.split();
                 pageId = originalNextPageId;
             } else {
                 pageId = page.nextPageId;
@@ -387,36 +362,6 @@ public class BufferManager {
 
 
     /**
-     * Splits the page at the midway point, links the ids to maintain record order on primary key
-     *
-     * @param page the page you wish to split
-     * @param ts the table schema needed for accessing metadata
-     */
-    private void handlePageSplit(Page page, TableSchema ts) {
-        // Link pages in correct order page -> page.nextPage goes to page -> page2 -> page.nextPage
-        int newId = DataCatalog.getInstance().getNextAvailablePageID();
-        Page page2 = new Page(newId, ts.tableName);
-        page2.nextPageId = page.nextPageId;
-        page.nextPageId = newId;
-
-        // Give Each Page half of the records
-        int mid = page.recordList.size() / 2;
-        ArrayList<Record> firstHalf = new ArrayList<>(page.recordList.subList(0, mid));
-        ArrayList<Record> secondHalf = new ArrayList<>(page.recordList.subList(mid, page.recordList.size()));
-        page.recordList = firstHalf;
-        page2.recordList = secondHalf;
-
-        page.hasBeenModified = true;
-        page2.hasBeenModified = true;
-        page.timestamp = java.time.LocalDateTime.now();
-        page2.timestamp = java.time.LocalDateTime.now();
-
-        buffer.put(newId, page2);
-    }
-
-    /**
-     * overloaded version of handlePageSplit for when the split happens
-     * due to the insertion of a new record
      *
      * @param page the page you are spliting
      * @param record the record you are looking to insert
@@ -425,13 +370,7 @@ public class BufferManager {
     private void handlePageSplit(Page page, Record record, TableSchema ts) {
         // Temporarily insert record into page before split to get in order positioning
         page.insert(record, ts, true, true);
-
-        // Call the parent handlePageSplit function
-        handlePageSplit(page, ts);
-    }
-
-    public void deleteTempTables() {
-        // delete all temporary tables
+        page.split();
     }
 
 }

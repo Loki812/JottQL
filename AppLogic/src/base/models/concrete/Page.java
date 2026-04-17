@@ -1,5 +1,6 @@
 package base.models.concrete;
 
+import base.buffer.BufferManager;
 import base.models.DataCatalog;
 import base.models.schemas.AttributeSchema;
 import base.models.schemas.InsertionResult;
@@ -250,5 +251,29 @@ public class Page implements Ipage {
 
     public boolean getHasBeenModified() {
         return hasBeenModified;
+    }
+
+    public Ipage split(){
+        BufferManager bm = BufferManager.getInstance();
+        int page2ID = DataCatalog.getInstance().getNextAvailablePageID();
+        bm.createNewDataPage(page2ID, tableName);
+        // Link pages in correct order page -> page.nextPage goes to page -> page2 -> page.nextPage
+        Page page2 = (Page) bm.getPageV2(page2ID);
+        page2.nextPageId = nextPageId;
+        nextPageId = page2ID;
+
+        // Give Each Page half of the records
+        int mid = recordList.size() / 2;
+        ArrayList<Record> firstHalf = new ArrayList<>(recordList.subList(0, mid));
+        ArrayList<Record> secondHalf = new ArrayList<>(recordList.subList(mid, recordList.size()));
+        recordList = firstHalf;
+        page2.recordList = secondHalf;
+
+        hasBeenModified = true;
+        page2.hasBeenModified = true;
+        timestamp = java.time.LocalDateTime.now();
+        page2.timestamp = java.time.LocalDateTime.now();
+
+        return page2;
     }
 }
