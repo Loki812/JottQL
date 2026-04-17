@@ -202,7 +202,7 @@ public class IndexPage implements Ipage {
     }
 
     @Override
-    public InsertionResult tryInsert(Record record, TableSchema ts, boolean ORDERED, boolean DUPLICATES_ALLOWED) {
+    public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) {
         //todo make this do something
         return null;
     }
