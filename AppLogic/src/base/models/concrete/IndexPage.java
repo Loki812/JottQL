@@ -181,7 +181,7 @@ public class IndexPage implements Ipage {
         return accum;
     }
 
-    public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) throws Exception {
+    public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) {
         if(isLeaf){
             return tryInsertLeaf(record, schema);
         }else {
@@ -189,8 +189,7 @@ public class IndexPage implements Ipage {
             int i = 0;
             while (i < childPointers.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
                 if(record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))==0){
-                    System.out.println("Unique attribute cannot have Duplicates");
-                    throw new Exception();
+                    throw new RuntimeException("Unique attribute cannot have Duplicates");
                 }
                 i++;
             }
@@ -213,13 +212,12 @@ public class IndexPage implements Ipage {
         }
     }
 
-    public InsertionResult tryInsertLeaf(Record record, TableSchema schema) throws Exception {
+    public InsertionResult tryInsertLeaf(Record record, TableSchema schema) {
         int attributeIndex = schema.getIndex(this.searchKey.attributeName);
         int i = 0;
         while (i < childPointers.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
             if(record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))==0){
-                System.out.println("Unique attribute cannot have Duplicates");
-                throw new Exception();
+                throw new RuntimeException("Unique attribute cannot have Duplicates");
             }
             i++;
         }
