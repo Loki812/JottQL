@@ -4,6 +4,7 @@ import base.buffer.BufferManager;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 public class IndexSchema {
 
@@ -17,13 +18,9 @@ public class IndexSchema {
 
         this.tableName = tableName;
         this.columnName = columnName;
-        DataCatalog catalog = DataCatalog.getInstance();
-        rootPageID = catalog.getNextAvailablePageID();
-        int pageSize = catalog.getPageSize();
+
+        int pageSize = DataCatalog.getInstance().getPageSize();
         n = find_n(pageSize);
-        BufferManager bm = BufferManager.getInstance();
-        String indexTableName = tableName + "_idx_" + columnName;
-        bm.createNewPage(rootPageID, indexTableName);
 
     }
 
@@ -74,10 +71,14 @@ public class IndexSchema {
 
     public void saveIndexSchemaToDisk(DataOutputStream out) throws IOException {
 
-        out.writeInt(tableName.length());
-        out.writeBytes(tableName);
-        out.writeInt(columnName.length());
-        out.writeBytes(columnName);
+        out.writeInt(tableName.getBytes(StandardCharsets.UTF_8).length);
+        byte[] tableBytes = tableName.getBytes(StandardCharsets.UTF_8);
+        out.write(tableBytes);
+
+        out.writeInt(columnName.getBytes(StandardCharsets.UTF_8).length);
+        byte[] columnBytes = columnName.getBytes(StandardCharsets.UTF_8);
+        out.write(columnBytes);
+
         out.writeInt(rootPageID);
         out.writeInt(n);
 
@@ -86,14 +87,18 @@ public class IndexSchema {
     public static IndexSchema createIndexSchemaFromDisk(DataInputStream in) throws IOException {
 
         IndexSchema idx = new IndexSchema();
+
         byte[] tableBytes = new byte[in.readInt()];
         in.readFully(tableBytes);
-        idx.tableName = new String(tableBytes);
+        idx.tableName = new String(tableBytes, StandardCharsets.UTF_8);
+
         byte[] columnBytes = new byte[in.readInt()];
         in.readFully(columnBytes);
-        idx.columnName = new String(columnBytes);
+        idx.columnName = new String(columnBytes, StandardCharsets.UTF_8);
+
         idx.rootPageID = in.readInt();
         idx.n = in.readInt();
+
         return idx;
 
     }
