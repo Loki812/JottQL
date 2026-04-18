@@ -18,8 +18,8 @@ public class IndexPage implements Ipage {
     public String tableName;
     public int pageId;
     public int parentPageId;
-    public boolean root;
-    public boolean leaf;
+    public boolean isRoot;
+    public boolean isLeaf;
     public int n;
     public boolean hasBeenModified;
     public LocalDateTime timestamp;
@@ -42,8 +42,8 @@ public class IndexPage implements Ipage {
         IndexSchema is = dc.getIndexSchema(tableName, searchKey.attributeName);
         this.tableName = tableName;
         this.pageId = pageId;
-        this.root = false;
-        this.leaf = false;
+        this.isRoot = false;
+        this.isLeaf = false;
         this.n = is.n;
         this.parentPageId = parentPageId;
         this.hasBeenModified = true;
@@ -183,7 +183,7 @@ public class IndexPage implements Ipage {
     public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) {
         duplicates = false;
         int attributeIndex = schema.getIndex(searchKey.attributeName);
-        if(leaf){
+        if(isLeaf){
             return tryInsertLeaf(record, schema);
         }else {
             int i = 0;
@@ -233,15 +233,58 @@ public class IndexPage implements Ipage {
             }
             searchKeys.add(i, record.attributeList.get(attributeIndex));
         }
-        if(searchKeys.size() > n){
+        if(searchKeys.size() > n-1){
             return InsertionResult.NEEDS_SPLIT;
         }else{
             return InsertionResult.SUCCESS;
         }
     }
 
+
+    //todo return the next page id
     public int split(){
-        return -1;
+
+        BufferManager bm = BufferManager.getInstance();
+        DataCatalog catalog = DataCatalog.getInstance();
+
+        //todo try rounding down if this fails
+        int midIndex = (n + 1) / 2;
+        int newPageId = catalog.getNextAvailablePageID();
+        bm.createNewIndexPage(catalog.getNextAvailablePageID(), this.tableName, this.searchKey, this.parentPageId);
+        IndexPage newLeaf = (IndexPage) bm.getPageV2(newPageId);
+
+        // Move half the children to the new leaf node
+        newLeaf.childPointers.addAll(this.childPointers.subList(midIndex,childPointers.size()));
+        this.childPointers.subList(midIndex,childPointers.size()).clear();
+
+        // If the root splits, create a new root
+        if (isRoot) {
+            int newRootId = catalog.getNextAvailablePageID();
+            bm.createNewIndexPage(catalog.getNextAvailablePageID(), this.tableName, this.searchKey, this.parentPageId);
+            IndexPage newRoot = (IndexPage) bm.getPageV2(newRootId);
+
+            newRoot.childPointers.add(this.pageId);
+            newRoot.childPointers.add(newLeaf.pageId);
+            isRoot = false;
+
+        } else {
+            insertIntoParent(newLeaf);
+        }
+
+
+        hasBeenModified = true;
+        newLeaf.hasBeenModified = true;
+        timestamp = java.time.LocalDateTime.now();
+        newLeaf.timestamp = java.time.LocalDateTime.now();
+
+        return newLeaf.pageId;
+
+    }
+
+    private void insertIntoParent(IndexPage newSibling){
+        BufferManager bm = BufferManager.getInstance();
+        IndexPage parent = (IndexPage) bm.getPageV2(this.parentPageId);
+        parent.childPointers.add(newSibling.pageId);
     }
 
     //----------
