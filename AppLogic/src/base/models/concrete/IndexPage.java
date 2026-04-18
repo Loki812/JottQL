@@ -251,11 +251,24 @@ public class IndexPage implements Ipage {
         int midIndex = (n + 1) / 2;
         int newPageId = catalog.getNextAvailablePageID();
         bm.createNewIndexPage(catalog.getNextAvailablePageID(), this.tableName, this.searchKey, this.parentPageId);
-        IndexPage newLeaf = (IndexPage) bm.getPageV2(newPageId);
+        IndexPage newPageNode = (IndexPage) bm.getPageV2(newPageId);
 
-        // Move half the children to the new leaf node
-        newLeaf.childPointers.addAll(this.childPointers.subList(midIndex,childPointers.size()));
-        this.childPointers.subList(midIndex,childPointers.size()).clear();
+        // Move half the keys to the new leaf node
+        newPageNode.searchKeys.addAll(this.searchKeys.subList(midIndex, this.searchKeys.size()));
+        this.searchKeys.subList(midIndex, this.searchKeys.size()).clear();
+
+        if(isLeaf){
+            if(this.searchKey.attributeName.equals(catalog.getTableSchema(tableName).primaryKey)){
+                // Move half the children to the new leaf node
+                newPageNode.childPointers.addAll(this.childPointers.subList(midIndex,childPointers.size()));
+                this.childPointers.subList(midIndex,childPointers.size()).clear();
+            }
+        } else {
+            // Move half the children to the new leaf node
+            newPageNode.childPointers.addAll(this.childPointers.subList(midIndex,childPointers.size()));
+            this.childPointers.subList(midIndex,childPointers.size()).clear();
+        }
+
 
         // If the root splits, create a new root
         if (isRoot) {
@@ -264,20 +277,21 @@ public class IndexPage implements Ipage {
             IndexPage newRoot = (IndexPage) bm.getPageV2(newRootId);
 
             newRoot.childPointers.add(this.pageId);
-            newRoot.childPointers.add(newLeaf.pageId);
+            newRoot.childPointers.add(newPageNode.pageId);
+            newRoot.searchKeys.add(newPageNode.getFirst(0));
             isRoot = false;
 
         } else {
-            insertIntoParent(newLeaf);
+            insertIntoParent(newPageNode);
         }
 
 
         hasBeenModified = true;
-        newLeaf.hasBeenModified = true;
+        newPageNode.hasBeenModified = true;
         timestamp = java.time.LocalDateTime.now();
-        newLeaf.timestamp = java.time.LocalDateTime.now();
+        newPageNode.timestamp = java.time.LocalDateTime.now();
 
-        return newLeaf.pageId;
+        return newPageNode.pageId;
 
     }
 
@@ -306,7 +320,7 @@ public class IndexPage implements Ipage {
 
     @Override
     public AttributeValue<?> getFirst(int i) {
-        return this.searchKeys.getFirst();
+        return this.searchKeys.removeFirst();
     }
 
     // DO NOT CALL ON INDEX PAGE
