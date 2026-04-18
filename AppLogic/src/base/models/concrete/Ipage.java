@@ -24,7 +24,7 @@ public interface Ipage {
 
     public boolean getHasBeenModified();
 
-    public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates);
+    public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) throws Exception;
 
     public int split();
 

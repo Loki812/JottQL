@@ -7,6 +7,7 @@ import base.models.schemas.AttributeSchema;
 import base.models.schemas.DataTypes;
 import base.models.schemas.InsertionResult;
 import base.models.schemas.TableSchema;
+import base.parse.DDL.CreateTable;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -180,39 +181,17 @@ public class IndexPage implements Ipage {
         return accum;
     }
 
-    public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) {
-        duplicates = false;
-        int attributeIndex = schema.getIndex(searchKey.attributeName);
+    public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) throws Exception {
         if(isLeaf){
             return tryInsertLeaf(record, schema);
         }else {
+            int attributeIndex = schema.getIndex(searchKey.attributeName);
             int i = 0;
             while (i < childPointers.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
-                i++;
-            }
-            Ipage child = BufferManager.getInstance().getPageV2(childPointers.get(i));
-            InsertionResult result = child.tryInsert(record, schema, duplicates);
-            switch (result){
-                case SUCCESS:
-                    return InsertionResult.SUCCESS;
-                case NEEDS_SPLIT:
-                    int newID = child.split();
-                    childPointers.add(i+1, newID);
-                    searchKeys.add(i, child.getFirst(attributeIndex));
-            }
-        }
-        if(searchKeys.size() > n){
-            return InsertionResult.NEEDS_SPLIT;
-        }else{
-            return InsertionResult.SUCCESS;
-        }
-    }
-
-    public InsertionResult tryInsertLeaf(Record record, TableSchema schema) {
-        if(this.searchKey.attributeName.equals(schema.primaryKey)){
-            int attributeIndex = schema.getIndex(this.searchKey.attributeName);
-            int i = 0;
-            while (i < childPointers.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
+                if(record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))==0){
+                    System.out.println("Unique attribute cannot have Duplicates");
+                    throw new Exception();
+                }
                 i++;
             }
             Ipage child = BufferManager.getInstance().getPageV2(childPointers.get(i));
@@ -224,13 +203,42 @@ public class IndexPage implements Ipage {
                     int newID = child.split();
                     childPointers.add(i+1, newID);
                     searchKeys.add(i, child.getFirst(attributeIndex));
+                    break;
+            }
+        }
+        if(searchKeys.size() > n){
+            return InsertionResult.NEEDS_SPLIT;
+        }else{
+            return InsertionResult.SUCCESS;
+        }
+    }
+
+    public InsertionResult tryInsertLeaf(Record record, TableSchema schema) throws Exception {
+        int attributeIndex = schema.getIndex(this.searchKey.attributeName);
+        int i = 0;
+        while (i < childPointers.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
+            if(record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))==0){
+                System.out.println("Unique attribute cannot have Duplicates");
+                throw new Exception();
+            }
+            i++;
+        }
+        if(this.searchKey.attributeName.equals(schema.primaryKey)){
+            Ipage child = BufferManager.getInstance().getPageV2(childPointers.get(i));
+            InsertionResult result = child.tryInsert(record, schema, false);
+            int newID;
+            switch (result){
+                case SUCCESS:
+                    searchKeys.add(i, record.attributeList.get(attributeIndex));
+                    return InsertionResult.SUCCESS;
+                case NEEDS_SPLIT, NOT_IN_RANGE:
+                    newID = child.split();
+                    childPointers.add(i+1, newID);
+                    searchKeys.add(i, child.getFirst(attributeIndex));
+                    tryInsertLeaf(record, schema);
+                    break;
             }
         }else{
-            int attributeIndex = schema.getIndex(this.searchKey.attributeName);
-            int i = 0;
-            while (i < childPointers.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
-                i++;
-            }
             searchKeys.add(i, record.attributeList.get(attributeIndex));
         }
         if(searchKeys.size() > n-1){
@@ -327,4 +335,18 @@ public class IndexPage implements Ipage {
     public int nextPageId(){
         return -1;
     }
+
+}
+
+class Test{
+
+    public static void main(String[] args) throws Exception{
+        DataCatalog.buildCatalog(256, "C:\\Users\\Om\\Documents\\cs\\JottQL\\Data");
+        DataCatalog dc = DataCatalog.getInstance();
+        BufferManager bm = BufferManager.buildBufferManager(10,"C:\\Users\\Om\\Documents\\cs\\JottQL\\Data");
+
+        CreateTable.execute("CREATE TABLE test(key INTEGER PRIMARYKEY, )");
+
+    }
+
 }
