@@ -247,7 +247,7 @@ public class IndexPage implements Ipage {
     }
 
 
-    //todo return the next page id
+    //return the next page id
     public int split(){
 
         BufferManager bm = BufferManager.getInstance();
@@ -287,9 +287,14 @@ public class IndexPage implements Ipage {
             newRoot.searchKeys.add(newPageNode.getFirst(0));
             isRoot = false;
 
-        } else {
+            catalog.getIndexSchema(tableName,searchKey.attributeName).rootPageID=newRootId;
+
+        }
+        /*else {
             insertIntoParent(newPageNode);
         }
+
+         */
 
 
         hasBeenModified = true;
@@ -301,11 +306,13 @@ public class IndexPage implements Ipage {
 
     }
 
+    /*
     private void insertIntoParent(IndexPage newSibling){
         BufferManager bm = BufferManager.getInstance();
         IndexPage parent = (IndexPage) bm.getPageV2(this.parentPageId);
         parent.childPointers.add(newSibling.pageId);
     }
+     */
 
     //----------
     // Getters, setters here
@@ -326,6 +333,9 @@ public class IndexPage implements Ipage {
 
     @Override
     public AttributeValue<?> getFirst(int i) {
+        if(isLeaf){
+            return this.searchKeys.getFirst();
+        }
         return this.searchKeys.removeFirst();
     }
 
