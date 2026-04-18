@@ -9,6 +9,7 @@ import java.util.*;
 
 import base.models.concrete.*;
 import base.models.concrete.Record;
+import base.models.schemas.AttributeSchema;
 import base.models.schemas.InsertionResult;
 import base.models.schemas.TableSchema;
 import base.storage.StorageManager;
@@ -110,10 +111,10 @@ public class BufferManager {
      * @param tableName the name of the related table
      * @param parentPageId the id of the parent to the page in the B+ tree
      */
-    public void createNewIndexPage(int pageId, String tableName, int parentPageId) {
+    public void createNewIndexPage(int pageId, String tableName, AttributeSchema searchKey, int parentPageId) {
         try {
             flushOldestIfNeeded();
-            IndexPage indexPage = new IndexPage(pageId, tableName, parentPageId);
+            IndexPage indexPage = new IndexPage(pageId, tableName, searchKey, parentPageId);
             buffer.put(pageId, indexPage);
         } catch (Exception e) {
             System.err.println("Failed to create new page");

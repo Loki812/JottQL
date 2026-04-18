@@ -2,6 +2,7 @@ package base.models.concrete;
 
 import base.buffer.BufferManager;
 import base.models.DataCatalog;
+import base.models.IndexSchema;
 import base.models.schemas.AttributeSchema;
 import base.models.schemas.DataTypes;
 import base.models.schemas.InsertionResult;
@@ -19,6 +20,7 @@ public class IndexPage implements Ipage {
     public int parentPageId;
     public boolean root;
     public boolean leaf;
+    public int n;
     public boolean hasBeenModified;
     public LocalDateTime timestamp;
     public AttributeSchema searchKey;
@@ -35,20 +37,20 @@ public class IndexPage implements Ipage {
      * @param pageId the ID of the given page
      * @param tableName the name of the table this is indexed for
      */
-    public IndexPage(int pageId, String tableName, int parentPageId) {
+    public IndexPage(int pageId, String tableName, AttributeSchema searchKey, int parentPageId) {
         DataCatalog dc = DataCatalog.getInstance();
-        TableSchema ts = dc.getTableSchema(tableName);
-
+        IndexSchema is = dc.getIndexSchema(tableName, searchKey.attributeName);
         this.tableName = tableName;
         this.pageId = pageId;
         this.root = false;
         this.leaf = false;
+        this.n = is.n;
         this.parentPageId = parentPageId;
         this.hasBeenModified = true;
         this.timestamp = LocalDateTime.now();
         this.childPointers = new ArrayList<>();
         this.searchKeys = new ArrayList<>();
-        this.searchKey = ts.getAttributeSchemas().get(ts.primaryKey);
+        this.searchKey = searchKey;
     }
 
     /**
@@ -180,8 +182,8 @@ public class IndexPage implements Ipage {
 
     public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) {
         duplicates = false;
-        int attributeIndex = schema.getIndex(this.searchKey.attributeName);
-        if(this.leaf){
+        int attributeIndex = schema.getIndex(searchKey.attributeName);
+        if(leaf){
             return tryInsertLeaf(record, schema);
         }else {
             int i = 0;
