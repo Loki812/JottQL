@@ -66,10 +66,7 @@ public class Cartesian {
             }
             table1page = (Page) buffer.getPageV2(table1page.nextPageId);
         }
-        //if doing multiple joins clean up extra tables
-        if(table1.startsWith("_TEMP_")){
-            TableSchema.addTemp(table1);
-        }
+
         //recurse
         tableNames.addFirst(newTable);
         return Product(tableNames);
