@@ -2,7 +2,7 @@ package base.models.concrete;
 
 import base.buffer.BufferManager;
 import base.models.DataCatalog;
-import base.models.IndexSchema;
+import base.models.schemas.IndexSchema;
 import base.models.schemas.AttributeSchema;
 import base.models.schemas.DataTypes;
 import base.models.schemas.InsertionResult;
@@ -339,22 +339,21 @@ public class IndexPage implements Ipage {
         return this.searchKeys.removeFirst();
     }
 
+    @Override
+    public void changeTableName(String newTableName) {
+        tableName = newTableName;
+
+        BufferManager bm = BufferManager.getInstance();
+
+        for (int childPointer : childPointers) {
+            Ipage child = bm.getPageV2(childPointer);
+            child.changeTableName(newTableName);
+        }
+    }
+
     // DO NOT CALL ON INDEX PAGE
     public int nextPageId(){
         return -1;
-    }
-
-}
-
-class Test{
-
-    public static void main(String[] args) throws Exception{
-        DataCatalog.buildCatalog(256, "C:\\Users\\Om\\Documents\\cs\\JottQL\\Data");
-        DataCatalog dc = DataCatalog.getInstance();
-        BufferManager bm = BufferManager.buildBufferManager(10,"C:\\Users\\Om\\Documents\\cs\\JottQL\\Data");
-
-        CreateTable.execute("CREATE TABLE test(key INTEGER PRIMARYKEY, )");
-
     }
 
 }

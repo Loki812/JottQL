@@ -10,6 +10,7 @@ import java.util.*;
 import base.models.concrete.*;
 import base.models.concrete.Record;
 import base.models.schemas.AttributeSchema;
+import base.models.schemas.IndexSchema;
 import base.models.schemas.InsertionResult;
 import base.models.schemas.TableSchema;
 import base.storage.StorageManager;
@@ -190,22 +191,49 @@ public class BufferManager {
         // TODO work will need to be done here to handle indexs
         TableSchema ts = dataCatalog.getTableSchema(tableName);
 
-        int currentPageId = ts.getRootPageID();
+        ArrayList<Integer> rootPageIds = new ArrayList<>();
 
-        while (currentPageId != -1) {
-            Ipage page = getPageV2(currentPageId);
+        if (dataCatalog.indexOn) {
+            ArrayList<IndexSchema> indexes = new ArrayList<>();
 
-            InsertionResult result = page.tryInsert(record, ts, duplicates);
-            switch (result) {
-                case SUCCESS -> {
-                    return;
+            for (AttributeSchema as : ts.getAttributeSchemas().values()) {
+                IndexSchema is = dataCatalog.getIndexSchema(tableName, as.attributeName);
+                if (is != null) {
+                    indexes.add(is);
                 }
-                case NEEDS_SPLIT -> {
-                    page.split();
-                    insertRecordIntoTable(tableName, record, duplicates);
-                }
-                case NOT_IN_RANGE -> currentPageId = page.nextPageId();
+            }
 
+            for (IndexSchema is : indexes) {
+                Ipage ip = getPageV2(is.rootPageID);
+                rootPageIds.add(ip.getPageId());
+            }
+        } else {
+            rootPageIds.add(ts.getRootPageID());
+        }
+
+        for (int currentPageId : rootPageIds) {
+            while (currentPageId != -1) {
+                Ipage page = getPageV2(currentPageId);
+
+                InsertionResult result = page.tryInsert(record, ts, duplicates);
+                switch (result) {
+                    case SUCCESS -> {
+                        return;
+                    }
+                    case NEEDS_SPLIT -> {
+                        page.split();
+                        if(page instanceof Page) {
+                            result = page.tryInsert(record, ts , duplicates);
+                            if(result == InsertionResult.NOT_IN_RANGE) {
+                                currentPageId = page.nextPageId();
+                            }else{
+                                return;
+                            }
+                        }
+                    }
+                    case NOT_IN_RANGE -> currentPageId = page.nextPageId();
+
+                }
             }
         }
     }
@@ -270,7 +298,38 @@ public class BufferManager {
     }
 
     public void deleteIndex(String tableName) throws IOException {
-        // TODO
+        DataCatalog dc = DataCatalog.getInstance();
+
+        ArrayList<IndexSchema> indexes = new ArrayList<>();
+
+        TableSchema tableSchema = dc.getTableSchema(tableName);
+
+        for (AttributeSchema as : tableSchema.getAttributeSchemas().values()) {
+            IndexSchema is = dc.getIndexSchema(tableName, as.attributeName);
+            if (is != null) {
+                indexes.add(is);
+            }
+        }
+
+        ArrayList<Integer> pageIds = new ArrayList<>();
+
+        for (IndexSchema is : indexes) {
+            pageIds.add(is.rootPageID);
+        }
+
+        deleteIndexPages(pageIds);
+    }
+
+    private void deleteIndexPages(ArrayList<Integer> pageIds) throws IOException {
+        for (int pageId : pageIds) {
+            IndexPage ip = (IndexPage)getPageV2(pageId);
+            if (!ip.isLeaf) {
+                ArrayList<Integer> children = ip.childPointers;
+                buffer.remove(pageId);
+                storageManager.deletePage(pageId);
+                deleteIndexPages(children);
+            }
+        }
     }
 
     /**

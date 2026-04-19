@@ -1,6 +1,7 @@
-package base.models;
+package base.models.schemas;
 
-import base.buffer.BufferManager;
+import base.models.DataCatalog;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;

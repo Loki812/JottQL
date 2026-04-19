@@ -99,7 +99,7 @@ public class JottQL {
             System.out.println("No file found at " + args[0] + " creating new file...");
         }
         // build data catalog with page-size and data directory
-        DataCatalog.buildCatalog(Integer.parseInt(args[1]), args[0]);
+        DataCatalog.buildCatalog(Integer.parseInt(args[1]), args[0], Boolean.parseBoolean(args[3]));
         DataCatalog dc = DataCatalog.getInstance();
         BufferManager bm = BufferManager.buildBufferManager(Integer.parseInt(args[2]),args[0]);
 

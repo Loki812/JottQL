@@ -31,4 +31,6 @@ public interface Ipage {
     public int nextPageId();
 
     public AttributeValue<?> getFirst(int i);
+
+    public void changeTableName(String newTableName);
 }

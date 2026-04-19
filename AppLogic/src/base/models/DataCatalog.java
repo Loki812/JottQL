@@ -1,6 +1,9 @@
 package base.models;
 import base.buffer.BufferManager;
+import base.models.concrete.IndexPage;
 import base.models.concrete.Page;
+import base.models.schemas.AttributeSchema;
+import base.models.schemas.IndexSchema;
 import base.models.schemas.TableSchema;
 
 import java.io.*;
@@ -22,6 +25,7 @@ public class DataCatalog {
     private Map<String, TableSchema> tables;
     private int indexCount;
     private Map<String, IndexSchema> indexes;
+    public boolean indexOn;
 
 
     private DataCatalog() {}
@@ -42,7 +46,7 @@ public class DataCatalog {
      * @param dataDirectory - the path to the catalog.bin file.
      *
      **/
-    public static void buildCatalog(Integer suggestedSize, String dataDirectory) {
+    public static void buildCatalog(Integer suggestedSize, String dataDirectory, boolean indexOn) {
 
         catalog = new DataCatalog();
         File catalogFile = new File(dataDirectory, "catalog.bin");
@@ -71,6 +75,7 @@ public class DataCatalog {
             catalog.tables = new HashMap<String, TableSchema>();
             catalog.indexCount = 0;
             catalog.indexes = new HashMap<String, IndexSchema>();
+            catalog.indexOn = indexOn;
             saveToDisk();
 
 
@@ -94,6 +99,7 @@ public class DataCatalog {
         catalog.tableCount = in.readInt();
         catalog.indexCount = in.readInt();
         catalog.nextAvailablePageID = in.readInt();
+        catalog.indexOn = in.readBoolean();
 
         freePageList = new ArrayList<>();
         int freePageListSize = in.readInt();
@@ -131,6 +137,7 @@ public class DataCatalog {
             out.writeInt(catalog.tableCount);
             out.writeInt(catalog.indexCount);
             out.writeInt(catalog.nextAvailablePageID);
+            out.writeBoolean(catalog.indexOn);
             out.writeInt(freePageList.size());
 
             for (int i = 0; i < freePageList.size(); i++) {
@@ -217,10 +224,19 @@ public class DataCatalog {
         String indexTableName =
                 schema.tableName + "_idx_" + schema.columnName;
 
-        bufferManager.createNewPage(
+        TableSchema ts = tables.get(schema.tableName);
+        AttributeSchema searchKey = ts.getAttributeSchemas().get(schema.columnName);
+
+        bufferManager.createNewIndexPage(
                 schema.rootPageID,
-                indexTableName
+                indexTableName,
+                searchKey,
+                -1
         );
+
+        IndexPage ip = (IndexPage)bufferManager.getPageV2(schema.rootPageID);
+
+        ip.childPointers.add(ts.rootPageID);
 
         catalog.indexCount += 1;
     }
@@ -256,28 +272,55 @@ public class DataCatalog {
      * @throws IOException if the ogtTable does not exist
      */
     public void changeTableName(String ogName, String copyName) throws IOException {
+        if (indexOn) {
+            changeIndexName(ogName, copyName);
+        } else {
+            BufferManager bm = BufferManager.getInstance();
+            // Drop the original tableSchema
+            bm.deleteTable(ogName);
+
+            // Get the root page ID of the copy
+            TableSchema copy = getTableSchema(copyName);
+            int copyRootPageId = copy.getRootPageID();
+
+            // Get the page associated with the copy's root page ID
+            Page page = (Page) bm.getPageV2(copyRootPageId);
+
+            // Change all the copy's page's tableNames to the original tableName
+            while (page.nextPageId != -1) {
+                page.tableName = ogName;
+                page = (Page) bm.getPageV2(page.nextPageId);
+            }
+
+            // Put the copy in the tables map
+            catalog.tables.put(ogName, copy);
+            //remove the copy
+            catalog.tables.remove(copyName);
+            catalog.tableCount -= 1;
+        }
+    }
+
+    public void changeIndexName(String ogName, String copyName) throws IOException {
         BufferManager bm = BufferManager.getInstance();
-        // Drop the original tableSchema
-        bm.deleteTable(ogName);
 
-        // Get the root page ID of the copy
-        TableSchema copy = getTableSchema(copyName);
-        int copyRootPageId = copy.getRootPageID();
+        // Drop original indexSchema
+        bm.deleteIndex(ogName);
 
-        // Get the page associated with the copy's root page ID
-        Page page = (Page) bm.getPageV2(copyRootPageId);
+        ArrayList<IndexSchema> indexes = new ArrayList<>();
 
-        // Change all the copy's page's tableNames to the original tableName
-        while (page.nextPageId != -1) {
-            page.tableName = ogName;
-            page = (Page) bm.getPageV2(page.nextPageId);
+        TableSchema copyTs = getTableSchema(copyName);
+
+        for (AttributeSchema as : copyTs.getAttributeSchemas().values()) {
+            IndexSchema is = getIndexSchema(copyName, as.attributeName);
+            if (is != null) {
+                indexes.add(is);
+            }
         }
 
-        // Put the copy in the tables map
-        catalog.tables.put(ogName, copy);
-        //remove the copy
-        catalog.tables.remove(copyName);
-        catalog.tableCount -= 1;
+        for (IndexSchema is : indexes) {
+            IndexPage ip = (IndexPage)bm.getPageV2(is.rootPageID);
+            ip.changeTableName(copyName);
+        }
     }
 
 }

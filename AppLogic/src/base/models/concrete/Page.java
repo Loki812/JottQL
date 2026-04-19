@@ -306,4 +306,9 @@ public class Page implements Ipage {
     public AttributeValue<?> getFirst(int i) {
         return this.recordList.getFirst().attributeList.get(i);
     }
+
+    @Override
+    public void changeTableName(String newTableName) {
+        tableName = newTableName;
+    }
 }
