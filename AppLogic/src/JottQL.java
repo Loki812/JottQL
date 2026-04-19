@@ -43,11 +43,11 @@ public class JottQL {
                 }
             }
             case "INSERT" -> {
-                try {
+                //try {
                     base.parse.DML.InsertTable.parse(command);
-                }catch (Exception e){
-                    System.err.println("Table insertion failed " + e);
-                }
+                //}catch (Exception e){
+                //    System.err.println("Table insertion failed " + e);
+                //}
             }
             case "DROP" -> {
                 try {

@@ -187,7 +187,7 @@ public class IndexPage implements Ipage {
         }else {
             int attributeIndex = schema.getIndex(searchKey.attributeName);
             int i = 0;
-            while (i < childPointers.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
+            while (i < searchKeys.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
                 if(record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))==0){
                     throw new RuntimeException("Unique attribute cannot have Duplicates");
                 }
@@ -215,7 +215,7 @@ public class IndexPage implements Ipage {
     public InsertionResult tryInsertLeaf(Record record, TableSchema schema) {
         int attributeIndex = schema.getIndex(this.searchKey.attributeName);
         int i = 0;
-        while (i < childPointers.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
+        while (i < searchKeys.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
             if(record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))==0){
                 throw new RuntimeException("Unique attribute cannot have Duplicates");
             }
