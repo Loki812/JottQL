@@ -20,12 +20,12 @@ public class JottQL {
 
         switch (firstWord) {
             case "CREATE" -> {
-                try {
+                //try {
                     CreateTable.execute(command);
                     System.out.println("Table Created Successfully");
-                }catch (Exception e){
-                    System.err.println("Table Creation Failed");
-                }
+//                }catch (Exception e){
+//                    System.err.println("Table Creation Failed");
+//                }
             }
             case "SELECT" -> {
                 try {

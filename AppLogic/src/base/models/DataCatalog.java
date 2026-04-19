@@ -221,15 +221,12 @@ public class DataCatalog {
 
         catalog.indexes.put(key, schema);
 
-        String indexTableName =
-                schema.tableName + "_idx_" + schema.columnName;
-
         TableSchema ts = tables.get(schema.tableName);
         AttributeSchema searchKey = ts.getAttributeSchemas().get(schema.columnName);
 
         bufferManager.createNewIndexPage(
                 schema.rootPageID,
-                indexTableName,
+                schema.tableName,
                 searchKey,
                 -1
         );
