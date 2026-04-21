@@ -19,6 +19,7 @@ public class IndexPage implements Ipage {
     public String tableName;
     public int pageId;
     public int parentPageId;
+    public int nextPageId;
     public boolean isRoot;
     public boolean isLeaf;
     public int n;
@@ -43,6 +44,7 @@ public class IndexPage implements Ipage {
         IndexSchema is = dc.getIndexSchema(tableName, searchKey.attributeName);
         this.tableName = tableName;
         this.pageId = pageId;
+        this.nextPageId = -1;
         this.isRoot = false;
         this.isLeaf = false;
         this.n = is.n;
@@ -215,7 +217,42 @@ public class IndexPage implements Ipage {
         }
     }
 
+    /*
+    //gets the lowest record value that is in a leaf node of this root
+    private Record getLowestChildValue(Ipage root){
+        BufferManager bm = BufferManager.getInstance();
+        //recursive case
+        if(root instanceof IndexPage){
+            IndexPage firstPage = (IndexPage) bm.getPageV2(((IndexPage) root).childPointers.getFirst());
+            return getLowestChildValue(firstPage);
+
+        }else if(root instanceof Page){
+            Page page = (Page) root;
+            return page.recordList.getFirst();
+        }
+        return null;
+    }
+
+    //gets the greatest record value that is in a leaf node of this root
+    private Record getGreatestChildValue(Ipage root){
+        BufferManager bm = BufferManager.getInstance();
+        //recursive case
+        if(root instanceof IndexPage){
+            IndexPage firstPage = (IndexPage) bm.getPageV2(((IndexPage) root).childPointers.getLast());
+            return getLowestChildValue(firstPage);
+
+        }else if(root instanceof Page){
+            Page page = (Page) root;
+            return page.recordList.getLast();
+        }
+        return null;
+    }
+
+     */
+
     public InsertionResult tryInsertLeaf(Record record, TableSchema schema) {
+        BufferManager bm = BufferManager.getInstance();
+
         timestamp = java.time.LocalDateTime.now();
         int attributeIndex = schema.getIndex(this.searchKey.attributeName);
         int i = 0;
@@ -226,20 +263,81 @@ public class IndexPage implements Ipage {
             i++;
         }
         if(this.searchKey.attributeName.equals(schema.primaryKey)){
-            Ipage child = BufferManager.getInstance().getPageV2(childPointers.get(i));
+            Ipage child = bm.getPageV2(childPointers.get(i));
             InsertionResult result = child.tryInsert(record, schema, false);
             int newID;
             switch (result){
                 case SUCCESS:
                     searchKeys.add(i, record.attributeList.get(attributeIndex));
+                    childPointers.add(i+1, child.getPageId());
                     break;
                 case NEEDS_SPLIT, NOT_IN_RANGE:
                     hasBeenModified = true;
                     newID = child.split();
+                    //get the search key index
+                    int searchKeyIndex = schema.getIndex(searchKey.attributeName);
+
+
                     childPointers.add(i+1, newID);
                     searchKeys.add(i, child.getFirst(attributeIndex));
                     tryInsertLeaf(record, schema);
-                    break;
+
+                    /**
+                     * get the first and last search key value from newChild page
+                     *
+                     * go through currentLeafPage and nextLeafPage and if a value in its searchkey array is between your first and last values (x > first val, x < last val),
+                     *  then update the childIndex array at searchkeyIndex+1 = newChild pointer; (update both this page the next page)
+                     *
+                     *  break if x > lastValue
+                     *
+                     */
+                    //Record firstRecord = getLowestChildValue(this);
+                    Page newPage = (Page) bm.getPageV2(newID);
+                    Record firstRecord = newPage.recordList.getFirst();
+                            //page.recordList.getFirst();
+                    AttributeValue firstValue = firstRecord.attributeList.get(searchKeyIndex);
+
+
+                    Record lastRecord = newPage.recordList.getLast();
+                    //page.recordList.getFirst();
+                    AttributeValue lastValue = lastRecord.attributeList.get(searchKeyIndex);
+
+
+                    //Record lastRecord = getGreatestChildValue(this);
+                    //AttributeValue lastValue = lastRecord.attributeList.get(searchKeyIndex);
+                    //update my search keys
+
+                    //for(AttributeValue key : searchKeys){
+                    for(int updateSearchKeyIndex=0; updateSearchKeyIndex<searchKeys.size(); updateSearchKeyIndex++){
+                        // if key > firstValue
+                        if(searchKeys.get(updateSearchKeyIndex).compareTo(firstValue)>0){
+                            // if key < lastValue
+                            if(searchKeys.get(updateSearchKeyIndex).compareTo(lastValue)<0){
+                                this.childPointers.set(updateSearchKeyIndex+1, newID);
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+
+                    //update newChild's search keys
+                    if(nextPageId!=-1){
+                        IndexPage nextPage = (IndexPage)bm.getPageV2(nextPageId);
+                        for(int updateSearchKeyIndex=0; updateSearchKeyIndex<nextPage.searchKeys.size(); updateSearchKeyIndex++){
+
+                            // if key > firstValue
+                            if(nextPage.searchKeys.get(updateSearchKeyIndex).compareTo(firstValue)>0){
+                                // if key < lastValue
+                                if(nextPage.searchKeys.get(updateSearchKeyIndex).compareTo(lastValue)<0){
+                                    nextPage.childPointers.set(updateSearchKeyIndex+1, newID);
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+
             }
         }else{
             searchKeys.add(i, record.attributeList.get(attributeIndex));
@@ -254,7 +352,7 @@ public class IndexPage implements Ipage {
 
     //return the next page id
     public int split(){
-        System.out.println(STR."Before:\{this.searchKeys}");
+        System.out.println("Before:" +this.searchKeys+"}");
 
         BufferManager bm = BufferManager.getInstance();
         DataCatalog catalog = DataCatalog.getInstance();
@@ -274,6 +372,8 @@ public class IndexPage implements Ipage {
                 // Move half the children to the new leaf node
                 newPageNode.childPointers.addAll(this.childPointers.subList(midIndex,childPointers.size()));
                 this.childPointers = new ArrayList<>(this.childPointers.subList(0, midIndex));
+
+                this.nextPageId = newPageId;
             }
         } else {
             // Move half the children to the new leaf node
@@ -308,7 +408,7 @@ public class IndexPage implements Ipage {
         timestamp = java.time.LocalDateTime.now();
         newPageNode.timestamp = java.time.LocalDateTime.now();
 
-        System.out.println(STR."After\{this.searchKeys}");
+        System.out.println("After {"+this.searchKeys+"}");
         System.out.println(newPageNode.searchKeys);
 
         return newPageNode.pageId;
