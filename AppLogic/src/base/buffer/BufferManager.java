@@ -202,10 +202,13 @@ public class BufferManager {
                     indexes.add(is);
                 }
             }
-
-            for (IndexSchema is : indexes) {
-                Ipage ip = getPageV2(is.rootPageID);
-                rootPageIds.add(ip.getPageId());
+            if(indexes.isEmpty()){
+                rootPageIds.add(ts.getRootPageID());
+            }else {
+                for (IndexSchema is : indexes) {
+                    Ipage ip = getPageV2(is.rootPageID);
+                    rootPageIds.add(ip.getPageId());
+                }
             }
         } else {
             rootPageIds.add(ts.getRootPageID());

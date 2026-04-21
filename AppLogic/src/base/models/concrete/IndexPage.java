@@ -205,7 +205,7 @@ public class IndexPage implements Ipage {
                     break;
             }
         }
-        if(searchKeys.size() > n){
+        if(childPointers.size() > n){
             return InsertionResult.NEEDS_SPLIT;
         }else{
             return InsertionResult.SUCCESS;
@@ -239,7 +239,7 @@ public class IndexPage implements Ipage {
         }else{
             searchKeys.add(i, record.attributeList.get(attributeIndex));
         }
-        if(searchKeys.size() > n-1){
+        if(childPointers.size() > n-1){
             return InsertionResult.NEEDS_SPLIT;
         }else{
             return InsertionResult.SUCCESS;

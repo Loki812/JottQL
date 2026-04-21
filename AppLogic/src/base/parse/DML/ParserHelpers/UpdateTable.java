@@ -7,6 +7,7 @@ import base.models.DataCatalog;
 import base.models.schemas.DataTypes;
 import base.models.concrete.Page;
 import base.models.concrete.Record;
+import base.models.schemas.IndexSchema;
 import base.models.schemas.TableSchema;
 import base.models.whereNodes.WhereTreeNode;
 
@@ -140,6 +141,15 @@ public class UpdateTable {
         TableSchema tempSchema = tableSchema.makeTempCopy(new ArrayList<>());
 
         String tempName = tempSchema.tableName;
+
+        if (dataCatalog.indexOn) {
+            for (AttributeSchema as : tempSchema.getAttributeSchemas().values()) {
+                if (as.isPrimaryKey() || as.isUnique()) {
+                    IndexSchema is = new IndexSchema(tempSchema.tableName, as.attributeName);
+                    dataCatalog.addIndexSchema(is);
+                }
+            }
+        }
 
         int pageId = tableSchema.getRootPageID();
 
