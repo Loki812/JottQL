@@ -52,6 +52,7 @@ public class IndexPage implements Ipage {
         this.childPointers = new ArrayList<>();
         this.searchKeys = new ArrayList<>();
         this.searchKey = searchKey;
+        System.out.println(n);
     }
 
     /**
@@ -198,7 +199,7 @@ public class IndexPage implements Ipage {
             InsertionResult result = child.tryInsert(record, schema, false);
             switch (result){
                 case SUCCESS:
-                    return InsertionResult.SUCCESS;
+                    break;
                 case NEEDS_SPLIT:
                     hasBeenModified = true;
                     int newID = child.split();
@@ -218,7 +219,7 @@ public class IndexPage implements Ipage {
         timestamp = java.time.LocalDateTime.now();
         int attributeIndex = schema.getIndex(this.searchKey.attributeName);
         int i = 0;
-        while (i < searchKeys.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
+        while (i < searchKeys.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))>-1) {
             if(record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))==0){
                 throw new RuntimeException("Unique attribute cannot have Duplicates");
             }
@@ -231,7 +232,7 @@ public class IndexPage implements Ipage {
             switch (result){
                 case SUCCESS:
                     searchKeys.add(i, record.attributeList.get(attributeIndex));
-                    return InsertionResult.SUCCESS;
+                    break;
                 case NEEDS_SPLIT, NOT_IN_RANGE:
                     hasBeenModified = true;
                     newID = child.split();
@@ -253,6 +254,7 @@ public class IndexPage implements Ipage {
 
     //return the next page id
     public int split(){
+        System.out.println(STR."Before:\{this.searchKeys}");
 
         BufferManager bm = BufferManager.getInstance();
         DataCatalog catalog = DataCatalog.getInstance();
@@ -305,6 +307,9 @@ public class IndexPage implements Ipage {
         newPageNode.hasBeenModified = true;
         timestamp = java.time.LocalDateTime.now();
         newPageNode.timestamp = java.time.LocalDateTime.now();
+
+        System.out.println(STR."After\{this.searchKeys}");
+        System.out.println(newPageNode.searchKeys);
 
         return newPageNode.pageId;
 

@@ -194,11 +194,9 @@ public class Page implements Ipage {
             if(schema.primaryKey != null){
                 Integer primaryKeyIndex = schema.getIndex(schema.primaryKey);
                 if(primaryKeyIndex != null){
-                    //todo find the primary key and call compareTo on that
                     if(record.compareTo(recordList.get(i), primaryKeyIndex) == 0 && !DUPLICATES_ALLOWED){
                         throw new RuntimeException("Duplicate primary key found while attempting insertion...");
                     }
-                    //todo find the primary key and call compareTo on that
                     if (record.compareTo(recordList.get(i), primaryKeyIndex) <= 0) {
                         recordList.add(i, record);
                         return;

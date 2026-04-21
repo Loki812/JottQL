@@ -234,6 +234,8 @@ public class DataCatalog {
         IndexPage ip = (IndexPage)bufferManager.getPageV2(schema.rootPageID);
 
         ip.childPointers.add(ts.rootPageID);
+        ip.isLeaf = true;
+        ip.isRoot = true;
 
         catalog.indexCount += 1;
     }
