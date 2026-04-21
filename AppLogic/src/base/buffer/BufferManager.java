@@ -188,7 +188,6 @@ public class BufferManager {
      * @param record the given record you are inserting
      */
     public void insertRecordIntoTable(String tableName, Record record, boolean duplicates) {
-        // TODO work will need to be done here to handle indexs
         TableSchema ts = dataCatalog.getTableSchema(tableName);
 
         ArrayList<Integer> rootPageIds = new ArrayList<>();

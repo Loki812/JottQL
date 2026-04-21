@@ -182,6 +182,7 @@ public class IndexPage implements Ipage {
     }
 
     public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) {
+        timestamp = java.time.LocalDateTime.now();
         if(isLeaf){
             return tryInsertLeaf(record, schema);
         }else {
@@ -199,6 +200,7 @@ public class IndexPage implements Ipage {
                 case SUCCESS:
                     return InsertionResult.SUCCESS;
                 case NEEDS_SPLIT:
+                    hasBeenModified = true;
                     int newID = child.split();
                     childPointers.add(i+1, newID);
                     searchKeys.add(i, child.getFirst(attributeIndex));
@@ -213,6 +215,7 @@ public class IndexPage implements Ipage {
     }
 
     public InsertionResult tryInsertLeaf(Record record, TableSchema schema) {
+        timestamp = java.time.LocalDateTime.now();
         int attributeIndex = schema.getIndex(this.searchKey.attributeName);
         int i = 0;
         while (i < searchKeys.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
@@ -230,6 +233,7 @@ public class IndexPage implements Ipage {
                     searchKeys.add(i, record.attributeList.get(attributeIndex));
                     return InsertionResult.SUCCESS;
                 case NEEDS_SPLIT, NOT_IN_RANGE:
+                    hasBeenModified = true;
                     newID = child.split();
                     childPointers.add(i+1, newID);
                     searchKeys.add(i, child.getFirst(attributeIndex));
@@ -261,18 +265,18 @@ public class IndexPage implements Ipage {
 
         // Move half the keys to the new leaf node
         newPageNode.searchKeys.addAll(this.searchKeys.subList(midIndex, this.searchKeys.size()));
-        this.searchKeys.subList(midIndex, this.searchKeys.size()).clear();
+        this.searchKeys = new ArrayList<>(this.searchKeys.subList(0, midIndex));
 
         if(isLeaf){
             if(this.searchKey.attributeName.equals(catalog.getTableSchema(tableName).primaryKey)){
                 // Move half the children to the new leaf node
                 newPageNode.childPointers.addAll(this.childPointers.subList(midIndex,childPointers.size()));
-                this.childPointers.subList(midIndex,childPointers.size()).clear();
+                this.childPointers = new ArrayList<>(this.childPointers.subList(0, midIndex));
             }
         } else {
             // Move half the children to the new leaf node
             newPageNode.childPointers.addAll(this.childPointers.subList(midIndex,childPointers.size()));
-            this.childPointers.subList(midIndex,childPointers.size()).clear();
+            this.childPointers = new ArrayList<>(this.childPointers.subList(0, midIndex));
         }
 
 
@@ -333,9 +337,11 @@ public class IndexPage implements Ipage {
 
     @Override
     public AttributeValue<?> getFirst(int i) {
+        timestamp = java.time.LocalDateTime.now();
         if(isLeaf){
             return this.searchKeys.getFirst();
         }
+        hasBeenModified = true;
         return this.searchKeys.removeFirst();
     }
 
