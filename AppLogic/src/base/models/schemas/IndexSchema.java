@@ -68,9 +68,9 @@ public class IndexSchema {
 
 
     private int getNodeHeaderSize() {
-        // Int parent page ID, nextPageID, pageTypeIndicator, n, number of searchKeys, num of children, tableName length, search key length
+        // Int parent page ID, nextPageID, pageTypeIndicator, number of searchKeys, num of children, tableName length, search key length
         // Bool isLeaf, isRoot
-        return tableName.length()+(Integer.BYTES*8)+2;
+        return tableName.length()+(Integer.BYTES*7)+2;
     }
 
     public void saveIndexSchemaToDisk(DataOutputStream out) throws IOException {
