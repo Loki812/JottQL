@@ -216,7 +216,7 @@ public class BufferManager {
         for (int currentPageId : rootPageIds) {
             while (currentPageId != -1) {
                 Ipage page = getPageV2(currentPageId);
-
+                System.out.println(currentPageId);
                 InsertionResult result = page.tryInsert(record, ts, duplicates);
                 switch (result) {
                     case SUCCESS -> {
@@ -231,6 +231,8 @@ public class BufferManager {
                             }else{
                                 return;
                             }
+                        }else {
+                            return;
                         }
                     }
                     case NOT_IN_RANGE -> currentPageId = page.nextPageId();

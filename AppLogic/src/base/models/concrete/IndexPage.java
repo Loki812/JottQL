@@ -43,6 +43,7 @@ public class IndexPage implements Ipage {
         DataCatalog dc = DataCatalog.getInstance();
         IndexSchema is = dc.getIndexSchema(tableName, searchKey.attributeName);
         this.tableName = tableName;
+        this.searchKey = searchKey;
         this.pageId = pageId;
         this.nextPageId = -1;
         this.isRoot = false;
@@ -53,8 +54,6 @@ public class IndexPage implements Ipage {
         this.timestamp = LocalDateTime.now();
         this.childPointers = new ArrayList<>();
         this.searchKeys = new ArrayList<>();
-        this.searchKey = searchKey;
-        System.out.println(n);
     }
 
     /**
@@ -63,8 +62,14 @@ public class IndexPage implements Ipage {
      *
      * -- Page Type Indicator (4 bytes)
      * -- Parent Page ID (4 bytes)
+     * -- Next Page ID (4 bytes)
+     * -- N (4 bytes)
+     * -- is Root (1 byte)
+     * -- is Leaf (1 byte)
      * -- Table Name Length (4 bytes)
      * -- Table Name (variable length)
+     * -- Key Name Length (4 bytes)
+     * -- Key Name (variable length)
      * -- number of searchKeyValues (4 bytes)
      * -- number of childPagePointers (4 bytes)
      * -- searchKeyValues (variable length)
@@ -88,13 +93,21 @@ public class IndexPage implements Ipage {
         this.childPointers = new ArrayList<>();
 
         this.parentPageId = buffer.getInt();
+        this.nextPageId = buffer.getInt();
+        this.n = buffer.getInt();
+        this.isRoot = buffer.get() == 1;
+        this.isLeaf = buffer.get() == 1;
+
         int tableNameLength = buffer.getInt();
         byte[] tableNameBytes = new byte[tableNameLength];
         buffer.get(tableNameBytes);
         this.tableName = new String(tableNameBytes, StandardCharsets.UTF_8);
 
-        TableSchema ts = dc.getTableSchema(this.tableName);
-        this.searchKey = ts.getAttributeSchemas().get(ts.primaryKey);
+        int searchKeyLength = buffer.getInt();
+        byte[] SearchKeyBytes = new byte[searchKeyLength];
+        buffer.get(SearchKeyBytes);
+        String searchKeyName = new String(SearchKeyBytes, StandardCharsets.UTF_8);
+        this.searchKey = dc.getTableSchema(this.tableName).getAttributeSchemas().get(searchKeyName);
 
         int numberOfSearchKeys = buffer.getInt();
         int numberOfChildPointers = buffer.getInt();
@@ -134,9 +147,18 @@ public class IndexPage implements Ipage {
         byteBuffer.putInt(INDEX_PAGE_IND);
 
         byteBuffer.putInt(parentPageId);
+        byteBuffer.putInt(nextPageId);
+        byteBuffer.putInt(n);
+        byteBuffer.put((byte) (isRoot ? 1 : 0));
+        byteBuffer.put((byte) (isLeaf ? 1 : 0));
+
         byteBuffer.putInt(tableName.length());
         byte[] tableNameBytes = this.tableName.getBytes(StandardCharsets.UTF_8);
         byteBuffer.put(tableNameBytes);
+
+        byteBuffer.putInt(searchKey.attributeName.length());
+        byte[] searchKeyName = this.tableName.getBytes(StandardCharsets.UTF_8);
+        byteBuffer.put(searchKeyName);
 
         byteBuffer.putInt(searchKeys.size());
         byteBuffer.putInt(childPointers.size());
@@ -171,7 +193,9 @@ public class IndexPage implements Ipage {
 
     public int getPageSize() {
         int accum = 0;
-        accum += Integer.BYTES * 5; // parent page ID, pageTypeIndicator, number of searchkeys, num of children, tablename length
+        // parent page ID, nextPageID, pageTypeIndicator, n, number of searchKeys, num of children, tableName length, search key length
+        accum += Integer.BYTES * 8;
+        accum += 2; // bool isLeaf, isRoot
         accum += Integer.BYTES * childPointers.size();
         int searchKeyValuesSize = switch (searchKey.getDataType()) {
             case INTEGER -> Integer.BYTES * searchKeys.size();
@@ -191,7 +215,7 @@ public class IndexPage implements Ipage {
         }else {
             int attributeIndex = schema.getIndex(searchKey.attributeName);
             int i = 0;
-            while (i < searchKeys.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))<1) {
+            while (i < searchKeys.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))>-1) {
                 if(record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))==0){
                     throw new RuntimeException("Unique attribute cannot have Duplicates");
                 }
@@ -252,7 +276,7 @@ public class IndexPage implements Ipage {
 
     public InsertionResult tryInsertLeaf(Record record, TableSchema schema) {
         BufferManager bm = BufferManager.getInstance();
-
+        System.out.println(searchKeys);
         timestamp = java.time.LocalDateTime.now();
         int attributeIndex = schema.getIndex(this.searchKey.attributeName);
         int i = 0;
@@ -335,7 +359,6 @@ public class IndexPage implements Ipage {
         }else{
             searchKeys.add(i, record.attributeList.get(attributeIndex));
         }
-        System.out.println(searchKeys.get(i));
         if(childPointers.size() > n-1){
             return InsertionResult.NEEDS_SPLIT;
         }else{
@@ -352,7 +375,7 @@ public class IndexPage implements Ipage {
         DataCatalog catalog = DataCatalog.getInstance();
 
         //todo try rounding down if this fails
-        int midIndex = (n) / 2;
+        int midIndex = n/2;
         int newPageId = catalog.getNextAvailablePageID();
         bm.createNewIndexPage(newPageId, this.tableName, this.searchKey, this.parentPageId);
         IndexPage newPageNode = (IndexPage) bm.getPageV2(newPageId);
