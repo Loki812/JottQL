@@ -214,29 +214,33 @@ public class BufferManager {
         }
 
         for (int currentPageId : rootPageIds) {
-            while (currentPageId != -1) {
-                Ipage page = getPageV2(currentPageId);
-                InsertionResult result = page.tryInsert(record, ts, duplicates);
-                switch (result) {
-                    case SUCCESS -> {
-                        return;
-                    }
-                    case NEEDS_SPLIT -> {
-                        page.split();
-                        if(page instanceof Page) {
-                            result = page.tryInsert(record, ts , duplicates);
-                            if(result == InsertionResult.NOT_IN_RANGE) {
-                                currentPageId = page.nextPageId();
-                            }else{
-                                return;
-                            }
-                        }else {
+            insertHelper(currentPageId, record, ts,duplicates);
+        }
+    }
+
+    public void insertHelper(int currentPageId, Record record, TableSchema ts,  boolean duplicates) {
+        while (currentPageId != -1) {
+            Ipage page = getPageV2(currentPageId);
+            InsertionResult result = page.tryInsert(record, ts, duplicates);
+            switch (result) {
+                case SUCCESS -> {
+                    return;
+                }
+                case NEEDS_SPLIT -> {
+                    page.split();
+                    if(page instanceof Page) {
+                        result = page.tryInsert(record, ts , duplicates);
+                        if(result == InsertionResult.NOT_IN_RANGE) {
+                            currentPageId = page.nextPageId();
+                        }else{
                             return;
                         }
+                    }else {
+                        return;
                     }
-                    case NOT_IN_RANGE -> currentPageId = page.nextPageId();
-
                 }
+                case NOT_IN_RANGE -> currentPageId = page.nextPageId();
+
             }
         }
     }
