@@ -342,6 +342,9 @@ public class IndexPage implements Ipage {
         BufferManager bm = BufferManager.getInstance();
         if(isLeaf){
             childPointers.set(i, newPageId);
+            if(i == 1){
+                childPointers.set(0, newPageId);
+            }
         }else{
             IndexPage child = (IndexPage)bm.getPageV2(childPointers.get(i));
             child.update(record, schema, newPageId);
@@ -371,7 +374,6 @@ public class IndexPage implements Ipage {
             if(this.searchKey.attributeName.equals(catalog.getTableSchema(tableName).primaryKey)){
                 // Move half the children to the new leaf node
                 newPageNode.childPointers.addAll(this.childPointers.subList(midIndex,childPointers.size()));
-                newPageNode.childPointers.addFirst(this.childPointers.get(midIndex-1));
                 this.childPointers = new ArrayList<>(this.childPointers.subList(0, midIndex+1));
 
                 this.nextPageId = newPageId;
