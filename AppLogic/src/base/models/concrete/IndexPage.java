@@ -8,6 +8,7 @@ import base.models.schemas.DataTypes;
 import base.models.schemas.InsertionResult;
 import base.models.schemas.TableSchema;
 
+import java.awt.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -48,6 +49,7 @@ public class IndexPage implements Ipage {
         this.isRoot = false;
         this.isLeaf = false;
         this.n = is.n;
+        //this.n = 3;
         this.parentPageId = parentPageId;
         this.hasBeenModified = true;
         this.timestamp = LocalDateTime.now();
@@ -107,6 +109,7 @@ public class IndexPage implements Ipage {
         this.searchKey = dc.getTableSchema(this.tableName).getAttributeSchemas().get(searchKeyName);
 
         this.n = dc.getIndexSchema(this.tableName, searchKeyName).n;
+        //this.n = 3;
 
         int numberOfSearchKeys = buffer.getInt();
         int numberOfChildPointers = buffer.getInt();
@@ -211,19 +214,26 @@ public class IndexPage implements Ipage {
         if(isLeaf){
             return tryInsertLeaf(record, schema, 0);
         }else {
+            System.out.println("non leaf Keys"+searchKeys);
+            System.out.println("Pointers"+childPointers);
             int attributeIndex = schema.getIndex(searchKey.attributeName);
             int i = getIndex(record, attributeIndex);
-            getIndex(record, attributeIndex);
             Ipage child = BufferManager.getInstance().getPageV2(childPointers.get(i));
             InsertionResult result = child.tryInsert(record, schema, false);
             switch (result){
                 case SUCCESS:
                     break;
                 case NEEDS_SPLIT:
-                    hasBeenModified = true;
+                    BufferManager bm = BufferManager.getInstance();
                     int newID = child.split();
+                    Ipage newChild = bm.getPageV2(newID);
+                    bm.getPageV2(this.pageId);
                     childPointers.add(i+1, newID);
-                    searchKeys.add(i, child.getFirst(attributeIndex));
+                    searchKeys.add(i, newChild.getFirst(attributeIndex));
+                    timestamp = java.time.LocalDateTime.now();
+                    hasBeenModified = true;
+                    System.out.println("Parent"+searchKeys);
+                    System.out.println(childPointers);
                     break;
             }
         }
@@ -234,51 +244,25 @@ public class IndexPage implements Ipage {
         }
     }
 
-    /*
-    //gets the lowest record value that is in a leaf node of this root
-    private Record getLowestChildValue(Ipage root){
-        BufferManager bm = BufferManager.getInstance();
-        //recursive case
-        if(root instanceof IndexPage){
-            IndexPage firstPage = (IndexPage) bm.getPageV2(((IndexPage) root).childPointers.getFirst());
-            return getLowestChildValue(firstPage);
-
-        }else if(root instanceof Page){
-            Page page = (Page) root;
-            return page.recordList.getFirst();
-        }
-        return null;
-    }
-
-    //gets the greatest record value that is in a leaf node of this root
-    private Record getGreatestChildValue(Ipage root){
-        BufferManager bm = BufferManager.getInstance();
-        //recursive case
-        if(root instanceof IndexPage){
-            IndexPage firstPage = (IndexPage) bm.getPageV2(((IndexPage) root).childPointers.getLast());
-            return getLowestChildValue(firstPage);
-
-        }else if(root instanceof Page){
-            Page page = (Page) root;
-            return page.recordList.getLast();
-        }
-        return null;
-    }
-
-     */
-
     public InsertionResult tryInsertLeaf(Record record, TableSchema schema, int offset) {
         BufferManager bm = BufferManager.getInstance();
-        System.out.println(searchKeys);
-        System.out.println(childPointers);
+        System.out.println("leaf Keys"+searchKeys);
+        System.out.println("Pointers"+childPointers);
         timestamp = java.time.LocalDateTime.now();
         int attributeIndex = schema.getIndex(this.searchKey.attributeName);
         int i = getIndex(record, attributeIndex);
         if(this.searchKey.attributeName.equals(schema.primaryKey)){
             Ipage child;
-            if(i+offset > searchKeys.size()){
+            if(i+offset >= childPointers.size()){
                 IndexPage nextPage = (IndexPage) bm.getPageV2(nextPageId);
-                child = bm.getPageV2(nextPage.childPointers.getFirst());
+                child = bm.getPageV2(nextPage.childPointers.get(1));
+                offset+=1;
+                if(offset>n){
+                    System.out.println(record.attributeList.get(attributeIndex));
+                    System.out.println(nextPage.searchKeys);
+                    System.out.println(nextPage.childPointers);
+                    throw new RuntimeException();
+                }
             }else {
                 child = bm.getPageV2(childPointers.get(i + offset));
             }
@@ -287,7 +271,7 @@ public class IndexPage implements Ipage {
                 case SUCCESS:
                     hasBeenModified = true;
                     searchKeys.add(i, record.attributeList.get(attributeIndex));
-                    childPointers.add(i+offset+1, child.getPageId());
+                    childPointers.add(i+1, child.getPageId());
                     break;
                 case NEEDS_SPLIT:
                     int newID = child.split();
@@ -359,7 +343,6 @@ public class IndexPage implements Ipage {
         BufferManager bm = BufferManager.getInstance();
         DataCatalog catalog = DataCatalog.getInstance();
 
-        //todo try rounding down if this fails
         int midIndex = n/2;
         int newPageId = catalog.getNextAvailablePageID();
         bm.createNewIndexPage(newPageId, this.tableName, this.searchKey, this.parentPageId);
@@ -368,19 +351,18 @@ public class IndexPage implements Ipage {
         // Move half the keys to the new leaf node
         newPageNode.searchKeys.addAll(this.searchKeys.subList(midIndex, this.searchKeys.size()));
         this.searchKeys = new ArrayList<>(this.searchKeys.subList(0, midIndex));
-
+        newPageNode.nextPageId = this.nextPageId;
+        this.nextPageId = newPageId;
         if(isLeaf){
             newPageNode.isLeaf = true;
             if(this.searchKey.attributeName.equals(catalog.getTableSchema(tableName).primaryKey)){
                 // Move half the children to the new leaf node
                 newPageNode.childPointers.addAll(this.childPointers.subList(midIndex,childPointers.size()));
                 this.childPointers = new ArrayList<>(this.childPointers.subList(0, midIndex+1));
-
-                this.nextPageId = newPageId;
             }
         } else {
             // Move half the children to the new node
-            newPageNode.childPointers.addAll(this.childPointers.subList(midIndex,childPointers.size()));
+            newPageNode.childPointers.addAll(this.childPointers.subList(midIndex+1,childPointers.size()));
             this.childPointers = new ArrayList<>(this.childPointers.subList(0, midIndex+1));
         }
 
@@ -404,32 +386,18 @@ public class IndexPage implements Ipage {
 
 
         }
-        /*else {
-            insertIntoParent(newPageNode);
-        }
-
-         */
-
 
         hasBeenModified = true;
         newPageNode.hasBeenModified = true;
         timestamp = java.time.LocalDateTime.now();
         newPageNode.timestamp = java.time.LocalDateTime.now();
 
-        System.out.println("After"+this.searchKeys);
-        System.out.println(newPageNode.searchKeys);
+        System.out.println("After"+this.searchKeys +" "+ this.pageId);
+        System.out.println(newPageNode.searchKeys+" "+ newPageNode.pageId);
 
         return newPageNode.pageId;
 
     }
-
-    /*
-    private void insertIntoParent(IndexPage newSibling){
-        BufferManager bm = BufferManager.getInstance();
-        IndexPage parent = (IndexPage) bm.getPageV2(this.parentPageId);
-        parent.childPointers.add(newSibling.pageId);
-    }
-     */
 
     //----------
     // Getters, setters here
