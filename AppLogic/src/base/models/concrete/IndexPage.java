@@ -214,8 +214,7 @@ public class IndexPage implements Ipage {
         if(isLeaf){
             return tryInsertLeaf(record, schema, 0);
         }else {
-            System.out.println("non leaf Keys"+searchKeys);
-            System.out.println("Pointers"+childPointers);
+
             int attributeIndex = schema.getIndex(searchKey.attributeName);
             int i = getIndex(record, attributeIndex);
             Ipage child = BufferManager.getInstance().getPageV2(childPointers.get(i));
@@ -232,8 +231,6 @@ public class IndexPage implements Ipage {
                     searchKeys.add(i, newChild.getFirst(attributeIndex));
                     timestamp = java.time.LocalDateTime.now();
                     hasBeenModified = true;
-                    System.out.println("Parent"+searchKeys);
-                    System.out.println(childPointers);
                     break;
             }
         }
@@ -246,8 +243,6 @@ public class IndexPage implements Ipage {
 
     public InsertionResult tryInsertLeaf(Record record, TableSchema schema, int offset) {
         BufferManager bm = BufferManager.getInstance();
-        System.out.println("leaf Keys"+searchKeys);
-        System.out.println("Pointers"+childPointers);
         timestamp = java.time.LocalDateTime.now();
         int attributeIndex = schema.getIndex(this.searchKey.attributeName);
         int i = getIndex(record, attributeIndex);
@@ -258,9 +253,6 @@ public class IndexPage implements Ipage {
                 child = bm.getPageV2(nextPage.childPointers.get(1));
                 offset+=1;
                 if(offset>n){
-                    System.out.println(record.attributeList.get(attributeIndex));
-                    System.out.println(nextPage.searchKeys);
-                    System.out.println(nextPage.childPointers);
                     throw new RuntimeException();
                 }
             }else {
@@ -338,7 +330,6 @@ public class IndexPage implements Ipage {
 
     //return the next page id
     public int split(){
-        System.out.println("Before:" +this.searchKeys);
 
         BufferManager bm = BufferManager.getInstance();
         DataCatalog catalog = DataCatalog.getInstance();
@@ -382,7 +373,7 @@ public class IndexPage implements Ipage {
             IndexSchema schema = catalog.getIndexSchema(tableName,searchKey.attributeName);
             schema.rootPageID=newRootId;
 
-            System.out.println("new root"+newRoot.searchKeys);
+
 
 
         }
@@ -392,8 +383,7 @@ public class IndexPage implements Ipage {
         timestamp = java.time.LocalDateTime.now();
         newPageNode.timestamp = java.time.LocalDateTime.now();
 
-        System.out.println("After"+this.searchKeys +" "+ this.pageId);
-        System.out.println(newPageNode.searchKeys+" "+ newPageNode.pageId);
+
 
         return newPageNode.pageId;
 

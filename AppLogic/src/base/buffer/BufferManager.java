@@ -209,6 +209,17 @@ public class BufferManager {
                     rootPageIds.add(ip.getPageId());
                 }
             }
+
+            // put the primary key at the end of the list
+            // find with root id corrosponds to the indexSchema for the primary key
+            for(IndexSchema indexSchema : indexes){
+                if(indexSchema.columnName.equals(ts.primaryKey)){
+                    rootPageIds.remove((Integer) indexSchema.rootPageID);
+                    rootPageIds.add(indexSchema.rootPageID);
+                    break;
+                }
+            }
+
         } else {
             rootPageIds.add(ts.getRootPageID());
         }
