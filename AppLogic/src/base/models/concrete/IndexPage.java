@@ -211,6 +211,7 @@ public class IndexPage implements Ipage {
 
     public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) {
         timestamp = java.time.LocalDateTime.now();
+        BufferManager bm = BufferManager.getInstance();
         if(isLeaf){
             return tryInsertLeaf(record, schema, 0);
         }else {
@@ -218,30 +219,36 @@ public class IndexPage implements Ipage {
             System.out.println("Pointers"+childPointers);
             int attributeIndex = schema.getIndex(searchKey.attributeName);
             int i = getIndex(record, attributeIndex);
-            Ipage child = BufferManager.getInstance().getPageV2(childPointers.get(i));
-            InsertionResult result = child.tryInsert(record, schema, false);
-            switch (result){
-                case SUCCESS:
-                    break;
-                case NEEDS_SPLIT:
-                    BufferManager bm = BufferManager.getInstance();
-                    int newID = child.split();
-                    Ipage newChild = bm.getPageV2(newID);
-                    bm.getPageV2(this.pageId);
-                    childPointers.add(i+1, newID);
-                    searchKeys.add(i, newChild.getFirst(attributeIndex));
-                    timestamp = java.time.LocalDateTime.now();
-                    hasBeenModified = true;
-                    System.out.println("Parent"+searchKeys);
-                    System.out.println(childPointers);
-                    break;
+            Ipage child = bm.getPageV2(childPointers.get(i));
+            child.tryInsert(record, schema, false);
+            if(i==0 && !isRoot){
+                IndexPage parent = (IndexPage) bm.getPageV2(parentPageId);
+                parent.updateKey(searchKeys.get(1), searchKeys.get(0));
             }
         }
         if(childPointers.size() > n){
-            return InsertionResult.NEEDS_SPLIT;
-        }else{
-            return InsertionResult.SUCCESS;
+            if(isRoot){
+                split();
+                return InsertionResult.SUCCESS;
+            }
+            int newChild = split();
+            IndexPage parent = (IndexPage) bm.getPageV2(parentPageId);
+            parent.pushValue(newChild, record, schema);
         }
+        return InsertionResult.SUCCESS;
+    }
+
+    private void pushValue(int newChildId, Record record, TableSchema schema){
+            BufferManager bm = BufferManager.getInstance();
+            Ipage newChild = bm.getPageV2(newChildId);
+            int attributeIndex = schema.getIndex(searchKey.attributeName);
+            int i = getIndex(record, attributeIndex);
+            childPointers.add(i+1, newChildId);
+            searchKeys.add(i, newChild.getFirst(attributeIndex));
+            timestamp = java.time.LocalDateTime.now();
+            hasBeenModified = true;
+            System.out.println("Parent"+searchKeys);
+            System.out.println(childPointers);
     }
 
     public InsertionResult tryInsertLeaf(Record record, TableSchema schema, int offset) {
@@ -289,29 +296,29 @@ public class IndexPage implements Ipage {
                     tryInsertLeaf(record, schema, offset+1);
 
             }
+            if(i==0 && !isRoot){
+                IndexPage parent = (IndexPage) bm.getPageV2(parentPageId);
+                parent.updateKey(searchKeys.get(1), searchKeys.get(0));
+            }
         }else{
             searchKeys.add(i, record.attributeList.get(attributeIndex));
         }
         if(childPointers.size() > n-1){
-            return InsertionResult.NEEDS_SPLIT;
-        }else{
-            return InsertionResult.SUCCESS;
-        }
-    }
-
-    private int getIndex(Record record, int attributeIndex) {
-        int i = 0;
-        while (i < searchKeys.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))>-1) {
-            if(record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))==0){
-                throw new RuntimeException("Unique attribute cannot have Duplicates");
+            if(isRoot){
+                split();
+                return InsertionResult.SUCCESS;
             }
-            i++;
+            int newChild = split();
+            IndexPage parent = (IndexPage) bm.getPageV2(parentPageId);
+            parent.pushValue(newChild, record, schema);
+
         }
-        return i;
+        return InsertionResult.SUCCESS;
     }
 
     /**
      * @param record record to be updated
+     * @param schema the table schema
      * @param newPageId page value is in after split
      *
      * Only call on the root to update the values of the tree after
@@ -335,6 +342,14 @@ public class IndexPage implements Ipage {
         }
     }
 
+    public void updateKey(AttributeValue<?> oldKey, AttributeValue<?> newKey){
+        int i = 0;
+        while (i < searchKeys.size() && oldKey.compareTo(searchKeys.get(i))!=0) {
+            i++;
+        }
+        this.searchKeys.set(i-1, newKey);
+    }
+
 
     //return the next page id
     public int split(){
@@ -345,6 +360,8 @@ public class IndexPage implements Ipage {
 
         int midIndex = n/2;
         int newPageId = catalog.getNextAvailablePageID();
+        this.hasBeenModified = true;
+        this.timestamp = java.time.LocalDateTime.now();
         bm.createNewIndexPage(newPageId, this.tableName, this.searchKey, this.parentPageId);
         IndexPage newPageNode = (IndexPage) bm.getPageV2(newPageId);
 
@@ -364,13 +381,18 @@ public class IndexPage implements Ipage {
             // Move half the children to the new node
             newPageNode.childPointers.addAll(this.childPointers.subList(midIndex+1,childPointers.size()));
             this.childPointers = new ArrayList<>(this.childPointers.subList(0, midIndex+1));
+            for(int pointer : newPageNode.childPointers){
+                IndexPage child = (IndexPage) bm.getPageV2(pointer);
+                child.hasBeenModified = true;
+                child.parentPageId = newPageNode.pageId;
+            }
         }
 
 
         // If the root splits, create a new root
         if (isRoot) {
             int newRootId = catalog.getNextAvailablePageID();
-            bm.createNewIndexPage(newRootId, this.tableName, this.searchKey, this.parentPageId);
+            bm.createNewIndexPage(newRootId, this.tableName, this.searchKey, -1);
             IndexPage newRoot = (IndexPage) bm.getPageV2(newRootId);
 
             newRoot.childPointers.add(this.pageId);
@@ -382,8 +404,13 @@ public class IndexPage implements Ipage {
             IndexSchema schema = catalog.getIndexSchema(tableName,searchKey.attributeName);
             schema.rootPageID=newRootId;
 
-            System.out.println("new root"+newRoot.searchKeys);
+            for(int pointer : newRoot.childPointers){
+                IndexPage child = (IndexPage) bm.getPageV2(pointer);
+                child.hasBeenModified = true;
+                child.parentPageId = newRoot.pageId;
+            }
 
+            System.out.println("new root"+newRoot.searchKeys);
 
         }
 
@@ -402,6 +429,17 @@ public class IndexPage implements Ipage {
     //----------
     // Getters, setters here
     //----------
+    private int getIndex(Record record, int attributeIndex) {
+        int i = 0;
+        while (i < searchKeys.size() && record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))>-1) {
+            if(record.attributeList.get(attributeIndex).compareTo(searchKeys.get(i))==0){
+                throw new RuntimeException("Unique attribute cannot have Duplicates");
+            }
+            i++;
+        }
+        return i;
+    }
+
     public void setTimeStamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
     }
@@ -440,7 +478,7 @@ public class IndexPage implements Ipage {
 
     // DO NOT CALL ON INDEX PAGE
     public int nextPageId(){
-        return -1;
+        return nextPageId;
     }
 
 }

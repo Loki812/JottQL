@@ -23,7 +23,7 @@ public class BufferManager {
     private final int maxPageCount;
     private final HashMap<Integer, Ipage> buffer;
     private final StorageManager storageManager;
-
+    private final ArrayList<Integer> locks;
 
     private final DataCatalog dataCatalog;
 
@@ -42,6 +42,7 @@ public class BufferManager {
         this.storageManager = StorageManager.buildStorageManager(directory);
         buffer = new HashMap<>();
         dataCatalog = DataCatalog.getInstance();
+        locks = new ArrayList<>();
     }
 
     /**
@@ -152,6 +153,10 @@ public class BufferManager {
     public void flushOldestIfNeeded() {
         if (buffer.size()>= maxPageCount){
             Ipage oldestPage = Collections.min(buffer.values(), Comparator.comparing(Ipage::getTimeStamp));
+            while (locks.contains(oldestPage.getPageId())){
+                oldestPage.setTimeStamp(LocalDateTime.now());
+                oldestPage = Collections.min(buffer.values(), Comparator.comparing(Ipage::getTimeStamp));
+            }
             try {
                 writePageToHardwareV2(oldestPage);
                 buffer.remove(oldestPage.getPageId());
@@ -214,7 +219,9 @@ public class BufferManager {
         }
 
         for (int currentPageId : rootPageIds) {
+            locks.add(currentPageId);
             insertHelper(currentPageId, record, ts,duplicates);
+            locks.remove((Integer) currentPageId);
         }
     }
 
@@ -411,9 +418,7 @@ public class BufferManager {
      */
     private void writePageToHardwareV2(Ipage page) {
         //prevent a page from writing if it has not been modified
-        // need to add if table was recently touched as well with timestamp. for initial disk allocation.
-        long secondsActive = Duration.between(page.getTimeStamp(), java.time.LocalDateTime.now()).getSeconds();
-        if(!page.getHasBeenModified() && secondsActive > 5){
+        if(!page.getHasBeenModified()){
             return;
         }
         try {
@@ -424,19 +429,6 @@ public class BufferManager {
             throw new RuntimeException(e);
         }
 
-    }
-
-
-    /**
-     *
-     * @param page the page you are spliting
-     * @param record the record you are looking to insert
-     * @param ts the tableschema you are using as reference
-     */
-    private void handlePageSplit(Page page, Record record, TableSchema ts) {
-        // Temporarily insert record into page before split to get in order positioning
-        page.insert(record, ts, true, true);
-        page.split();
     }
 
 }
