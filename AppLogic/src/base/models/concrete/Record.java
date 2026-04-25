@@ -92,31 +92,35 @@ public class Record {
      * Compare this record to another record.
      *
      * @param rec The record to compare this record to
-     * @param schema The current table schema
+     * @param attributeIndex index of the attribute in the record to be compared
      * @return a positive value if this record is greater than rec,
      *      negative if it is less than rec,
      *      0 if they are equal
      */
-    public int compareTo(Record rec, TableSchema schema)  {
+    //TableSchema schema
+    public int compareTo(Record rec, int attributeIndex)  {
 
+        /*
         if (schema.primaryKey == null) {
             return 0;
         }
 
-        Integer primaryKeyIndex = schema.getIndex(schema.primaryKey);
+        //Integer primaryKeyIndex = schema.getIndex(schema.primaryKey);
 
         if (primaryKeyIndex == null) {
             return 0;
         }
 
-        AttributeValue<?> primaryKey = attributeList.get(primaryKeyIndex);
+         */
+
+        AttributeValue<?> primaryKey = attributeList.get(attributeIndex);
 
         if (primaryKey.data == null) {
             System.out.println("Primary key is null");
             throw new RuntimeException();
         }
 
-        return primaryKey.compareTo(rec.attributeList.get(primaryKeyIndex));
+        return primaryKey.compareTo(rec.attributeList.get(attributeIndex));
     }
 
     public int getSize(){

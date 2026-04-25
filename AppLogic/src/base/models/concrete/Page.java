@@ -1,5 +1,6 @@
 package base.models.concrete;
 
+import base.buffer.BufferManager;
 import base.models.DataCatalog;
 import base.models.schemas.AttributeSchema;
 import base.models.schemas.InsertionResult;
@@ -18,6 +19,7 @@ public class Page implements Ipage {
     public boolean hasBeenModified;
     public LocalDateTime timestamp;
     public ArrayList<Record> recordList;
+
 
     /**
      * Basic constructor for when creating a new page, no records added
@@ -116,10 +118,18 @@ public class Page implements Ipage {
      */
     public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates) {
         // 1. Check if record is in range of page
-        if (!recordList.isEmpty() && record.compareTo(recordList.getLast(), schema) > 0) {
-            // If we are not on the last page, send signal to buffer manager to iterate to next page
-            if (nextPageId != -1) return InsertionResult.NOT_IN_RANGE;
+
+        //todo find the primary key and call compareTo on that
+        if(schema.primaryKey != null){
+            Integer primaryKeyIndex = schema.getIndex(schema.primaryKey);
+            if(primaryKeyIndex!=null){
+                if (!recordList.isEmpty() && record.compareTo(recordList.getLast(), primaryKeyIndex) > 0) {
+                    // If we are not on the last page, send signal to buffer manager to iterate to next page
+                    if (nextPageId != -1) return InsertionResult.NOT_IN_RANGE;
+                }
+            }
         }
+
 
         // 2. Check if record fits in page
         int pageSize = DataCatalog.getInstance().getPageSize();
@@ -179,13 +189,22 @@ public class Page implements Ipage {
             return;
         }
         for (int i = 0; i < recordList.size(); i++) {
-            if(record.compareTo(recordList.get(i), schema) == 0 && !DUPLICATES_ALLOWED){
-                throw new RuntimeException("Duplicate primary key found while attempting insertion...");
+
+
+            if(schema.primaryKey != null){
+                Integer primaryKeyIndex = schema.getIndex(schema.primaryKey);
+                if(primaryKeyIndex != null){
+                    if(record.compareTo(recordList.get(i), primaryKeyIndex) == 0 && !DUPLICATES_ALLOWED){
+                        throw new RuntimeException("Duplicate primary key found while attempting insertion...");
+                    }
+                    if (record.compareTo(recordList.get(i), primaryKeyIndex) <= 0) {
+                        recordList.add(i, record);
+                        return;
+                    }
+                }
             }
-            if (record.compareTo(recordList.get(i), schema) <= 0) {
-                recordList.add(i, record);
-                return;
-            }
+
+
         }
 
         // did not run into exception, either greater than all records on page or is unordered insertion
@@ -250,5 +269,44 @@ public class Page implements Ipage {
 
     public boolean getHasBeenModified() {
         return hasBeenModified;
+    }
+
+
+    public int split(){
+        BufferManager bm = BufferManager.getInstance();
+        int page2ID = DataCatalog.getInstance().getNextAvailablePageID();
+        bm.createNewDataPage(page2ID, tableName);
+        // Link pages in correct order page -> page.nextPage goes to page -> page2 -> page.nextPage
+        Page page2 = (Page) bm.getPageV2(page2ID);
+        page2.nextPageId = nextPageId;
+        nextPageId = page2ID;
+
+        // Give Each Page half of the records
+        int mid = recordList.size() / 2;
+        ArrayList<Record> firstHalf = new ArrayList<>(recordList.subList(0, mid));
+        ArrayList<Record> secondHalf = new ArrayList<>(recordList.subList(mid, recordList.size()));
+        recordList = firstHalf;
+        page2.recordList = secondHalf;
+
+        hasBeenModified = true;
+        page2.hasBeenModified = true;
+        timestamp = java.time.LocalDateTime.now();
+        page2.timestamp = java.time.LocalDateTime.now();
+
+        return page2ID;
+    }
+
+    public int nextPageId() {
+        return nextPageId;
+    }
+
+    @Override
+    public AttributeValue<?> getFirst(int i) {
+        return this.recordList.getFirst().attributeList.get(i);
+    }
+
+    @Override
+    public void changeTableName(String newTableName) {
+        tableName = newTableName;
     }
 }

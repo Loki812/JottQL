@@ -20,12 +20,12 @@ public class JottQL {
 
         switch (firstWord) {
             case "CREATE" -> {
-                try {
+                //try {
                     CreateTable.execute(command);
                     System.out.println("Table Created Successfully");
-                }catch (Exception e){
-                    System.err.println("Table Creation Failed");
-                }
+//                }catch (Exception e){
+//                    System.err.println("Table Creation Failed");
+//                }
             }
             case "SELECT" -> {
                 try {
@@ -43,11 +43,11 @@ public class JottQL {
                 }
             }
             case "INSERT" -> {
-                try {
+                //try {
                     base.parse.DML.InsertTable.parse(command);
-                }catch (Exception e){
-                    System.err.println("Table insertion failed " + e);
-                }
+                //}catch (Exception e){
+                //    System.err.println("Table insertion failed " + e);
+                //}
             }
             case "DROP" -> {
                 try {
@@ -99,7 +99,7 @@ public class JottQL {
             System.out.println("No file found at " + args[0] + " creating new file...");
         }
         // build data catalog with page-size and data directory
-        DataCatalog.buildCatalog(Integer.parseInt(args[1]), args[0]);
+        DataCatalog.buildCatalog(Integer.parseInt(args[1]), args[0], Boolean.parseBoolean(args[3]));
         DataCatalog dc = DataCatalog.getInstance();
         BufferManager bm = BufferManager.buildBufferManager(Integer.parseInt(args[2]),args[0]);
 

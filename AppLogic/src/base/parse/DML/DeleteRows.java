@@ -4,6 +4,8 @@ import base.buffer.BufferManager;
 import base.models.DataCatalog;
 import base.models.concrete.Page;
 import base.models.concrete.Record;
+import base.models.schemas.AttributeSchema;
+import base.models.schemas.IndexSchema;
 import base.models.schemas.TableSchema;
 import base.models.whereNodes.WhereTreeNode;
 
@@ -74,6 +76,15 @@ public class DeleteRows {
         TableSchema tableSchema = dc.getTableSchema(tableName);
         TableSchema copy = tableSchema.makeTempCopy(new ArrayList<>());
 
+        if (dc.indexOn) {
+            for (AttributeSchema as : copy.getAttributeSchemas().values()) {
+                if (as.isPrimaryKey() || as.isUnique()) {
+                    IndexSchema is = new IndexSchema(copy.tableName, as.attributeName);
+                    dc.addIndexSchema(is);
+                }
+            }
+        }
+
         // Go through the table's pages and insert non-deleted rows into the copy
         int pageId = tableSchema.rootPageID;
         while (pageId != -1) {
@@ -81,7 +92,7 @@ public class DeleteRows {
             for (Record r : page.recordList) {
                 // If the where tree node isn't evaluating this record, insert it into the copy
                 if (whereTreeNode != null && !whereTreeNode.eval(r, tableSchema)) {
-                    bm.insertRecordIntoTable(copy.tableName, r);
+                    bm.insertRecordIntoTable(copy.tableName, r, false);
                 }
             }
 

@@ -1,6 +1,7 @@
-package base.models;
+package base.models.schemas;
 
-import base.buffer.BufferManager;
+import base.models.DataCatalog;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -21,6 +22,9 @@ public class IndexSchema {
 
         int pageSize = DataCatalog.getInstance().getPageSize();
         n = find_n(pageSize);
+        if(n%2 == 0){
+            n-=1;
+        }
 
     }
 
@@ -42,7 +46,7 @@ public class IndexSchema {
         }
 
         int keySize = attr.getLength();
-        int headerSize = getNodeHeaderSize();
+        int headerSize = getNodeHeaderSize()+keySize;
         int pairSize = POINTER_SIZE + keySize;
         if (pairSize <= 0) {
 
@@ -64,9 +68,9 @@ public class IndexSchema {
 
 
     private int getNodeHeaderSize() {
-
-        return 12;
-
+        // Int parent page ID, nextPageID, pageTypeIndicator, number of searchKeys, num of children, tableName length, search key length
+        // Bool isLeaf, isRoot
+        return tableName.length()+(Integer.BYTES*7)+2;
     }
 
     public void saveIndexSchemaToDisk(DataOutputStream out) throws IOException {

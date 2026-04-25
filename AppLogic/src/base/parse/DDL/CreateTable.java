@@ -1,6 +1,8 @@
 package base.parse.DDL;
 import base.buffer.BufferManager;
 import base.models.DataCatalog;
+import base.models.schemas.AttributeSchema;
+import base.models.schemas.IndexSchema;
 import base.models.schemas.TableSchema;
 
 import java.util.ArrayList;
@@ -33,6 +35,14 @@ public class CreateTable {
             DataCatalog dc = DataCatalog.getInstance();
             BufferManager bm = BufferManager.getInstance();
             dc.addTableSchema(ts);
+            if (dc.indexOn) {
+                for (AttributeSchema as : ts.getAttributeSchemas().values()) {
+                    if (as.isPrimaryKey() || as.isUnique()) {
+                        IndexSchema is = new IndexSchema(ts.tableName, as.attributeName);
+                        dc.addIndexSchema(is);
+                    }
+                }
+            }
 
         }else {
             System.out.println("Missing closing parentheses");

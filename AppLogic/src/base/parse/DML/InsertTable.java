@@ -311,7 +311,7 @@ public class InsertTable {
                     System.exit(0);
                 }
 
-                bm.insertRecordIntoTable(tableName, record);
+                bm.insertRecordIntoTable(tableName, record, false);
                 inserted++;
 
             }

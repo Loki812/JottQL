@@ -1,5 +1,6 @@
 package base.models.concrete;
 
+import base.models.schemas.InsertionResult;
 import base.models.schemas.TableSchema;
 
 import java.nio.ByteBuffer;
@@ -23,5 +24,13 @@ public interface Ipage {
 
     public boolean getHasBeenModified();
 
-    public void insert(Record record, TableSchema ts, boolean ORDERED, boolean DUPLICATES_ALLOWED);
+    public InsertionResult tryInsert(Record record, TableSchema schema, Boolean duplicates);
+
+    public int split();
+
+    public int nextPageId();
+
+    public AttributeValue<?> getFirst(int i);
+
+    public void changeTableName(String newTableName);
 }
